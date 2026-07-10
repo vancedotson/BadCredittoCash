@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+/* Dark theme driven by data-theme="dark" on <html> (set by the toggle + a
+   no-flash script in layout.tsx). Enables `dark:` utilities site-wide. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---------------------------------------------------------------------------
+   Vance Dotson — Brand tokens (see brand-guideline.md §13)
+   Blue-anchored, light theme, mobile-first. Restraint = legitimacy.
+   Light is the default (brand). A full dark theme is supported via
+   data-theme="dark" on <html> (toggle in the nav) — see the flippable
+   semantic tokens (page/card/body/heading + cloud/sky/slate/mist overrides).
+--------------------------------------------------------------------------- */
+@theme {
+  /* Blue family (the brand) */
+  --color-navy: #0f2c4c; /* Advocate Navy — authority, footer, hero */
+  --color-darkblue: #0a1a2e; /* Nav bar — very dark blue, almost black */
+  --color-trust: #1e5fa3; /* Trust Blue — links, secondary CTA, icons */
+  --color-sky: #eaf2fb; /* Sky Tint — soft section wash */
+
+  /* Action accent (the 10%) */
+  --color-gold: #f2a93b; /* Justice Gold — PRIMARY CTA (text must be Ink) */
+  --color-gold-deep: #d98e1f; /* CTA hover / pressed */
+
+  /* Semantic (used sparingly) */
+  --color-green: #1f9d57; /* success / checkmarks */
+  --color-red: #c0392b; /* errors/validation ONLY — never marketing */
+
+  /* Neutrals (the 60%) */
+  --color-ink: #16202b; /* Ink — text on gold buttons (does NOT flip) */
+  --color-slate: #4a5a6a; /* secondary text, captions, disclaimers */
+  --color-mist: #e4e9ee; /* borders, dividers, input outlines */
+  --color-cloud: #f5f7fa; /* light section background */
+
+  /* Theme-flippable semantic tokens (overridden under [data-theme="dark"]) */
+  --color-page: #ffffff; /* body / page background */
+  --color-card: #ffffff; /* cards & panels (was bg-white) */
+  --color-body: #16202b; /* body text (was text-ink) */
+  --color-heading: #0f2c4c; /* headings & dark emphasis (was text-navy) */
+
+  /* Type families (loaded via next/font in layout.tsx) */
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-poppins);
+  --font-serif: var(--font-source-serif);
+  --font-display: var(--font-staatliches); /* hero headline (caps display) */
+
+  /* Navy-tinted card shadow — subtle, never harsh */
+  --shadow-card: 0 2px 8px rgba(15, 44, 76, 0.08);
+}
+
+/* Dark theme — flip the neutral palette. Navy/darkblue sections, gold, trust,
+   ink (gold-button text) and white (text on dark) intentionally stay put. */
+[data-theme="dark"] {
+  --color-page: #0b1524;
+  --color-card: #16273d;
+  --color-body: #cdd8e4;
+  --color-heading: #f1f5f9;
+  --color-cloud: #0e1a2b;
+  --color-sky: #10203a;
+  --color-slate: #93a4b6;
+  --color-mist: #2a3d54;
+}
+
+/* Base element defaults live in @layer base so Tailwind utilities
+   (e.g. text-white on a navy hero) can override them. Unlayered rules would
+   otherwise win over layered utilities regardless of specificity. */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-page);
+    color: var(--color-body);
+    font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+    /* Body never below 16px (accessibility; avoids iOS input auto-zoom). */
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  /* Headlines use Staatliches (the hero display face) across the whole project.
+     It's a single-weight caps display font, so weight is normal and we add a
+     touch of tracking. Poppins remains the fallback / sub-label font. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), var(--font-heading), var(--font-sans),
+      sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    color: var(--color-heading);
+    text-wrap: balance;
+  }
+}
+
+/* Periodic "shine" sweep across a button — quick pass fully off both edges,
+   then a long pause off-screen (so no sliver parks on the right). */
+@keyframes shine {
+  0% {
+    transform: translateX(-200%) skewX(-20deg);
+  }
+  28% {
+    transform: translateX(460%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(460%) skewX(-20deg);
+  }
+}
+
+/* Seamless horizontal marquee (content duplicated; -50% == 0). Moves L -> R. */
+@keyframes marquee {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Subtle premium entrance for hero content. */
+@keyframes fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Nav bottom-border "beam" — a gold highlight that sweeps left -> right,
+   tapering thin at the start and end of its travel, fullest in the middle.
+   translateX stays linear (-100 -> 150 -> 400) so the speed is unchanged. */
+@keyframes beam {
+  0% {
+    transform: translateX(-100%) scaleX(0.08);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(150%) scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(400%) scaleX(0.08);
+    opacity: 0;
+  }
+}
+
+/* Mechanism rail — a bright pulse that travels along the connector after it
+   has drawn, keeping the left-to-right flow alive between the step dots. */
+@keyframes railPulse {
+  0% {
+    left: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
