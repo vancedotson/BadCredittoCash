@@ -1,0 +1,427 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funnel CRO Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7ECF1;--sheet:#FAFCFD;--ink:#16263B;--ink-2:#3C5067;
+  --line:#B7C7D6;--line-soft:#D6E0E9;--grid:#D3DEE8;--muted:#6B7B8C;
+  --hi:#D14B3D;--hi-soft:#F7DED9;--mid:#C57A12;--mid-soft:#F7E7CC;
+  --lo:#5A6B7E;--lo-soft:#E8EDF1;--done:#1B8A4B;--done-soft:#E4F4EA;--na:#7F8FA0;
+  --teal:#0E7C7B;--zebra:#F1F5F8;
+  --t1:50px;--t2:118px;
+  --disp:"Space Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --cols:120px 138px minmax(260px,1fr) 64px 64px 72px 168px;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--disp);color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
+
+.topbar{position:sticky;top:0;z-index:60;background:rgba(231,236,241,.94);backdrop-filter:blur(8px);border-bottom:1.5px solid var(--ink)}
+.topbar .inner{max-width:1240px;margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1.05;margin-right:auto}
+.brand .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;color:var(--ink-2);text-transform:uppercase}
+.brand .t{font-weight:700;font-size:18px;letter-spacing:-.01em}
+.act{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;border:1.5px solid var(--line);
+  background:var(--sheet);color:var(--ink-2);padding:8px 12px;border-radius:2px;cursor:pointer;transition:.13s}
+.act:hover{border-color:var(--ink);color:var(--ink)}
+.act.primary{background:var(--ink);border-color:var(--ink);color:#fff}
+
+.wrap{max-width:1240px;margin:0 auto;padding:26px 22px 90px}
+.intro{border:1.5px solid var(--ink);background:var(--sheet);border-radius:3px;overflow:hidden;margin-bottom:18px}
+.intro .bar{height:7px;background:var(--ink)}
+.intro .b{padding:18px 24px}
+.intro .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--hi);margin:0 0 6px}
+.intro h1{margin:0 0 7px;font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.02}
+.intro p{margin:0;color:var(--ink-2);font-size:13.5px;line-height:1.55;max-width:74ch}
+
+.cmdbar{position:sticky;top:var(--t1);z-index:40;background:var(--paper);padding-top:4px}
+.tabsrow{display:flex;align-items:flex-end;gap:3px;border-bottom:2px solid var(--ink)}
+.tab{font-family:var(--disp);font-size:13px;font-weight:600;color:var(--ink-2);background:var(--lo-soft);
+  border:1.5px solid var(--line);border-bottom:0;border-radius:5px 5px 0 0;padding:9px 14px;cursor:pointer;
+  display:flex;align-items:center;gap:9px;transition:.12s;position:relative;top:1.5px}
+.tab:hover{background:#fff;color:var(--ink)}
+.tab.on{background:var(--sheet);color:var(--ink);border-color:var(--ink);border-bottom:2px solid var(--sheet);top:2px;z-index:2}
+.tab .pp{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--hi);background:#fff;border:1px solid var(--line-soft);
+  border-radius:9px;padding:1px 7px}
+.tab.on .pp{background:var(--hi-soft);border-color:var(--hi)}
+.tabsrow .grow{flex:1}
+.tabsrow .ovr{font-family:var(--mono);font-size:11px;color:var(--ink-2);padding:0 4px 8px;white-space:nowrap}
+.tabsrow .ovr b{color:var(--hi)}
+
+.toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--sheet);
+  border:1.5px solid var(--ink);border-top:0;padding:9px 12px}
+.tgroup{display:flex;align-items:center;gap:8px}
+.tgroup .tl{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:5px;overflow:hidden}
+.seg button{font-family:var(--mono);font-size:11px;font-weight:500;padding:5px 11px;border:0;background:#fff;color:var(--ink-2);
+  cursor:pointer;border-left:1.5px solid var(--line);transition:.1s}
+.seg button:first-child{border-left:0}
+.seg button.on{background:var(--ink);color:#fff}
+.chip{font-family:var(--mono);font-size:10.5px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);
+  padding:5px 9px;border-radius:14px;cursor:pointer;transition:.12s}
+.chip:hover{border-color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toolbar .stat{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-2);white-space:nowrap}
+.toolbar .stat b{color:var(--hi)}
+
+.sheet{border:1.5px solid var(--ink);border-top:0;background:var(--sheet)}
+.grid{min-width:0}
+@media (max-width:920px){.sheet{overflow-x:auto}.grid{min-width:860px}}
+.hrow,.row{display:grid;grid-template-columns:var(--cols)}
+.hrow{position:sticky;top:var(--t2);z-index:20}
+.hrow .h{background:var(--teal);color:#fff;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;padding:9px 10px;border-right:1px solid rgba(255,255,255,.22)}
+.hrow .h.c{text-align:center}
+.hrow .h:last-child{border-right:0}
+
+.row{border-top:1px solid var(--line-soft)}
+.row.even{background:var(--zebra)}
+.row[data-st="Done"]{background:var(--done-soft)}
+.row[data-st="N/A"]{opacity:.6}
+.row > div{border-right:1px solid var(--line-soft);padding:0;display:flex;align-items:center;min-height:40px}
+.row > div:last-child{border-right:0}
+.row[data-st="To do"] .cell-st{box-shadow:inset 4px 0 0 var(--line)}
+.row[data-st="To improve"] .cell-st{box-shadow:inset 4px 0 0 var(--mid)}
+.row[data-st="Done"] .cell-st{box-shadow:inset 4px 0 0 var(--done)}
+.row[data-st="N/A"] .cell-st{box-shadow:inset 4px 0 0 var(--na)}
+
+.cell-st select{font-family:var(--mono);font-size:11.5px;font-weight:500;color:var(--ink);background:transparent;border:0;
+  width:100%;padding:8px 8px 8px 12px;cursor:pointer;outline:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 13px) 16px,calc(100% - 9px) 16px;background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+.cell-sec{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);padding:6px 10px;line-height:1.3}
+.cell-sec.start{background:rgba(14,124,123,.07);font-weight:600;color:var(--ink)}
+.cell-chk{padding:7px 11px;font-size:13px;line-height:1.32;font-weight:500}
+.cell-ie{justify-content:center}
+.cell-ie select{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:transparent;border:0;
+  text-align:center;text-align-last:center;width:100%;padding:8px 0;cursor:pointer;outline:none;appearance:none}
+.cell-pri{justify-content:center;padding:5px 6px}
+.pri{font-family:var(--mono);font-weight:700;font-size:13.5px;text-align:center;border-radius:4px;padding:5px 0;width:100%;border:1.5px solid}
+.pri.hi{color:var(--hi);border-color:var(--hi);background:var(--hi-soft)}
+.pri.mid{color:var(--mid);border-color:var(--mid);background:var(--mid-soft)}
+.pri.lo{color:var(--lo);border-color:var(--line);background:#fff}
+.pri.done{color:var(--done);border-color:var(--done);background:#fff}
+.pri.na{color:var(--na);border-color:var(--line);background:#fff}
+.cell-note input{font-family:var(--disp);font-size:12px;color:var(--ink);background:transparent;border:0;width:100%;
+  padding:8px 10px;outline:none}
+.cell-note input::placeholder{color:#AAB6C2}
+.cell-note input:focus,.cell-ie select:focus,.cell-st select:focus{background-color:#fff;box-shadow:inset 0 0 0 1.5px var(--teal)}
+.row.hide{display:none}
+
+.foot{margin-top:18px;border-top:1.5px solid var(--ink);padding-top:18px;font-family:var(--mono);
+  font-size:11px;color:var(--muted);line-height:1.7;max-width:92ch}
+.foot b{color:var(--ink-2)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+  font-family:var(--mono);font-size:12px;padding:10px 16px;border-radius:3px;opacity:0;transition:.2s;pointer-events:none;z-index:70}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{body{background:#fff}.topbar,.cmdbar,.toast{display:none}.sheet{overflow:visible}.row{break-inside:avoid}}
+</style>
+
+<div class="topbar"><div class="inner">
+  <div class="brand"><span class="k">Funnel project kit · 01</span><span class="t">Funnel CRO Checklist</span></div>
+  <button class="act" id="reset">Reset</button>
+  <button class="act" id="print">Print</button>
+  <button class="act" id="copy">Copy audit</button>
+  <button class="act primary" id="download">Download audit</button>
+</div></div>
+
+<div class="wrap">
+  <div class="intro"><div class="bar"></div><div class="b">
+    <p class="eyebrow">Audit & prioritise · the highest-leverage fixes first</p>
+    <h1>Funnel CRO Checklist</h1>
+    <p>107 conversion checkpoints across the four funnel pages. Set each row's Status and tune Impact &amp; Effort; the Priority score updates live (high impact + low effort + still open = top score). Switch the view to <b>By priority</b> for a single ranked do-this-first list.</p>
+  </div></div>
+
+  <div class="cmdbar">
+    <div class="tabsrow" id="tabsrow"></div>
+    <div class="toolbar">
+      <div class="tgroup"><span class="tl">View</span>
+        <div class="seg" id="viewseg"><button data-v="grouped" class="on">By section</button><button data-v="priority">By priority ↓</button></div>
+      </div>
+      <div class="tgroup"><span class="tl">Status</span>
+        <div class="chips" id="statchips">
+          <button class="chip" data-f="all" aria-pressed="true">All</button>
+          <button class="chip" data-f="To do" aria-pressed="false">To do</button>
+          <button class="chip" data-f="To improve" aria-pressed="false">To improve</button>
+          <button class="chip" data-f="Done" aria-pressed="false">Done</button>
+        </div>
+      </div>
+      <span class="stat" id="sheetstat"></span>
+    </div>
+  </div>
+
+  <div class="sheet"><div class="grid">
+    <div class="hrow">
+      <div class="h">Status</div><div class="h">Section</div><div class="h">Checkpoint</div>
+      <div class="h c">Impact</div><div class="h c">Effort</div><div class="h c">Priority</div><div class="h">Notes</div>
+    </div>
+    <div id="rows"></div>
+  </div></div>
+
+  <div class="foot">
+    <b>Scoring:</b> Priority = (Impact + (4 − Effort)) × urgency, where urgency is 1.33 while a checkpoint is "To do" and 1.0 once "To improve" (max ≈ 8). Done / N/A score zero and drop out of the queue. Defaults are a sensible starting point — tune per client.<br>
+    <b>Source:</b> funnel-adapted from the E-commerce CRO Checklist by Jaka Šmid (conversion.design). Your own working tool — not for resale of the original.
+  </div>
+</div>
+<div class="toast" id="toast">Saved</div>
+
+<script>
+const DATA={
+ sales:{tab:"Sales Page",focus:"Sales / landing pages",items:[
+  ["Above the fold","Page loads in under 3 seconds",3,2],
+  ["Above the fold","The headline states the core promise / outcome in plain language",3,1],
+  ["Above the fold","A subheadline reinforces the promise with power words",3,1],
+  ["Above the fold","Within 5 seconds it's obvious what's sold and who it's for",3,1],
+  ["Above the fold","A primary CTA is visible above the fold with action copy",3,1],
+  ["Above the fold","A hero visual or VSL supports the promise — no generic stock",2,2],
+  ["Above the fold","If a VSL is used, it has a clear play state and works on mobile",3,2],
+  ["Offer & CTA","The CTA is the most visible element and is repeated down the page",3,1],
+  ["Offer & CTA","CTA copy explains what happens next (not 'Submit')",3,1],
+  ["Offer & CTA","Price is shown near the CTA and anchored against the value",3,1],
+  ["Offer & CTA","If discounted, the original price is struck through with the saving",3,2],
+  ["Offer & CTA","A money-back guarantee is shown clearly near the CTA",3,2],
+  ["Offer & CTA","Express payment options are shown (PayPal, Apple/Google Pay)",3,3],
+  ["Offer & CTA","Installment option offered for higher-ticket offers",2,3],
+  ["Offer & CTA","An urgency trigger sits near the CTA (cart closes, bonus expires)",3,2],
+  ["Offer & CTA","A scarcity trigger sits near the CTA (limited seats / copies)",3,2],
+  ["Offer & CTA","The page has no outgoing nav / footer links that leak traffic",3,1],
+  ["Offer & CTA","An easy way to ask questions is available (chat, email)",2,2],
+  ["Social proof","Testimonials include a photo, name, and a specific result",3,2],
+  ["Social proof","A star / aggregate rating is shown near the title",3,1],
+  ["Social proof","Logos of press, brands, or notable clients are shown",3,1],
+  ["Social proof","Video testimonials are included",3,3],
+  ["Social proof","Customer / student count is shown",2,2],
+  ["Social proof","Real screenshots of proof are embedded (DMs, posts, results)",3,3],
+  ["Social proof","Founder story / mission is shown to build connection",2,2],
+  ["Copy & structure","Copy is benefit-led, not feature-led",3,2],
+  ["Copy & structure","Body copy is easy to scan (short paras, bullets, bold)",3,2],
+  ["Copy & structure","Long sections collapse into accordions, scannable on mobile",3,2],
+  ["Copy & structure","What's included is spelled out, ideally with visuals",3,2],
+  ["Copy & structure","An FAQ section handles the common objections",3,2],
+  ["Copy & structure","'How it works' is explained in ~3 simple steps",3,2],
+  ["Copy & structure","A clear bullet list of key benefits sits near the headline",3,1],
+  ["Trust & risk reversal","Refund / guarantee terms are stated clearly",3,2],
+  ["Trust & risk reversal","The guarantee is visually distinct (badge or boxed)",2,2],
+  ["Trust & risk reversal","A real organisation is evident (contact, founder, company info)",2,1],
+  ["Technical / hygiene","Fully responsive on mobile",3,2],
+  ["Technical / hygiene","Every CTA links to the correct order page",3,1],
+  ["Technical / hygiene","Tracking pixels / events fire on page view and CTA click",3,2],
+ ]},
+ order:{tab:"Order Page",focus:"Order forms & checkouts",items:[
+  ["Layout & trust","Overall checkout design is clean and uncluttered",3,1],
+  ["Layout & trust","Checkout has no outgoing links (nav / footer removed)",3,1],
+  ["Layout & trust","A trust / security badge sits near the pay button",3,1],
+  ["Layout & trust","Guest checkout is allowed — no forced account creation",3,3],
+  ["Layout & trust","An easy way to get help is shown (chat, email)",3,1],
+  ["Layout & trust","The main CTA is the most prominent element on the page",3,1],
+  ["Layout & trust","Privacy policy is easy to find where personal info is requested",2,1],
+  ["Layout & trust","Progress / feedback is shown if checkout is multi-step",3,2],
+  ["Form & fields","Only the minimum fields needed to complete the purchase",3,2],
+  ["Form & fields","Fields use a single-column layout",3,2],
+  ["Form & fields","Email is requested first so abandoned orders are recoverable",3,2],
+  ["Form & fields","Floating labels keep the field name and content visible",3,3],
+  ["Form & fields","Inline validation gives green / red feedback",3,2],
+  ["Form & fields","Error states clearly state what's wrong and how to fix it",3,2],
+  ["Form & fields","Mandatory vs optional fields are clearly distinguishable",3,1],
+  ["Form & fields","A numeric keyboard shows for number-only fields on mobile",2,2],
+  ["Form & fields","An email keyboard shows for the email field on mobile",2,2],
+  ["Form & fields","If a phone number is requested, the reason is explained",3,1],
+  ["Form & fields","The user never enters the same information twice",3,2],
+  ["Form & fields","Entered fields are saved if the user leaves and returns",3,2],
+  ["Form & fields","Card fields sit on a subtle gray background for trust",3,1],
+  ["Form & fields","A visual hint shows where to find the CVV code",3,2],
+  ["Form & fields","If an account is created, password rules aren't overcomplicated",3,2],
+  ["Payment","Alternative payment options are shown (PayPal, Apple/Google)",3,3],
+  ["Payment","Installment options are shown for higher-ticket offers",3,3],
+  ["Payment","Choosing a payment method is easy on mobile (radio buttons)",3,2],
+  ["Order summary","A clear order summary is shown before the user commits",3,2],
+  ["Order summary","Subtotal / total is prominent and placed near the CTA",3,2],
+  ["Order summary","Any taxes or fees are shown transparently",3,2],
+  ["Order summary","Total savings are shown ('You save $X') near the CTA",3,1],
+  ["Order summary","CTA copy says what happens next, with a lock icon",3,1],
+  ["Order summary","A coupon field is present but visually subtle",3,2],
+  ["AOV boosters","An order bump is offered (low-cost add-on with a checkbox)",3,3],
+  ["AOV boosters","An urgency trigger is used ('Your spot is reserved…')",3,2],
+  ["Technical","A real upsell step exists after checkout, before thank-you",3,2],
+  ["Technical","Fully responsive on mobile",3,2],
+  ["Technical","The purchase event / pixel fires on order completion",3,2],
+ ]},
+ upsell:{tab:"Upsell Page",focus:"One-click upsells / OTOs",items:[
+  ["Offer logic","The upsell is relevant / complementary to what was bought",3,2],
+  ["Offer logic","The offer is framed as a one-time, this-page-only deal",3,2],
+  ["Offer logic","A clear discount vs the standalone price is shown as an anchor",3,2],
+  ["Offer logic","The headline restates the new outcome the buyer will get",3,1],
+  ["Offer logic","Quantity / tier options are offered where relevant",3,3],
+  ["Persuasion","Urgency is real and explained ('gone when you leave')",3,2],
+  ["Persuasion","Benefit-led copy explains why this complements their purchase",3,2],
+  ["Persuasion","Social proof specific to the upsell offer is included",3,3],
+  ["Persuasion","A short VSL or explainer supports higher-ticket upsells",3,3],
+  ["Persuasion","A clear 'what's included' list is shown",3,2],
+  ["Mechanics","One-click add — the buyer doesn't re-enter payment info",3,2],
+  ["Mechanics","A prominent accept CTA and a distinct, lower-friction decline",3,1],
+  ["Mechanics","The decline link is honest (no guilt copy that hurts trust)",2,1],
+  ["Mechanics","Adding the upsell clearly states it's combined with the order",3,2],
+  ["Mechanics","It works as a true one-click (no second checkout)",3,3],
+  ["Technical","Mobile responsive",3,2],
+  ["Technical","Accept and decline both route to the correct next page",3,2],
+  ["Technical","Upsell revenue is tracked separately",2,2],
+ ]},
+ thanks:{tab:"Thank You Page",focus:"Thank-you & confirmation",items:[
+  ["Confirmation","Clearly confirms the purchase succeeded and congratulates",3,2],
+  ["Confirmation","Summarizes exactly what they bought",3,2],
+  ["Confirmation","States clearly how and when they get access",3,2],
+  ["Confirmation","Explains how to access the product / account",3,2],
+  ["Confirmation","Offers an easy way to get support (chat, email)",3,1],
+  ["Next steps","A single clear primary next action ('Access your course now')",3,1],
+  ["Next steps","Tells them to check email (and spam) for the receipt / login",3,1],
+  ["Next steps","Sets onboarding expectations — what happens next",2,2],
+  ["AOV & referral","A follow-up offer is presented, combined with the order",3,3],
+  ["AOV & referral","A coupon for the next purchase or to share is offered",3,2],
+  ["AOV & referral","A referral / share prompt is included",2,2],
+  ["AOV & referral","The confirmation email summarizes everything",3,3],
+  ["Technical","The conversion pixel / event fires on the thank-you page",3,2],
+  ["Technical","Mobile responsive",3,1],
+ ]},
+};
+const ORDER=["sales","order","upsell","thanks"];
+const STORE="funnel_cro_v1";
+const state={};
+let active="sales",view="grouped",filter="all",dirty=false;
+
+ORDER.forEach(pid=>DATA[pid].items.forEach((it,i)=>{
+  const key=pid+"_"+i; it.key=key; it.sec=it[0]; it.c=it[1]; it.pid=pid;
+  if(!state[key])state[key]={st:"To do",im:it[2],ef:it[3],note:""};
+}));
+const allItems=ORDER.flatMap(pid=>DATA[pid].items);
+
+function pri(k){const s=state[k];if(s.st==="Done"||s.st==="N/A")return 0;return (s.im+(4-s.ef))*(s.st==="To do"?1.33:1);}
+function tier(p){return p>=6.5?"hi":p>=4.5?"mid":"lo";}
+function addressed(k){const s=state[k].st;return s==="Done"||s==="N/A";}
+
+function rowHTML(it,flat,start){
+  const k=it.key,s=state[k];
+  const stO=["To do","To improve","Done","N/A"].map(o=>`<option ${o===s.st?"selected":""}>${o}</option>`).join("");
+  const ie=sel=>[1,2,3].map(o=>`<option ${o===sel?"selected":""}>${o}</option>`).join("");
+  const secTxt=flat?`${it.sec} · ${DATA[it.pid].tab}`:it.sec;
+  return `<div class="row" data-key="${k}" data-st="${s.st}">
+    <div class="cell-st"><select class="sel-st" data-key="${k}">${stO}</select></div>
+    <div class="cell-sec ${(!flat&&start)?'start':''}">${secTxt}</div>
+    <div class="cell-chk">${it.c}</div>
+    <div class="cell-ie"><select class="sel-im" data-key="${k}">${ie(s.im)}</select></div>
+    <div class="cell-ie"><select class="sel-ef" data-key="${k}">${ie(s.ef)}</select></div>
+    <div class="cell-pri"><div class="pri" data-pri="${k}"></div></div>
+    <div class="cell-note"><input class="inp-note" data-key="${k}" placeholder="…" value="${(s.note||'').replace(/"/g,'&quot;')}"></div>
+  </div>`;
+}
+function renderRows(){
+  const p=DATA[active];let html="";
+  if(view==="priority"){
+    p.items.slice().sort((a,b)=>pri(b.key)-pri(a.key)).forEach(it=>html+=rowHTML(it,true,false));
+  }else{
+    let last=null;
+    p.items.forEach(it=>{const start=it.sec!==last;last=it.sec;html+=rowHTML(it,false,start);});
+  }
+  document.getElementById("rows").innerHTML=html;
+  paintPri();applyFilter();updateSheetStat();
+}
+function paintPri(){document.querySelectorAll("[data-pri]").forEach(el=>{
+  const k=el.dataset.pri,s=state[k],p=pri(k);
+  el.className="pri "+(s.st==="Done"?"done":s.st==="N/A"?"na":tier(p));
+  el.textContent=s.st==="Done"?"✓":s.st==="N/A"?"—":p.toFixed(1);
+});}
+function applyFilter(){
+  let vis=0;
+  document.querySelectorAll(".row").forEach(r=>{
+    const st=state[r.dataset.key].st,show=(filter==="all"||st===filter);
+    r.classList.toggle("hide",!show);
+    if(show){r.classList.toggle("even",vis%2===1);vis++;}else r.classList.remove("even");
+  });
+}
+function updateSheetStat(){
+  const p=DATA[active],done=p.items.filter(it=>addressed(it.key)).length;
+  const open=Math.round(p.items.reduce((s,it)=>s+pri(it.key),0));
+  document.getElementById("sheetstat").innerHTML=`${p.tab} · ${done}/${p.items.length} addressed · open priority <b>${open}</b>`;
+}
+function renderTabs(){
+  const total=allItems.length,done=allItems.filter(it=>addressed(it.key)).length;
+  const pc=Math.round(done/total*100),openAll=Math.round(allItems.reduce((s,it)=>s+pri(it.key),0));
+  let html=ORDER.map(pid=>{
+    const p=DATA[pid],open=Math.round(p.items.reduce((s,it)=>s+pri(it.key),0));
+    return `<button class="tab ${pid===active?'on':''}" data-pid="${pid}">${p.tab}<span class="pp">${open}</span></button>`;
+  }).join("");
+  html+=`<span class="grow"></span><span class="ovr">OVERALL <b>${pc}%</b> · ${done}/${total} · OPEN <b>${openAll}</b></span>`;
+  document.getElementById("tabsrow").innerHTML=html;
+}
+
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");
+  clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("show"),1300);}
+
+document.getElementById("rows").addEventListener("change",e=>{
+  const el=e.target,k=el.dataset.key;if(!k)return;
+  if(el.classList.contains("sel-st")){state[k].st=el.value;el.closest(".row").dataset.st=el.value;
+    paintPri();renderTabs();updateSheetStat();applyFilter();}
+  else if(el.classList.contains("sel-im")){state[k].im=+el.value;paintPri();renderTabs();updateSheetStat();}
+  else if(el.classList.contains("sel-ef")){state[k].ef=+el.value;paintPri();renderTabs();updateSheetStat();}
+  dirty=true;save();
+});
+document.getElementById("rows").addEventListener("input",e=>{
+  if(e.target.classList.contains("inp-note")){state[e.target.dataset.key].note=e.target.value;dirty=true;save();}
+});
+document.getElementById("tabsrow").addEventListener("click",e=>{
+  const b=e.target.closest(".tab");if(!b)return;active=b.dataset.pid;renderTabs();renderRows();
+  window.scrollTo({top:0,behavior:"smooth"});
+});
+document.getElementById("viewseg").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;view=b.dataset.v;
+  document.querySelectorAll("#viewseg button").forEach(x=>x.classList.toggle("on",x===b));renderRows();
+});
+document.getElementById("statchips").addEventListener("click",e=>{
+  const b=e.target.closest(".chip");if(!b)return;filter=b.dataset.f;
+  document.querySelectorAll("#statchips .chip").forEach(x=>x.setAttribute("aria-pressed",x===b));applyFilter();
+});
+
+function buildAudit(){
+  const date=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+  const total=allItems.length,done=allItems.filter(it=>addressed(it.key)).length;
+  const openAll=Math.round(allItems.reduce((s,it)=>s+pri(it.key),0));
+  let md=`# Funnel CRO Audit\n\n_Compiled ${date}_\n\n**Overall:** ${done}/${total} addressed · open priority ${openAll}\n`;
+  ORDER.forEach(pid=>{const p=DATA[pid],open=Math.round(p.items.reduce((s,it)=>s+pri(it.key),0));
+    md+=`\n## ${p.tab} — open priority ${open}\n\n`;
+    p.items.slice().sort((a,b)=>pri(b.key)-pri(a.key)).forEach(it=>{const s=state[it.key],P=pri(it.key);
+      const sc=s.st==="Done"?"DONE":s.st==="N/A"?"N/A":P.toFixed(1);
+      md+=`- [${sc}] ${it.c}  _(I${s.im}/E${s.ef} · ${it.sec})_`+(s.note?`  — ${s.note}`:"")+`\n`;});
+  });return md.trim()+"\n";
+}
+function copyText(t,m){const d=()=>toast(m);if(navigator.clipboard&&navigator.clipboard.writeText)
+  navigator.clipboard.writeText(t).then(d).catch(()=>fb(t,d));else fb(t,d);}
+function fb(t,d){const ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";
+  document.body.appendChild(ta);ta.select();try{document.execCommand("copy");d();}catch(e){}document.body.removeChild(ta);}
+document.getElementById("copy").onclick=()=>copyText(buildAudit(),"Audit copied");
+document.getElementById("download").onclick=()=>{const blob=new Blob([buildAudit()],{type:"text/markdown"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="Funnel_CRO_Audit.md";
+  document.body.appendChild(a);a.click();a.remove();toast("Audit downloaded");};
+document.getElementById("print").onclick=()=>window.print();
+document.getElementById("reset").onclick=()=>{if(!confirm("Reset all statuses and notes to default?"))return;
+  ORDER.forEach(pid=>DATA[pid].items.forEach(it=>{state[it.key]={st:"To do",im:it[2],ef:it[3],note:""};}));
+  try{localStorage.removeItem(STORE);}catch(e){}renderTabs();renderRows();toast("Checklist reset");};
+
+function save(){try{localStorage.setItem(STORE,JSON.stringify(state));}catch(e){}}
+function restore(){try{const raw=localStorage.getItem(STORE);if(!raw)return;const d=JSON.parse(raw);
+  Object.keys(d).forEach(k=>{if(state[k])state[k]=d[k];});}catch(e){}}
+window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+
+function setOffsets(){
+  const tb=document.querySelector(".topbar").offsetHeight;
+  const cb=document.querySelector(".cmdbar").offsetHeight;
+  document.documentElement.style.setProperty("--t1",tb+"px");
+  document.documentElement.style.setProperty("--t2",(tb+cb)+"px");
+}
+window.addEventListener("resize",setOffsets);
+
+restore();renderTabs();renderRows();setOffsets();
+</script>

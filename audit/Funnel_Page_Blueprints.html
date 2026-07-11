@@ -1,0 +1,334 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funnel Page Blueprints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E7ECF1;        /* drafting paper */
+  --sheet:#FAFCFD;        /* wireframe sheet */
+  --ink:#16263B;          /* navy ink */
+  --ink-2:#3C5067;        /* slate */
+  --line:#B7C7D6;         /* blueprint line */
+  --line-soft:#D6E0E9;
+  --grid:#D3DEE8;
+  --red:#D14B3D;          /* primary CTA / load-bearing */
+  --red-soft:#F6DCD7;
+  --teal:#0E7C7B;         /* AOV / revenue lever */
+  --teal-soft:#D2E8E7;
+  --muted:#6B7B8C;
+  --disp:"Space Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;font-family:var(--disp);color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px 80px}
+
+/* ---- topbar ---- */
+.topbar{position:sticky;top:0;z-index:40;background:rgba(231,236,241,.86);backdrop-filter:blur(8px);
+  border-bottom:1.5px solid var(--ink);margin-bottom:30px}
+.topbar .inner{max-width:1120px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;line-height:1.05;margin-right:auto}
+.brand .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;color:var(--ink-2);text-transform:uppercase}
+.brand .t{font-weight:700;font-size:18px;letter-spacing:-.01em}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.02em;
+  border:1.5px solid var(--line);background:var(--sheet);color:var(--ink-2);
+  padding:8px 13px;border-radius:2px;cursor:pointer;transition:.15s;white-space:nowrap}
+.tab:hover{border-color:var(--ink-2);color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab .n{opacity:.55;margin-right:7px}
+.print{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1.5px solid var(--line);
+  background:transparent;color:var(--ink-2);padding:8px 12px;border-radius:2px;cursor:pointer;text-transform:uppercase}
+.print:hover{border-color:var(--ink);color:var(--ink)}
+
+/* ---- page header ---- */
+.phead{border:1.5px solid var(--ink);background:var(--sheet);border-radius:3px;margin-bottom:14px;overflow:hidden}
+.phead .bar{height:7px;background:var(--ink)}
+.phead .body{padding:22px 24px 20px;display:grid;grid-template-columns:1.5fr 1fr;gap:22px}
+.phead .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin:0 0 6px}
+.phead h1{margin:0 0 8px;font-size:33px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.phead .job{margin:0;color:var(--ink-2);font-size:15px;line-height:1.5;max-width:46ch}
+.meta{display:flex;flex-direction:column;gap:10px;border-left:1.5px dashed var(--line);padding-left:20px}
+.meta .row{display:flex;flex-direction:column;gap:2px}
+.meta .lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.meta .val{font-size:13.5px;font-weight:500;color:var(--ink)}
+.flow{font-family:var(--mono);font-size:13px;color:var(--ink)}
+.flow b{color:var(--red);font-weight:600}
+
+/* ---- legend ---- */
+.legend{display:flex;gap:20px;flex-wrap:wrap;align-items:center;
+  font-family:var(--mono);font-size:11px;color:var(--ink-2);margin:0 2px 26px;padding:11px 14px;
+  border:1px dashed var(--line);border-radius:3px;background:rgba(250,252,253,.55)}
+.legend .sw{display:inline-flex;align-items:center;gap:7px}
+.legend .chip{width:13px;height:13px;border-radius:2px;border:1.5px solid}
+.legend .chip.red{background:var(--red-soft);border-color:var(--red)}
+.legend .chip.teal{background:var(--teal-soft);border-color:var(--teal)}
+.legend .chip.neu{background:var(--sheet);border-color:var(--line)}
+
+/* ---- blueprint stack ---- */
+.page{display:none}
+.page.active{display:block}
+.block{display:grid;grid-template-columns:54px 230px 1fr;gap:0;position:relative}
+.block:not(:last-child){margin-bottom:2px}
+
+/* axis column */
+.axis{position:relative;display:flex;justify-content:center}
+.axis::before{content:"";position:absolute;top:0;bottom:-2px;width:1.5px;background:var(--line);left:50%;transform:translateX(-50%)}
+.block:first-child .axis::before{top:18px}
+.block:last-child .axis::before{bottom:auto;height:18px}
+.num{position:relative;z-index:2;margin-top:14px;width:34px;height:34px;border-radius:50%;
+  background:var(--sheet);border:1.5px solid var(--ink);color:var(--ink);
+  font-family:var(--mono);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center}
+.block[data-kind="cta"] .num{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.block[data-kind="aov"] .num{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+
+/* wireframe column */
+.wfwrap{padding:12px 18px 12px 6px}
+.wf{border:1.5px solid var(--line);background:var(--sheet);border-radius:3px;padding:12px;display:flex;
+  flex-direction:column;gap:7px;min-height:64px}
+.block[data-kind="cta"] .wf{border-color:var(--red);box-shadow:inset 0 0 0 3px var(--red-soft)}
+.block[data-kind="aov"] .wf{border-color:var(--teal);box-shadow:inset 0 0 0 3px var(--teal-soft)}
+
+/* wf elements */
+.e-bar{height:9px;border-radius:2px;background:var(--line)}
+.e-bar.h{height:14px;background:var(--ink-2)}
+.e-bar.h2{height:11px;background:var(--ink-2);opacity:.8}
+.e-sub{height:8px;background:var(--line);width:80%}
+.e-lines{display:flex;flex-direction:column;gap:5px}
+.e-lines i{height:6px;background:var(--line-soft);border-radius:2px;display:block}
+.e-img{border:1.5px dashed var(--line);border-radius:2px;height:46px;position:relative;background:
+  repeating-linear-gradient(45deg,transparent,transparent 7px,var(--line-soft) 7px,var(--line-soft) 8px)}
+.e-img.play::after{content:"";position:absolute;inset:0;margin:auto;width:0;height:0;
+  border-left:14px solid var(--ink-2);border-top:9px solid transparent;border-bottom:9px solid transparent}
+.e-btn{height:22px;border-radius:3px;background:var(--red);width:62%}
+.e-btn.tealbtn{background:var(--teal);width:55%}
+.e-ghost{height:20px;border-radius:3px;border:1.5px solid var(--line);width:46%}
+.e-badge{display:flex;gap:6px}
+.e-badge span{height:13px;width:34px;border-radius:2px;border:1.5px solid var(--line);background:#fff}
+.e-stars{display:flex;gap:4px;align-items:center}
+.e-stars i{width:11px;height:11px;background:var(--ink-2);border-radius:1px;display:block;
+  clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.e-stars b{height:7px;width:46px;background:var(--line);border-radius:2px;margin-left:4px}
+.e-chips{display:flex;gap:5px;flex-wrap:wrap}
+.e-chips span{height:15px;width:48px;border-radius:8px;border:1.5px solid var(--line);background:#fff}
+.e-steps{display:flex;gap:7px}
+.e-steps span{flex:1;height:30px;border:1.5px solid var(--line);border-radius:2px;background:#fff;position:relative}
+.e-steps span::before{content:"";position:absolute;top:5px;left:5px;width:9px;height:9px;border-radius:50%;background:var(--line)}
+.e-field{height:24px;border:1.5px solid var(--line);border-radius:2px;background:#fff}
+.e-fields2{display:flex;gap:7px}
+.e-fields2 i{flex:1;height:24px;border:1.5px solid var(--line);border-radius:2px;background:#fff;display:block}
+.e-sum{border:1.5px solid var(--line);border-radius:2px;padding:8px;display:flex;flex-direction:column;gap:5px;background:#fff}
+.e-sum .r{display:flex;justify-content:space-between}
+.e-sum .r i{height:7px;background:var(--line-soft);border-radius:2px;display:block}
+.e-price{display:flex;align-items:baseline;gap:9px}
+.e-price b{height:20px;width:64px;background:var(--ink);border-radius:2px;display:block}
+.e-price s{height:8px;width:40px;background:var(--line);border-radius:2px;display:block;position:relative}
+.e-check{display:flex;gap:9px;align-items:flex-start;border:1.5px solid var(--teal);border-radius:3px;padding:9px;background:#fff}
+.e-check .box{width:16px;height:16px;border:2px solid var(--teal);border-radius:3px;flex:none;margin-top:1px}
+.e-check .tx{flex:1;display:flex;flex-direction:column;gap:5px}
+.e-check .tx i{height:7px;background:var(--line-soft);border-radius:2px;display:block}
+.e-accord{display:flex;flex-direction:column;gap:5px}
+.e-accord span{height:17px;border:1.5px solid var(--line);border-radius:2px;background:#fff;position:relative}
+.e-accord span::after{content:"+";position:absolute;right:7px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:var(--mono);font-size:13px}
+.e-eyebrow{height:11px;width:42%;background:var(--line);border-radius:6px}
+
+/* annotation column */
+.ann{padding:12px 4px 12px 20px;border-left:1.5px dashed var(--line-soft);align-self:stretch}
+.ann .tag{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-2);display:inline-flex;align-items:center;gap:8px;margin-bottom:5px}
+.ann .tag .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-2)}
+.block[data-kind="cta"] .ann .tag{color:var(--red)} .block[data-kind="cta"] .tag .dot{background:var(--red)}
+.block[data-kind="aov"] .ann .tag{color:var(--teal)} .block[data-kind="aov"] .tag .dot{background:var(--teal)}
+.ann h3{margin:0 0 5px;font-size:18px;font-weight:600;letter-spacing:-.01em}
+.ann .purpose{margin:0 0 11px;color:var(--ink-2);font-size:14px;line-height:1.5;max-width:54ch}
+.ann ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.ann li{font-family:var(--mono);font-size:12px;color:var(--ink);padding-left:16px;position:relative;line-height:1.45}
+.ann li::before{content:"—";position:absolute;left:0;color:var(--line);font-weight:600}
+.block[data-kind="cta"] .ann li::before{color:var(--red)}
+.block[data-kind="aov"] .ann li::before{color:var(--teal)}
+
+.foot{margin-top:40px;border-top:1.5px solid var(--ink);padding-top:18px;
+  font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.7;max-width:80ch}
+.foot b{color:var(--ink-2)}
+
+@media (max-width:760px){
+  .phead .body{grid-template-columns:1fr}
+  .meta{border-left:none;border-top:1.5px dashed var(--line);padding-left:0;padding-top:16px}
+  .block{grid-template-columns:40px 1fr}
+  .wfwrap{grid-column:2;padding:8px 0 4px}
+  .ann{grid-column:2;border-left:none;padding:0 0 16px}
+  .num{width:30px;height:30px;font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.block{opacity:0;transform:translateY(10px)}
+.block.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
+
+@media print{
+  body{background:#fff}
+  .topbar,.print,.legend{display:none}
+  .page{display:block!important;page-break-before:always}
+  .page:first-of-type{page-break-before:avoid}
+  .block{opacity:1!important;transform:none!important}
+}
+</style>
+
+<div class="topbar">
+  <div class="inner">
+    <div class="brand"><span class="k">Reusable build reference</span><span class="t">Funnel Page Blueprints</span></div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <button class="print" onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="legend">
+    <span class="sw"><span class="chip red"></span> Primary CTA — the load-bearing block. Every page has exactly one job; this is it.</span>
+    <span class="sw"><span class="chip teal"></span> Revenue / AOV lever — order bumps, upsells, referrals.</span>
+    <span class="sw"><span class="chip neu"></span> Supporting block.</span>
+  </div>
+  <div id="pages"></div>
+  <div class="foot">
+    <b>How to use:</b> follow the stack top-to-bottom as your build order for each page. Numbers = scroll order. The red block is the one element the page lives or dies on — build everything else to push toward it.<br>
+    <b>Source:</b> original build reference for info-product funnels. Block logic adapted from the E-commerce CRO Checklist by Jaka Šmid (conversion.design); not the original product, and not for resale of that checklist.
+  </div>
+</div>
+
+<script>
+const PAGES = [
+ { id:"sales", tab:"Sales Page",
+   eyebrow:"Funnel stage 01", title:"Sales Page",
+   job:"Take cold-ish traffic and earn one click to the order page. Long-form, single column. Every block pushes toward the buy CTA.",
+   meta:[["Layout","Long-form · single column"],["Traffic in","Ads · email · organic"],["Goal","Click → Order Page"]],
+   blocks:[
+    {k:"neu",tag:"Pre-head",name:"Announcement / qualifier bar",purpose:"Optional. Frame who it's for, or run a site-wide offer to set context before the hero.",wf:["eyebrow"],musts:["Audience qualifier OR offer","One line only","No nav links"]},
+    {k:"cta",tag:"Hero",name:"Above-the-fold promise + first CTA",purpose:"The 5-second test. State the core outcome, prove it's credible, and give the first way to buy.",wf:["headline","sub","video","cta","badge"],musts:["Outcome headline","Power-word subhead","Hero visual or VSL","Primary CTA","Micro-trust: rating / 'as featured in'"]},
+    {k:"neu",tag:"Problem",name:"Agitate the pain",purpose:"Name the problem and the cost of staying stuck so the offer feels necessary, not optional.",wf:["headline2","lines"],musts:["Name the core pain","Cost of inaction","Use the reader's own words"]},
+    {k:"neu",tag:"Mechanism",name:"Solution / how it works",purpose:"Bridge from problem to offer. Show the path in roughly three simple steps.",wf:["headline2","steps","lines"],musts:["Name the method","3-step how-it-works","Why it's different"]},
+    {k:"neu",tag:"Offer stack",name:"What's included",purpose:"Lay out every deliverable, module and bonus, with value anchoring against the price.",wf:["headline2","chips","img"],musts:["Modules / deliverables","Bonuses","A visual for each","Value stack vs price"]},
+    {k:"neu",tag:"Proof",name:"Social proof",purpose:"Concrete, specific proof beats claims. Lead with faces, names and numbers.",wf:["headline2","stars","img","lines"],musts:["Testimonial: photo + name + result","Star / aggregate rating","Screenshots or video","Customer count"]},
+    {k:"neu",tag:"Authority",name:"Founder / credibility",purpose:"Why trust the person behind this. Story and mission build the connection proof can't.",wf:["img","headline2","lines"],musts:["Founder face","Relevant credentials","Story / mission"]},
+    {k:"neu",tag:"Outcomes",name:"Benefit-led transformation",purpose:"Translate features into the after-state. Show the before → after explicitly.",wf:["headline2","lines","lines"],musts:["Benefit bullets (not features)","Before / after framing","Tie back to the promise"]},
+    {k:"cta",tag:"Pricing + CTA",name:"The offer & buy button",purpose:"Anchor the price, stack reassurance, strip the last friction, ask for the sale.",wf:["price","cta","badge"],musts:["Anchored price (value vs cost)","Primary CTA","Guarantee beside the button","Express pay options","Urgency / scarcity"]},
+    {k:"neu",tag:"Risk reversal",name:"Guarantee",purpose:"Make the decision safe. Reverse the risk explicitly and visibly.",wf:["headline2","lines"],musts:["Money-back terms","What happens if it doesn't work","Visually distinct / boxed"]},
+    {k:"neu",tag:"FAQ",name:"Objection handling",purpose:"Pre-empt the top reasons not to buy before they become exit clicks.",wf:["headline2","accordion"],musts:["Top 5–8 objections","Honest answers","Link back to the CTA"]},
+    {k:"cta",tag:"Close",name:"Final CTA",purpose:"Recap the promise, add urgency, give the last chance to act. No leaks out.",wf:["headline2","cta"],musts:["Restate the core promise","Urgency / deadline","Primary CTA","No nav / footer links"]},
+   ]},
+ { id:"order", tab:"Order Page",
+   eyebrow:"Funnel stage 02", title:"Order Page",
+   job:"Convert intent into payment with the least possible friction. Typically two columns: form on the left, sticky order summary on the right.",
+   meta:[["Layout","2-column · form + sticky summary"],["Traffic in","Sales Page CTA"],["Goal","Complete purchase"]],
+   blocks:[
+    {k:"neu",tag:"Header",name:"Minimal secure header",purpose:"Strip distractions, signal security, remove every exit from the page.",wf:["badge"],musts:["Logo (non-clickable)","Security badge","No nav menu"]},
+    {k:"neu",tag:"Order summary",name:"What they're buying (right col / sticky)",purpose:"Reassure them exactly what and how much, before they hand over a card.",wf:["sum"],musts:["Item + price","Savings shown","Sticky on scroll"]},
+    {k:"neu",tag:"Contact",name:"Email-first contact fields",purpose:"Capture email first so abandoners are recoverable. Minimum fields only.",wf:["field","fields2"],musts:["Email field first","Name","Fewest fields possible"]},
+    {k:"neu",tag:"Payment",name:"Payment details",purpose:"Make paying effortless and obviously trustworthy.",wf:["fields2","field","badge"],musts:["Card fields on gray background","CVV hint","Express pay (PayPal / Apple / Google)","Installments if high-ticket"]},
+    {k:"aov",tag:"Order bump",name:"One-checkbox add-on",purpose:"The highest-ROI AOV lever in the funnel. A single low-cost yes, no new checkout.",wf:["check"],musts:["Checkbox add-on","Clear benefit","Small price (under ~$X)","Light urgency line"]},
+    {k:"neu",tag:"Reassurance",name:"Risk + security strip",purpose:"Put last-second confidence right next to the button.",wf:["lines","badge"],musts:["Guarantee restated","'Secure checkout' + lock","Support contact"]},
+    {k:"cta",tag:"Primary CTA",name:"Complete order button",purpose:"One prominent action that states exactly what happens when clicked.",wf:["cta"],musts:["'Complete secure order' + lock","Most prominent element","Says what happens next"]},
+    {k:"neu",tag:"Footer",name:"Minimal trust footer",purpose:"Trust signals without giving them anywhere to wander off to.",wf:["badge"],musts:["Trust badges","Support + privacy link","No distracting links"]},
+   ]},
+ { id:"upsell", tab:"Upsell Page",
+   eyebrow:"Funnel stage 03", title:"Upsell Page",
+   job:"After payment, add one complementary offer in a single click. Fast, single column, no second checkout. Honesty protects the win you already have.",
+   meta:[["Layout","Single column · fast"],["Traffic in","Immediately post-order"],["Goal","One-click add to order"]],
+   blocks:[
+    {k:"neu",tag:"Continuity",name:"'Order not finished' bar",purpose:"Signal the order isn't done yet — this is a step, not a brand-new pitch.",wf:["eyebrow","headline2"],musts:["'Wait — your order isn't complete'","Step indicator (e.g. 2 of 3)","Don't make them feel tricked"]},
+    {k:"aov",tag:"Offer hero",name:"One-time offer headline",purpose:"Lead with the new outcome and the one-time framing.",wf:["headline","sub"],musts:["New-outcome headline","'One-time offer' framing","State it's added to the existing order"]},
+    {k:"neu",tag:"Offer detail",name:"What it is / why it fits",purpose:"Explain the add-on and why it complements what they just bought.",wf:["lines","chips","img"],musts:["What's included","Why it complements the purchase","Benefit-led copy"]},
+    {k:"neu",tag:"Proof",name:"Upsell-specific proof",purpose:"Proof tied to this offer, not the main product. Keep it short.",wf:["stars","lines"],musts:["Result specific to this add-on","Scannable in seconds"]},
+    {k:"aov",tag:"Price anchor",name:"One-time price vs standalone",purpose:"Show the deal they only get on this page, right now.",wf:["price"],musts:["Discounted one-time price","Struck standalone price","Clarity on the new total"]},
+    {k:"cta",tag:"Accept",name:"One-click add CTA",purpose:"Add to the order in one click — no re-entering payment details.",wf:["cta"],musts:["'Yes, add this to my order'","True one-click (no second checkout)","Most prominent element"]},
+    {k:"neu",tag:"Decline",name:"Honest pass link",purpose:"A clear, low-friction no. Guilt copy here erodes the trust you just earned.",wf:["ghost"],musts:["'No thanks, I'll pass'","Lower visual weight than accept","Honest — no manipulation"]},
+    {k:"neu",tag:"Urgency",name:"Won't-show-again note",purpose:"Reinforce the genuine one-time nature of the offer.",wf:["eyebrow"],musts:["'This offer won't be shown again'","Keep it true"]},
+   ]},
+ { id:"thanks", tab:"Thank You",
+   eyebrow:"Funnel stage 04", title:"Thank You Page",
+   job:"Confirm the purchase, deliver access, set next steps, and reduce buyer's remorse. One optional last revenue lever at the bottom.",
+   meta:[["Layout","Single column"],["Traffic in","After final step"],["Goal","Confirm · deliver · onboard"]],
+   blocks:[
+    {k:"neu",tag:"Confirmation",name:"Success + congrats hero",purpose:"Confirm it worked and make them feel good about the decision.",wf:["headline","sub","badge"],musts:["'You're in!' / order confirmed","Congratulate the buyer","Order reference"]},
+    {k:"cta",tag:"Access",name:"How & when to get it + primary action",purpose:"The most important block: get them to the product they just bought.",wf:["lines","cta"],musts:["Access method + timing","Primary action ('Access now')","'Check your email — and spam'"]},
+    {k:"neu",tag:"Summary",name:"Order recap",purpose:"Restate exactly what they bought, plus the receipt note.",wf:["sum"],musts:["Itemized recap","Receipt-in-email note"]},
+    {k:"neu",tag:"Onboarding",name:"What happens next",purpose:"Set expectations and head off buyer's remorse before it starts.",wf:["steps","lines"],musts:["Getting-started steps","What to expect and when"]},
+    {k:"neu",tag:"Support",name:"Get help",purpose:"Make help obvious to cut refunds and support tickets.",wf:["lines"],musts:["Support contact","'Where do I start?' link"]},
+    {k:"aov",tag:"Referral / AOV",name:"Coupon or share prompt",purpose:"Optional last lever: a next-purchase coupon or a referral nudge.",wf:["chips","cta2"],musts:["Next-purchase coupon OR share prompt","Combined-order follow-up offer","Keep it light — don't undercut the win"]},
+   ]},
+];
+
+const EL = {
+  eyebrow:()=>`<div class="e-eyebrow"></div>`,
+  headline:()=>`<div class="e-bar h"></div>`,
+  headline2:()=>`<div class="e-bar h2" style="width:70%"></div>`,
+  sub:()=>`<div class="e-sub"></div>`,
+  lines:()=>`<div class="e-lines"><i style="width:100%"></i><i style="width:92%"></i><i style="width:76%"></i></div>`,
+  img:()=>`<div class="e-img"></div>`,
+  video:()=>`<div class="e-img play"></div>`,
+  cta:()=>`<div class="e-btn"></div>`,
+  cta2:()=>`<div class="e-btn tealbtn"></div>`,
+  ghost:()=>`<div class="e-ghost"></div>`,
+  badge:()=>`<div class="e-badge"><span></span><span></span><span></span></div>`,
+  stars:()=>`<div class="e-stars"><i></i><i></i><i></i><i></i><i></i><b></b></div>`,
+  chips:()=>`<div class="e-chips"><span></span><span></span><span></span><span></span></div>`,
+  steps:()=>`<div class="e-steps"><span></span><span></span><span></span></div>`,
+  field:()=>`<div class="e-field"></div>`,
+  fields2:()=>`<div class="e-fields2"><i></i><i></i></div>`,
+  sum:()=>`<div class="e-sum"><div class="r"><i style="width:46%"></i><i style="width:20%"></i></div><div class="r"><i style="width:34%"></i><i style="width:16%"></i></div><div class="r"><i style="width:52%;height:9px;background:var(--ink-2)"></i><i style="width:24%;height:9px;background:var(--ink-2)"></i></div></div>`,
+  price:()=>`<div class="e-price"><b></b><s></s></div>`,
+  check:()=>`<div class="e-check"><div class="box"></div><div class="tx"><i style="width:80%"></i><i style="width:60%"></i></div></div>`,
+  accordion:()=>`<div class="e-accord"><span></span><span></span><span></span></div>`,
+};
+
+function blockHTML(b,i){
+  const wf = b.wf.map(t=>EL[t]?EL[t]():"").join("");
+  const musts = b.musts.map(m=>`<li>${m}</li>`).join("");
+  const num = String(i+1).padStart(2,"0");
+  return `<div class="block" data-kind="${b.k}">
+    <div class="axis"><div class="num">${num}</div></div>
+    <div class="wfwrap"><div class="wf">${wf}</div></div>
+    <div class="ann">
+      <span class="tag"><span class="dot"></span>${b.tag}</span>
+      <h3>${b.name}</h3>
+      <p class="purpose">${b.purpose}</p>
+      <ul>${musts}</ul>
+    </div>
+  </div>`;
+}
+
+function pageHTML(p){
+  const meta = p.meta.map(m=>`<div class="row"><span class="lab">${m[0]}</span><span class="val ${m[0]==='Traffic in'?'flow':''}">${m[1]}</span></div>`).join("");
+  const blocks = p.blocks.map((b,i)=>blockHTML(b,i)).join("");
+  return `<section class="page" id="page-${p.id}" role="tabpanel">
+    <div class="phead"><div class="bar"></div><div class="body">
+      <div><p class="eyebrow">${p.eyebrow} · ${p.blocks.length} blocks</p><h1>${p.title}</h1><p class="job">${p.job}</p></div>
+      <div class="meta">${meta}</div>
+    </div></div>
+    <div class="blueprint">${blocks}</div>
+  </section>`;
+}
+
+document.getElementById("pages").innerHTML = PAGES.map(pageHTML).join("");
+document.getElementById("tabs").innerHTML = PAGES.map((p,i)=>
+  `<button class="tab" role="tab" data-id="${p.id}" aria-selected="${i===0}"><span class="n">0${i+1}</span>${p.tab}</button>`).join("");
+
+const io = new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.12});
+function activate(id){
+  document.querySelectorAll(".page").forEach(s=>s.classList.toggle("active",s.id==="page-"+id));
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.id===id));
+  const blocks=document.querySelectorAll("#page-"+id+" .block");
+  blocks.forEach((b,i)=>{b.classList.remove("in");b.style.transitionDelay=(i*45)+"ms";io.observe(b);});
+  window.scrollTo({top:0,behavior:"instant"});
+}
+document.getElementById("tabs").addEventListener("click",e=>{const t=e.target.closest(".tab");if(t)activate(t.dataset.id);});
+activate(PAGES[0].id);
+</script>

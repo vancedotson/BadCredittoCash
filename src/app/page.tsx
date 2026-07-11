@@ -5,13 +5,12 @@ import { Reframe } from "@/components/marketing/reframe/Reframe";
 import { ReframeZigzag } from "@/components/marketing/reframe/ReframeZigzag";
 import { MeetDossier } from "@/components/marketing/meetvance/MeetDossier";
 import { HorizRail } from "@/components/marketing/mechanism/HorizRail";
-import { ProofDiscLibrary } from "@/components/marketing/proofcalls/ProofDiscLibrary";
-import { ProofResults } from "@/components/marketing/ProofResults";
-import { Testimonials } from "@/components/marketing/Testimonials";
-import { HowItWorks } from "@/components/marketing/HowItWorks";
-import { ObjectionCrusher } from "@/components/marketing/ObjectionCrusher";
-import { RiskReversal } from "@/components/marketing/RiskReversal";
-import { HonestUrgency } from "@/components/marketing/HonestUrgency";
+import { ProofLibrary } from "@/components/marketing/proofcalls/ProofLibrary";
+import { ResultsBoldLedger } from "@/components/marketing/proofresults/ResultsBoldLedger";
+import { TestiMarquee } from "@/components/marketing/testimonials/TestiMarquee";
+import { StepsPoster } from "@/components/marketing/howitworks/StepsPoster";
+import { FaqAccordion } from "@/components/marketing/faq/FaqAccordion";
+import { RiskStatement } from "@/components/marketing/riskreversal/RiskStatement";
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { Footer } from "@/components/marketing/Footer";
 import { StickyCta } from "@/components/marketing/StickyCta";
@@ -34,13 +33,12 @@ export default function Home() {
         <ReframeZigzag />
         <MeetDossier />
         <HorizRail />
-        <ProofDiscLibrary />
-        <ProofResults />
-        <Testimonials />
-        <HowItWorks />
-        <ObjectionCrusher />
-        <RiskReversal />
-        <HonestUrgency />
+        <ProofLibrary />
+        <ResultsBoldLedger />
+        <TestiMarquee />
+        <StepsPoster />
+        <FaqAccordion />
+        <RiskStatement />
         <FinalCta />
       </main>
       <Footer />

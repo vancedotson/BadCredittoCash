@@ -12,10 +12,13 @@ export function Waveform({
   playedClass,
   baseClass,
   className,
+  progress = 0.4,
 }: {
   playedClass: string;
   baseClass: string;
   className?: string;
+  /** Fraction of bars shown as "played" (0–1). Drive this to animate playback. */
+  progress?: number;
 }) {
   return (
     <div aria-hidden className={`flex items-center gap-[2px] ${className ?? ""}`}>
@@ -23,7 +26,7 @@ export function Waveform({
         <span
           key={i}
           className={`flex-1 rounded-full ${
-            i < BARS.length * 0.4 ? playedClass : baseClass
+            i < BARS.length * progress ? playedClass : baseClass
           }`}
           style={{ height: `${h}px` }}
         />

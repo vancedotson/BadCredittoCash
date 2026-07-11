@@ -148,6 +148,39 @@
   }
 }
 
+/* Testimonial ticker — a horizontal marquee of cards (track rendered twice). */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Flyout popover — a small card that fades/slides out to the right of a row. */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* "Now playing" equalizer — bars bounce to fake live audio on the active row. */
+@keyframes equalize {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
 /* Mechanism rail — a bright pulse that travels along the connector after it
    has drawn, keeping the left-to-right flow alive between the step dots. */
 @keyframes railPulse {

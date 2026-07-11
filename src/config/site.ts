@@ -196,12 +196,13 @@ export const site = {
   proofResults: {
     heading: "What that looks like in real life:",
     // ⚠️ Confirm each with Vance; keep the disclaimer visible in the same viewport.
+    // Re-captioned from documented outcomes — { item challenged, outcome }.
     results: [
-      "A bankruptcy and two medical collections — challenged and removed.",
-      "Three student loans — challenged and removed.",
-      "A five-item cleanup incl. a foreclosure, repo, judgment and charge-offs.",
-      "An eight-collection removal.",
-      'A foreclosure updated to "paid as agreed."',
+      { item: "Bankruptcy + 2 medical collections", outcome: "Removed" },
+      { item: "3 student loans", outcome: "Removed" },
+      { item: "Foreclosure, repo, judgment & charge-offs", outcome: "Removed" },
+      { item: "8 collection accounts", outcome: "Removed" },
+      { item: "Foreclosure", outcome: "Paid as agreed" },
     ],
     disclaimer:
       "Results vary and are not guaranteed. Past outcomes don't promise future results. Every case is different.",
@@ -213,6 +214,9 @@ export const site = {
     items: [
       { quote: "They stopped calling within a week.", name: "Client, OKC ⚠️" },
       { quote: "I didn't think it was real. It was.", name: "Client, OKC ⚠️" },
+      // ⚠️ PLACEHOLDER — swap in real quotes + names/permission.
+      { quote: "For the first time in years, I could breathe.", name: "Client, OKC ⚠️" },
+      { quote: "The calls stopped. So did the stress.", name: "Client, OKC ⚠️" },
     ],
   },
 
