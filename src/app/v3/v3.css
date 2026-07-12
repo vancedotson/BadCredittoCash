@@ -603,6 +603,478 @@
   }
 }
 
+/* v4 how-it-works — connector rails that draw on scroll-reveal */
+.v4-hiw-railline {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s;
+}
+.v4-hiw-railline.in {
+  transform: scaleX(1);
+}
+.v4-hiw-vrailfill {
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+.v4-hiw-vrailfill.in {
+  transform: scaleY(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-hiw-railline,
+  .v4-hiw-vrailfill {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* v4 testimonials — spotlight wall (dim siblings, pop the hovered card) +
+   ticker outline text. */
+.v4-testi-card {
+  transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.v4-testi-spot:hover .v4-testi-card {
+  opacity: 0.4;
+}
+.v4-testi-spot .v4-testi-card:hover {
+  opacity: 1 !important;
+  transform: translateY(-8px) rotate(0deg) scale(1.02) !important;
+  border-color: var(--v3-accent);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5),
+    0 0 44px color-mix(in srgb, var(--v3-accent) 15%, transparent);
+  z-index: 2;
+}
+.v4-testi-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--v3-line);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-testi-card {
+    transition: none;
+  }
+}
+
+/* v4 mechanism — per-stage background image, barely visible, blended into the
+   page (grayscale + very low opacity + edge fade) so it just tints the scene. */
+.v4-mech-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  filter: grayscale(1) contrast(1.1) brightness(0.7);
+  mask-image: radial-gradient(ellipse 82% 74% at 50% 48%, #000 18%, transparent 86%);
+}
+
+/* v4 evidence locker — hide the scrollbar (navigated with the buttons below) */
+.v4-locker-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.v4-locker-scroll::-webkit-scrollbar {
+  display: none;
+}
+/* faint background audio wave that plays across the whole section */
+.v4-locker-wave,
+.v4-locker-wave-reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  padding-inline: 4%;
+  pointer-events: none;
+  overflow: hidden;
+}
+.v4-locker-wave {
+  opacity: 0.028;
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+/* the coloured wave only shows inside a big, very soft circle around the cursor
+   — heavily blurred into a faint glow, revealing just a hint of the wave. */
+.v4-locker-wave-reveal {
+  opacity: 0.28;
+  filter: blur(7px);
+  -webkit-mask-image: radial-gradient(
+    circle 360px at var(--mx, -9999px) var(--my, -9999px),
+    #000 0%,
+    transparent 68%
+  );
+  mask-image: radial-gradient(
+    circle 360px at var(--mx, -9999px) var(--my, -9999px),
+    #000 0%,
+    transparent 68%
+  );
+}
+.v4-locker-wave i,
+.v4-locker-wave-reveal i {
+  flex: 1 1 0;
+  min-width: 2px;
+  border-radius: 2px;
+  transform-origin: center;
+  animation-name: equalize;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.v4-locker-wave i {
+  background: var(--v3-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-locker-wave i,
+  .v4-locker-wave-reveal i {
+    animation: none;
+  }
+}
+
+/* v4 "Pain" rows — hover/focus expands the row, fades in a background image
+   (behind a dark overlay for legibility), and reveals a storytelling paragraph. */
+.v4-pain-row {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--v3-line-soft);
+  outline: none;
+}
+.v4-pain-row:last-of-type {
+  border-bottom: 1px solid var(--v3-line-soft);
+}
+.v4-pain-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1.08);
+  transition: opacity 0.55s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.v4-pain-row:hover .v4-pain-bg,
+.v4-pain-row:focus-within .v4-pain-bg {
+  opacity: 1;
+  transform: scale(1);
+}
+.v4-pain-body {
+  position: relative;
+  z-index: 2;
+  padding: 22px clamp(16px, 3vw, 34px);
+  transition: padding 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v4-pain-row:hover .v4-pain-body,
+.v4-pain-row:focus-within .v4-pain-body {
+  padding-top: 30px;
+  padding-bottom: 34px;
+}
+.v4-pain-num {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--v3-faint);
+  transition: color 0.3s ease;
+}
+.v4-pain-row:hover .v4-pain-num,
+.v4-pain-row:focus-within .v4-pain-num {
+  color: var(--v3-accent);
+}
+.v4-pain-point {
+  font-size: clamp(17px, 2.4vw, 23px);
+  line-height: 1.4;
+  color: var(--v3-ink);
+}
+.v4-pain-detail {
+  max-width: 640px;
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.4s ease, margin-top 0.4s ease;
+}
+.v4-pain-row:hover .v4-pain-detail,
+.v4-pain-row:focus-within .v4-pain-detail {
+  max-height: 260px;
+  margin-top: 14px;
+  opacity: 1;
+}
+.v4-pain-para {
+  color: var(--v3-mut);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.v4-pain-meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  max-width: 440px;
+}
+.v4-pain-meter-cap {
+  flex: 0 0 auto;
+  font-family: var(--v3-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--v3-faint);
+}
+.v4-pain-meter-track {
+  position: relative;
+  flex: 1 1 auto;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f2c94c, #f2994a 52%, #e5484d);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+.v4-pain-meter-cover {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: #0e0e12;
+}
+.v4-pain-meter-word {
+  flex: 0 0 auto;
+  font-family: var(--v3-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.v4-pain-row:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--v3-accent) 55%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-pain-bg,
+  .v4-pain-body,
+  .v4-pain-detail,
+  .v4-pain-num {
+    transition: none;
+  }
+}
+@media (max-width: 760px) {
+  /* touch has no hover — show each detail + a subtle image by default */
+  .v4-pain-detail {
+    max-height: 320px;
+    margin-top: 12px;
+    opacity: 1;
+  }
+  .v4-pain-bg {
+    opacity: 0.4;
+    transform: none;
+  }
+}
+
+/* v4 "Statute" (reframe gather) — drifting smoke + a fine line pattern behind
+   the gathering words, and a neon underline/glitch on "your side" once settled. */
+.v4-reframe-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* Reveal the imagery only in the center; fade fully to the page canvas at the
+     edges so the section blends seamlessly into the ones above and below. */
+  -webkit-mask-image: radial-gradient(
+    ellipse 78% 68% at 50% 46%,
+    #000 0%,
+    #000 22%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    ellipse 78% 68% at 50% 46%,
+    #000 0%,
+    #000 22%,
+    transparent 72%
+  );
+}
+.v4-reframe-img {
+  position: absolute;
+  inset: 0;
+  /* Oklahoma City skyline under a strong dark overlay (a little reveal only) */
+  background: linear-gradient(rgba(6, 6, 7, 0.78), rgba(6, 6, 7, 0.78)),
+    url("/oklahoma-night.png") center / cover no-repeat;
+  filter: grayscale(0.25) contrast(1.05);
+}
+.v4-reframe-smoke {
+  position: absolute;
+  inset: -12%;
+  background: url("/v3/tex-fog.jpg") center / cover no-repeat;
+  filter: grayscale(1) contrast(1.15) brightness(0.9);
+  opacity: 0.1;
+  mix-blend-mode: screen;
+  animation: v4Smoke 34s ease-in-out infinite alternate;
+}
+.v4-reframe-smoke.two {
+  inset: -18%;
+  opacity: 0.07;
+  filter: grayscale(1) contrast(1.1) brightness(0.8) blur(3px);
+  animation-duration: 46s;
+  animation-direction: alternate-reverse;
+}
+.v4-reframe-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 5px,
+    rgba(255, 255, 255, 0.04) 5px 6px
+  );
+  opacity: 0.7;
+}
+.v4-reframe-glow {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(70vw, 900px);
+  height: min(46vh, 420px);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--v3-accent) 9%, transparent),
+    transparent 70%
+  );
+  filter: blur(10px);
+}
+@keyframes v4Smoke {
+  from {
+    transform: translate3d(-2%, 1%, 0) scale(1.08);
+  }
+  to {
+    transform: translate3d(3%, -2%, 0) scale(1.2);
+  }
+}
+
+/* left→right color wipe: the opening statute sentence turns from muted to white
+   (fires when the paragraph's reveal wrapper scrolls into view). */
+.v4-highlight {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  background-image: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #ffffff 50%,
+    var(--v3-mut) 50%,
+    var(--v3-mut) 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  transition: background-position 1.15s cubic-bezier(0.33, 0, 0.2, 1) 0.2s;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.v3-reveal.in .v4-highlight {
+  background-position: 0% 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-highlight {
+    transition: none;
+    background-position: 0% 0;
+  }
+}
+
+/* finalizing subheadline — fades in just after the words settle */
+.v4-reframe-sub {
+  margin-top: clamp(22px, 3.4vh, 44px);
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: clamp(18px, 2.6vw, 28px);
+  line-height: 1.4;
+  color: var(--v3-mut);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.7s ease 0.4s,
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.4s;
+}
+.v4-reframe-sub.in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-reframe-sub {
+    transition: none;
+  }
+}
+
+/* neon "your side" — activates when the gather is `.settled` */
+.v4-gather-neon {
+  position: relative;
+  color: var(--v3-ink);
+  transition: color 0.45s ease, text-shadow 0.45s ease;
+}
+.v3-gather.settled .v4-gather-neon {
+  color: var(--v3-accent);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--v3-accent) 60%, transparent),
+    0 0 22px color-mix(in srgb, var(--v3-accent) 32%, transparent);
+  animation: v4NeonGlitch 3.4s steps(1, end) 0.5s infinite;
+}
+.v3-gather.settled .v4-gather-neon::after {
+  content: "";
+  position: absolute;
+  left: 0.04em;
+  right: 0.04em;
+  bottom: -0.04em;
+  height: 0.08em;
+  background: var(--v3-accent);
+  box-shadow: 0 0 8px var(--v3-accent),
+    0 0 18px color-mix(in srgb, var(--v3-accent) 55%, transparent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: v4NeonUnderline 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
+}
+@keyframes v4NeonUnderline {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes v4NeonGlitch {
+  0%,
+  88%,
+  100% {
+    transform: none;
+    opacity: 1;
+    text-shadow: 0 0 8px color-mix(in srgb, var(--v3-accent) 60%, transparent),
+      0 0 22px color-mix(in srgb, var(--v3-accent) 32%, transparent);
+  }
+  89% {
+    transform: translate(-2px, 1px);
+    text-shadow: -2px 0 rgba(120, 225, 255, 0.85), 2px 0 var(--v3-accent);
+  }
+  90% {
+    transform: translate(2px, -1px);
+    opacity: 0.9;
+  }
+  91% {
+    transform: translate(-1px, 0);
+    text-shadow: 2px 0 rgba(120, 225, 255, 0.85), -2px 0 var(--v3-accent);
+  }
+  92% {
+    transform: none;
+    opacity: 1;
+  }
+  94% {
+    opacity: 0.72;
+  }
+  95% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-reframe-smoke {
+    animation: none;
+  }
+  .v3-gather.settled .v4-gather-neon {
+    animation: none;
+  }
+  .v3-gather.settled .v4-gather-neon::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
 /* Page switcher ------------------------------------------------------------ */
 .v3-switcher {
   position: fixed;
