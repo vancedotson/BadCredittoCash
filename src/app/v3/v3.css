@@ -1,0 +1,749 @@
+/* ============================================================================
+   v3 — "Evidence Room" stylesheet.
+   Route-scoped: imported by src/app/v3/page.tsx only. EVERYTHING is namespaced
+   under `.v3` so it can never leak into the live / or /v2 pages (which share
+   the same root layout). Per-variant accents flip via `.v3[data-variant=...]`.
+   Dark-only by design — does not depend on the site's data-theme.
+   ============================================================================ */
+
+.v3 {
+  /* palette (Case File defaults; overridden per variant below) */
+  --v3-bg: #060607;
+  --v3-bg2: #0b0c0e;
+  --v3-panel: rgba(255, 255, 255, 0.04);
+  --v3-panel-2: rgba(255, 255, 255, 0.06);
+  --v3-line: rgba(255, 255, 255, 0.12);
+  --v3-line-soft: rgba(255, 255, 255, 0.07);
+  --v3-ink: #f4f1ea;
+  --v3-mut: rgba(244, 241, 234, 0.62);
+  --v3-faint: rgba(244, 241, 234, 0.36);
+  --v3-accent: #f2a93b; /* justice gold */
+  --v3-accent-deep: #d98e1f;
+  --v3-accent-2: #f2a93b;
+  --v3-cream: #e8e2d2;
+  --v3-danger: #d8563f;
+  --v3-mono: ui-monospace, "SF Mono", "SFMono-Regular", "Menlo", "Consolas",
+    monospace;
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--v3-bg);
+  color: var(--v3-ink);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+/* Variant accents ---------------------------------------------------------- */
+.v3[data-variant="signalroom"] {
+  --v3-bg: #04070a;
+  --v3-bg2: #060c10;
+  --v3-ink: #eaf3ee;
+  --v3-mut: rgba(234, 243, 238, 0.6);
+  --v3-faint: rgba(234, 243, 238, 0.34);
+  --v3-accent: #34e2a0; /* phosphor green */
+  --v3-accent-deep: #1fbf83;
+  --v3-accent-2: #f2a93b; /* gold secondary */
+  --v3-line: rgba(120, 230, 190, 0.16);
+  --v3-line-soft: rgba(120, 230, 190, 0.09);
+}
+.v3[data-variant="ledger"] {
+  --v3-bg: #000000;
+  --v3-bg2: #050505;
+  --v3-ink: #ffffff;
+  --v3-mut: rgba(255, 255, 255, 0.6);
+  --v3-faint: rgba(255, 255, 255, 0.32);
+  --v3-accent: #f2a93b;
+  --v3-accent-deep: #d98e1f;
+  --v3-accent-2: #f2a93b;
+  --v3-line: rgba(255, 255, 255, 0.16);
+  --v3-line-soft: rgba(255, 255, 255, 0.08);
+  letter-spacing: -0.02em;
+}
+
+/* Ambient canvas: fixed grid + grain + radial glow ------------------------- */
+.v3-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.v3-canvas::before {
+  /* faint engineering grid */
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  background-image: linear-gradient(var(--v3-line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--v3-line-soft) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse at 50% 30%, #000 0%, #000 55%, transparent 92%);
+}
+.v3-canvas::after {
+  /* accent bloom near the top */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      ellipse 60% 40% at 72% 2%,
+      color-mix(in srgb, var(--v3-accent) 12%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 8% 30%,
+      color-mix(in srgb, var(--v3-accent-2) 7%, transparent),
+      transparent 55%
+    );
+}
+.v3-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.06;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+  animation: v3Grain 0.6s steps(2) infinite;
+}
+.v3-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* A section's traveling scan-line (a bright bar sweeping down once on reveal) */
+.v3-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--v3-accent) 85%, transparent),
+    transparent
+  );
+  box-shadow: 0 0 18px 2px color-mix(in srgb, var(--v3-accent) 35%, transparent);
+  opacity: 0;
+}
+.v3-scan.in {
+  animation: v3Scan 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+/* Layout helpers ----------------------------------------------------------- */
+.v3-wrap {
+  width: min(100%, 1200px);
+  margin-inline: auto;
+  padding-inline: clamp(20px, 5vw, 48px);
+}
+.v3-section {
+  position: relative;
+  padding-block: clamp(72px, 12vh, 150px);
+  border-top: 1px solid var(--v3-line-soft);
+}
+
+/* Mono kicker/eyebrow ------------------------------------------------------ */
+.v3-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--v3-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--v3-accent);
+}
+.v3-kicker::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--v3-accent);
+  opacity: 0.8;
+}
+.v3-mono {
+  font-family: var(--v3-mono);
+  letter-spacing: 0.06em;
+}
+
+/* Display type ------------------------------------------------------------- */
+.v3-display {
+  font-family: var(--font-display), var(--font-heading), sans-serif;
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  color: var(--v3-ink);
+  text-wrap: balance;
+}
+.v3-serif-em {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.v3-accent-text {
+  color: var(--v3-accent);
+}
+/* silver -> accent gradient headline (Editorial-noir touch) */
+.v3-grad {
+  background: linear-gradient(
+    92deg,
+    var(--v3-ink),
+    color-mix(in srgb, var(--v3-accent) 80%, var(--v3-ink))
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Panels ------------------------------------------------------------------- */
+.v3-panel {
+  position: relative;
+  border: 1px solid var(--v3-line);
+  background: linear-gradient(158deg, var(--v3-panel-2), var(--v3-panel));
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 30px 80px rgba(0, 0, 0, 0.5);
+}
+/* angled clip-path corners (Ledger uses this heavily) */
+.v3-clip {
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% 100%,
+    18px 100%,
+    0 calc(100% - 18px)
+  );
+}
+.v3-corner::before,
+.v3-corner::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--v3-accent);
+  opacity: 0.7;
+}
+.v3-corner::before {
+  top: 8px;
+  left: 8px;
+  border-right: 0;
+  border-bottom: 0;
+}
+.v3-corner::after {
+  bottom: 8px;
+  right: 8px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* Buttons ------------------------------------------------------------------ */
+.v3-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 26px;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s,
+    border-color 0.2s, box-shadow 0.2s;
+}
+.v3-btn:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v3-accent) 55%, transparent);
+}
+.v3-btn-primary {
+  background: var(--v3-accent);
+  color: #16110a;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--v3-accent) 24%, transparent);
+}
+.v3-btn-primary:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--v3-accent) 88%, #fff);
+}
+.v3-btn-ghost {
+  background: transparent;
+  color: var(--v3-ink);
+  border: 1px solid var(--v3-line);
+}
+.v3-btn-ghost:hover {
+  border-color: var(--v3-accent);
+  color: var(--v3-accent);
+}
+.v3-btn .v3-btn-badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #16110a;
+  color: var(--v3-accent);
+}
+
+/* Reveal (blur-up on scroll) ---------------------------------------------- */
+.v3-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  filter: blur(10px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v3-reveal.in {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+.v3-reveal[data-delay="1"] {
+  transition-delay: 0.08s;
+}
+.v3-reveal[data-delay="2"] {
+  transition-delay: 0.16s;
+}
+.v3-reveal[data-delay="3"] {
+  transition-delay: 0.24s;
+}
+.v3-reveal[data-delay="4"] {
+  transition-delay: 0.32s;
+}
+
+/* text-mask (words rise from behind a clip edge) */
+.v3-tm {
+  display: block;
+  overflow: hidden;
+}
+.v3-tm > span {
+  display: block;
+  transform: translateY(115%);
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v3-tm.in > span {
+  transform: none;
+}
+
+/* Redaction wipe (Case File): a black bar wipes away to reveal text -------- */
+.v3-redact {
+  position: relative;
+  display: inline-block;
+}
+.v3-redact::after {
+  content: "";
+  position: absolute;
+  inset: -2px -4px;
+  background: var(--v3-accent);
+  transform-origin: right;
+  transform: scaleX(1);
+  transition: transform 0.7s cubic-bezier(0.7, 0, 0.2, 1);
+}
+.v3-redact.in::after {
+  transform: scaleX(0);
+}
+
+/* Stamp-in (a "RECEIVED"/"REMOVED" stamp thuds in) ------------------------- */
+.v3-stamp {
+  opacity: 0;
+}
+.v3-stamp.in {
+  animation: v3Stamp 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+/* Sticky scrollytelling scene --------------------------------------------- */
+.v3-scene {
+  position: relative;
+}
+.v3-scene-sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* "gather" — scattered words converge into a sentence (uses --p 0..1) */
+.v3-gather {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.06em 0.2em;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(40px, 9vw, 132px);
+  line-height: 0.86;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.v3-gather span {
+  display: inline-block;
+  transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0)
+    rotate(var(--rot, 0deg));
+  opacity: var(--wo, 1);
+  filter: blur(var(--wb, 0px));
+  will-change: transform, opacity, filter;
+}
+
+/* Expanding evidence grid (Proof) — scale driven by --p */
+.v3-evgrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(8px, 1vw, 14px);
+  width: min(90vw, 1000px);
+  transform: scale(var(--gridScale, 1));
+  will-change: transform;
+}
+
+/* Pinned mechanism steps — highlight driven by --step */
+.v3-pin-step {
+  transition: opacity 0.4s ease, border-color 0.4s ease, transform 0.4s ease;
+}
+
+/* progress rail (fixed right edge) */
+.v3-rail {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 150px;
+  z-index: 40;
+  background: var(--v3-line);
+  overflow: hidden;
+  pointer-events: none;
+}
+.v3-rail span {
+  display: block;
+  width: 100%;
+  height: calc(var(--page, 0) * 100%);
+  background: linear-gradient(180deg, var(--v3-ink), var(--v3-accent));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--v3-accent) 45%, transparent);
+}
+
+/* Waveform bars (Signal Room) --------------------------------------------- */
+.v3-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 44px;
+}
+.v3-wave i {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--v3-accent);
+  height: 30%;
+  opacity: 0.5;
+}
+.v3-wave.playing i {
+  animation: v3Wave 0.9s ease-in-out infinite;
+}
+
+/* On-load cinematic intro -------------------------------------------------- */
+.v3-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, var(--v3-accent) 12%, transparent),
+      transparent 30%
+    ),
+    var(--v3-bg);
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+.v3-intro.hide {
+  opacity: 0;
+  visibility: hidden;
+}
+.v3-intro-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(64vw, 680px);
+  height: min(64vw, 680px);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--v3-accent) 22%, transparent);
+  transform: translate(-50%, -50%) scale(0.5);
+  box-shadow: 0 0 100px color-mix(in srgb, var(--v3-accent) 12%, transparent),
+    inset 0 0 80px color-mix(in srgb, var(--v3-accent) 6%, transparent);
+  animation: v3IntroRing 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.v3-intro-kicker {
+  font-family: var(--v3-mono);
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--v3-accent);
+  opacity: 0;
+  animation: v3Fade 0.6s ease 0.1s forwards;
+  text-align: center;
+}
+.v3-intro-brand {
+  margin-top: 14px;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(48px, 10vw, 130px);
+  line-height: 0.9;
+  text-align: center;
+  transform: translateY(18px);
+  opacity: 0;
+  filter: blur(12px);
+  animation: v3IntroBrand 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+}
+.v3-intro-line {
+  width: min(360px, 66vw);
+  height: 1px;
+  margin: 24px auto 0;
+  background: var(--v3-line);
+  overflow: hidden;
+}
+.v3-intro-line span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--v3-accent), transparent);
+  transform: translateX(-100%);
+  animation: v3IntroSweep 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards;
+}
+
+/* Keyframes ---------------------------------------------------------------- */
+@keyframes v3Grain {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-4%, 3%); }
+}
+@keyframes v3Scan {
+  0% { top: 0; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+@keyframes v3Stamp {
+  0% { opacity: 0; transform: scale(1.7) rotate(-14deg); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+@keyframes v3Wave {
+  0%, 100% { height: 22%; opacity: 0.5; }
+  50% { height: 100%; opacity: 1; }
+}
+@keyframes v3IntroRing {
+  to { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+}
+@keyframes v3IntroBrand {
+  to { transform: none; opacity: 1; filter: blur(0); }
+}
+@keyframes v3IntroSweep {
+  to { transform: translateX(100%); }
+}
+@keyframes v3Fade {
+  to { opacity: 1; }
+}
+@keyframes v3Marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Marquee (evidence tags / trust strip) */
+.v3-marquee {
+  overflow: hidden;
+  border-block: 1px solid var(--v3-line-soft);
+}
+.v3-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: v3Marquee 30s linear infinite;
+}
+.v3-marquee-track > * {
+  flex: 0 0 auto;
+}
+
+/* v4 "Combined" trust strip — hover expands the band, grows the letters, and
+   the word under the cursor highlights in the accent. */
+.v4-combo-lane {
+  padding-block: 9px;
+  transition: padding-block 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v4-combo:hover .v4-combo-lane {
+  padding-block: 22px;
+}
+.v4-combo-word {
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  transition: color 0.2s ease, font-size 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v4-combo-word--cred {
+  color: var(--v3-ink);
+}
+.v4-combo-word--tag {
+  color: var(--v3-mut);
+}
+.v4-combo:hover .v4-combo-word {
+  font-size: 13.5px;
+}
+.v4-combo-word:hover {
+  color: var(--v3-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-combo-lane,
+  .v4-combo-word {
+    transition: none;
+  }
+}
+
+/* Page switcher ------------------------------------------------------------ */
+.v3-switcher {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--v3-line);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 4px;
+  font-family: var(--v3-mono);
+}
+.v3-switcher-label {
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--v3-faint);
+  padding: 0 2px 2px;
+}
+.v3-switcher button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  font-family: var(--v3-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--v3-mut);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.v3-switcher button:hover {
+  color: var(--v3-ink);
+  background: var(--v3-panel);
+}
+.v3-switcher button[aria-pressed="true"] {
+  color: var(--v3-accent);
+  border-color: var(--v3-line);
+  background: var(--v3-panel-2);
+}
+.v3-switcher button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.v3-switcher button[aria-pressed="true"]::before {
+  background: var(--v3-accent);
+  border-color: var(--v3-accent);
+  box-shadow: 0 0 10px var(--v3-accent);
+}
+.v3-switcher button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--v3-accent) 55%, transparent);
+}
+
+/* Sticky CTA (bottom, appears on scroll) */
+.v3-stickycta {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translate(-50%, 30px);
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.v3-stickycta.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+/* Reduced motion ----------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .v3 * {
+    scroll-behavior: auto !important;
+  }
+  .v3-reveal,
+  .v3-tm > span,
+  .v3-redact::after {
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+  .v3-redact::after { display: none; }
+  .v3-grain,
+  .v3-scan.in,
+  .v3-wave.playing i,
+  .v3-marquee-track,
+  .v3-intro-ring,
+  .v3-intro-brand,
+  .v3-intro-line span,
+  .v3-stamp.in {
+    animation: none !important;
+  }
+  .v3-stamp { opacity: 1 !important; }
+  .v3-scene-sticky {
+    position: relative;
+    min-height: auto;
+    padding-block: 80px;
+  }
+  .v3-gather span {
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+  .v3-evgrid { transform: none !important; }
+}
+
+/* Mobile ------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .v3-scene-sticky {
+    position: relative;
+    min-height: auto;
+    padding-block: 72px;
+  }
+  .v3-gather span {
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+  .v3-evgrid {
+    grid-template-columns: repeat(2, 1fr);
+    transform: none !important;
+    width: 100%;
+  }
+  .v3-switcher {
+    left: 10px;
+    bottom: 10px;
+    padding: 8px;
+  }
+}

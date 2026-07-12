@@ -66,7 +66,18 @@ export function HeroCinematic() {
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/85">
             {site.hero.subhead}
           </p>
-          <HeroCtas className="mt-9" />
+
+          {/* ⚠️ PLACEHOLDER aggregate proof — swap in Vance's real numbers. */}
+          <div className="mt-6 flex items-center gap-2 text-sm font-medium text-white/85">
+            <span aria-hidden className="tracking-tight text-gold">
+              ★★★★★
+            </span>
+            <span>
+              {site.hero.rating.stars} · {site.hero.rating.count}
+            </span>
+          </div>
+
+          <HeroCtas className="mt-8" />
         </div>
       </div>
 

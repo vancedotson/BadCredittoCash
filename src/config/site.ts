@@ -74,6 +74,8 @@ export const site = {
     subhead:
       "I'm Vance. Since 2004 I've gone after the bureaus and collectors who break the law — using the FCRA and FDCPA to challenge the inaccurate information wrecking your credit. Not weak letters. Real action.",
     photoCaption: "Vance Dotson — at his Oklahoma City office",
+    // ⚠️ PLACEHOLDER — real aggregate proof (swap in Vance's true numbers).
+    rating: { stars: "4.9", count: "500+ Oklahomans helped ⚠️" },
   },
 
   // SECTION 2 — Pain Mirror
