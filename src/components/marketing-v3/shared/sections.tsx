@@ -15,8 +15,25 @@ import type { V3Variant } from "./PageSwitcher";
 export function Intro({ label }: { label: string }) {
   const [hide, setHide] = useState(false);
   useEffect(() => {
+    // Play the on-load animation once per session — so switching designs (the
+    // /v4 version toggle remounts this) doesn't replay it. Already played =>
+    // dismiss on the next tick (no replay).
+    let played = false;
+    try {
+      played = sessionStorage.getItem("v3-intro-played") === "1";
+    } catch {
+      /* ignore */
+    }
+    if (!played) {
+      try {
+        sessionStorage.setItem("v3-intro-played", "1");
+      } catch {
+        /* ignore */
+      }
+    }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const t = setTimeout(() => setHide(true), reduce ? 200 : 1700);
+    const delay = played ? 0 : reduce ? 200 : 1700;
+    const t = setTimeout(() => setHide(true), delay);
     return () => clearTimeout(t);
   }, []);
   return (

@@ -15,7 +15,9 @@ import { useScrollScene } from "../../marketing-v3/shared/hooks";
  * Headline text is reconstructed from site.mechanism.heading so the phrases can
  * be individually colored.
  */
-const STEP_COLORS = ["#f2a93b", "#c3cf3e", "#33c06a"];
+// Step colors read from CSS vars, so the accent theme drives the walk
+// (gold -> lime -> green on /v4, blue -> cyan -> aqua on /v5).
+const stepVar = (i: number) => `var(--v3-step-${i})`;
 // ⚠️ PLACEHOLDER stage backgrounds (barely visible) — swap for imagery that
 // represents each step: finding violations / holding accountable / results.
 const STEP_IMAGES = ["/v3/tex-ridge.jpg", "/v3/tex-fog.jpg", "/oklahoma.png"];
@@ -24,15 +26,14 @@ export function MechanismPinnedV4() {
   const { ref, progress } = useScrollScene<HTMLDivElement>();
   const steps = site.mechanism.steps;
   const active = Math.min(steps.length - 1, Math.floor(progress * steps.length));
-  const activeColor = STEP_COLORS[active];
+  const activeColor = stepVar(active);
 
   // a headline phrase that colors in once its step has been reached
   const hl = (text: string, idx: number) => (
     <span
       style={{
-        color: active >= idx ? STEP_COLORS[idx] : "var(--v3-heading)",
-        textShadow: active >= idx ? `0 0 22px ${STEP_COLORS[idx]}55` : "none",
-        transition: "color 0.5s ease, text-shadow 0.5s ease",
+        color: active >= idx ? stepVar(idx) : "var(--v3-heading)",
+        transition: "color 0.5s ease",
       }}
     >
       {text}
@@ -43,7 +44,8 @@ export function MechanismPinnedV4() {
     <section id="mechanism">
       <div ref={ref} className="v3-scene" style={{ minHeight: "340vh" }}>
         <div className="v3-scene-sticky">
-          {/* per-stage background image — barely visible, cross-fades on scroll */}
+          {/* per-stage background image — cross-fades on scroll as the step
+              advances (step 1 / 2 / 3 each get their own backdrop) */}
           <div className="v4-mech-bg" aria-hidden>
             {STEP_IMAGES.map((img, i) => (
               <div
@@ -60,7 +62,9 @@ export function MechanismPinnedV4() {
               />
             ))}
           </div>
-          {/* right-side colored glass blur — cross-fades color with the step */}
+          {/* readability veil over the imagery (theme-aware via --v3-bg) */}
+          <div className="v4-mech-veil" aria-hidden />
+          {/* right-side colored glass blur — subtle tint that follows the step */}
           <div
             aria-hidden
             className="pointer-events-none absolute"
@@ -68,12 +72,13 @@ export function MechanismPinnedV4() {
               right: "-6%",
               top: "50%",
               transform: "translateY(-50%)",
-              width: "48%",
-              height: "78%",
+              width: "42%",
+              height: "70%",
               borderRadius: "999px",
               backgroundColor: activeColor,
-              opacity: 0.16,
+              opacity: 0.06,
               filter: "blur(100px)",
+              zIndex: 1,
               transition: "background-color 0.7s ease, opacity 0.7s ease",
             }}
           />
@@ -103,7 +108,7 @@ export function MechanismPinnedV4() {
                   style={{
                     height: "100%",
                     width: `${Math.round(progress * 100)}%`,
-                    backgroundImage: `linear-gradient(90deg, ${STEP_COLORS[0]}, ${STEP_COLORS[1]}, ${STEP_COLORS[2]})`,
+                    backgroundImage: `linear-gradient(90deg, ${stepVar(0)}, ${stepVar(1)}, ${stepVar(2)})`,
                     backgroundSize: `${100 / Math.max(progress, 0.01)}% 100%`,
                     backgroundRepeat: "no-repeat",
                     transition: "width 0.1s linear",
@@ -116,7 +121,7 @@ export function MechanismPinnedV4() {
               {steps.map((s, i) => {
                 const on = i === active;
                 const done = i < active;
-                const c = STEP_COLORS[i];
+                const c = stepVar(i);
                 return (
                   <div
                     key={i}
@@ -126,7 +131,9 @@ export function MechanismPinnedV4() {
                       opacity: on ? 1 : done ? 0.72 : 0.4,
                       transform: on ? "translateX(8px)" : "none",
                       borderColor: on ? c : "var(--v3-line)",
-                      boxShadow: on ? `0 0 0 1px ${c}, 0 24px 60px ${c}26` : undefined,
+                      boxShadow: on
+                        ? `0 0 0 1px ${c}, 0 10px 26px color-mix(in srgb, ${c} 10%, transparent)`
+                        : "none",
                     }}
                   >
                     <span

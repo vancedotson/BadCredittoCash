@@ -20,6 +20,10 @@
   --v3-accent: #f2a93b; /* justice gold */
   --v3-accent-deep: #d98e1f;
   --v3-accent-2: #f2a93b;
+  /* "procedure" step walk (gold -> lime -> green); overridden per accent */
+  --v3-step-0: #f2a93b;
+  --v3-step-1: #c3cf3e;
+  --v3-step-2: #33c06a;
   --v3-cream: #e8e2d2;
   --v3-danger: #d8563f;
   --v3-mono: ui-monospace, "SF Mono", "SFMono-Regular", "Menlo", "Consolas",
@@ -60,6 +64,248 @@
   --v3-line: rgba(255, 255, 255, 0.16);
   --v3-line-soft: rgba(255, 255, 255, 0.08);
   letter-spacing: -0.02em;
+}
+
+/* Credibility-blue accent (used by /v5) — swaps the justice-gold palette for a
+   cool, trust-forward blue family. Everything reads --v3-accent / --v3-step-*,
+   so this single scope recolors the whole page. */
+.v3[data-accent="blue"] {
+  --v3-accent: #4a9dff; /* credibility blue */
+  --v3-accent-deep: #2a7ae6;
+  --v3-accent-2: #4a9dff;
+  --v3-step-0: #4a9dff; /* blue */
+  --v3-step-1: #38c4e6; /* cyan */
+  --v3-step-2: #45dcc0; /* aqua */
+}
+.v3[data-accent="blue"] .v3-btn-primary {
+  color: #06121f; /* cool near-black on the bright blue */
+}
+.v3[data-accent="blue"] .v3-btn .v3-btn-badge {
+  background: #06121f;
+}
+
+/* /v5 duotone — light sections. Wrap a section in `.v5-light` to flip it to a
+   warm-paper palette (dark ink on cream) with a deeper gold accent that stays
+   legible on light. Only /v5 uses this; /v4 is untouched. */
+.v5-light {
+  --v3-bg: #f3f6fc;
+  --v3-bg2: #e9eef8;
+  --v3-ink: #1b160e;
+  --v3-mut: rgba(27, 22, 14, 0.66);
+  --v3-faint: rgba(27, 22, 14, 0.44);
+  --v3-line: rgba(27, 22, 14, 0.16);
+  --v3-line-soft: rgba(27, 22, 14, 0.09);
+  --v3-panel: rgba(27, 22, 14, 0.05);
+  --v3-panel-2: rgba(27, 22, 14, 0.08);
+  --v3-accent: #9a5b0a; /* deep gold, legible on cream */
+  --v3-accent-deep: #7d4906;
+  --v3-accent-2: #9a5b0a;
+  --v3-heading: #1b160e;
+  /* trust-strip band + tab surfaces (dark by default, cream tint on light) */
+  --v3-strip-bg: rgba(27, 22, 14, 0.045);
+  --v3-strip-tab: rgba(27, 22, 14, 0.08);
+  background: var(--v3-bg);
+  color: var(--v3-ink);
+}
+/* primary button on light: light text on the deep-gold fill */
+.v5-light .v3-btn-primary {
+  color: #f7f2e6;
+}
+/* Suppress the decorative DARK imagery in light sections (placeholder mood
+   textures / city / stage backgrounds) so the section reads as clean paper. */
+.v5-light .v4-pain-bg,
+.v5-light .v4-reframe-img,
+.v5-light .v4-reframe-smoke {
+  display: none !important;
+}
+/* Mechanism per-step imagery stays on /v5 (subtler + brighter for paper). */
+.v5-light .v4-mech-bg {
+  opacity: 0.24;
+  filter: grayscale(0.5) contrast(1) brightness(1.15);
+}
+.v5-light .v4-reframe-lines {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 5px,
+    rgba(27, 22, 14, 0.05) 5px 6px
+  );
+}
+/* Urgency LINE 01/02/03 cells styled like the exhibit cards: separate
+   ink-black cards with light content + bright-blue accents on the light section. */
+.v5-light .v4-urg-ledger {
+  gap: 14px;
+  background: transparent;
+  border: none;
+}
+.v5-light .v4-urg-cell {
+  background: #16181c;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  --v3-ink: #f2f6fc;
+  --v3-mut: rgba(242, 246, 252, 0.66);
+  --v3-faint: rgba(242, 246, 252, 0.46);
+  --v3-line: rgba(255, 255, 255, 0.14);
+  --v3-line-soft: rgba(255, 255, 255, 0.09);
+  --v3-accent: #6db4ff;
+  --v3-accent-deep: #3d8fef;
+  --v3-step-0: #6db4ff;
+  --v3-step-1: #56d0e8;
+  --v3-step-2: #56e0b8;
+}
+.v5-light .v4-urg-cell:hover,
+.v5-light .v4-urg-cell:focus-within {
+  background: #1b1e23;
+}
+/* /v5: make the urgency radar clearly visible (blue on the off-white bg). */
+.v5-light .v4-urg-radar--section {
+  opacity: 0.9;
+}
+.v5-light .v4-urg-ring {
+  border-color: color-mix(in srgb, var(--v3-accent) 26%, transparent);
+}
+.v5-light .v4-urg-ring:first-of-type {
+  border-color: color-mix(in srgb, var(--v3-accent) 42%, transparent);
+}
+.v5-light .v4-urg-radar-x,
+.v5-light .v4-urg-radar-y {
+  background: color-mix(in srgb, var(--v3-accent) 22%, transparent);
+}
+.v5-light .v4-urg-sweep {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--v3-accent) 40%, transparent) 42deg,
+    transparent 62deg
+  );
+}
+
+/* /v5 FAQ: flat accordion cards (drop the heavy panel shadow) + a light CTA
+   button (white fill, deep-blue label/border) instead of the dark-blue fill. */
+.v5-light #faq .v3-panel {
+  box-shadow: none;
+}
+.v5-light #faq .v3-btn-primary {
+  background: #ffffff;
+  color: #1c62c9;
+  border: 1px solid rgba(28, 98, 201, 0.4);
+  box-shadow: none;
+}
+.v5-light #faq .v3-btn-primary:hover {
+  background: #ffffff;
+  border-color: #1c62c9;
+  color: #123f82;
+}
+/* Reframe gather words: drop the blur-in on light (kept the move/fade). */
+.v5-light .v3-gather span {
+  filter: none !important;
+}
+/* FCRA laws (moved below "the advocate"): bold black body copy + a much
+   lighter card shadow on paper. */
+.v5-light .v4-laws p,
+.v5-light .v4-laws .v3-mono {
+  color: var(--v3-ink) !important;
+}
+.v5-light .v4-laws p {
+  font-weight: 600;
+}
+/* the highlight-sweep lead is white (clip-text) — recolor to bold ink on paper */
+.v5-light .v4-laws .v4-highlight {
+  background-image: linear-gradient(
+    90deg,
+    var(--v3-ink) 0%,
+    var(--v3-ink) 50%,
+    var(--v3-mut) 50%,
+    var(--v3-mut) 100%
+  );
+  font-weight: 700;
+}
+.v5-light .v4-laws .v3-panel {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 4px 14px rgba(27, 22, 14, 0.06);
+}
+
+/* Blue duotone (/v5): recolor the accent per scope for legibility. Light
+   sections need a DEEP blue (readable on cream); dark sections use the bright
+   credibility blue. Higher specificity than the plain .v5-light / .v5-dark gold
+   defaults, so these win when the root carries data-accent="blue". */
+.v3[data-accent="blue"] .v5-light {
+  --v3-accent: #1c62c9; /* deep blue on cream */
+  --v3-accent-deep: #123f82;
+  --v3-accent-2: #1c62c9;
+  --v3-step-0: #1c62c9; /* blue */
+  --v3-step-1: #167a95; /* deep cyan */
+  --v3-step-2: #1b8a6a; /* deep teal */
+}
+.v3[data-accent="blue"] .v5-dark {
+  --v3-accent: #4a9dff; /* bright blue on black */
+  --v3-accent-deep: #2a7ae6;
+  --v3-accent-2: #4a9dff;
+}
+
+/* /v5 only: white navigation bar. The nav content flips to dark tokens so the
+   logo, links, file number and CTA stay legible on white. */
+.v5-page header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom: 1px solid rgba(27, 22, 14, 0.1);
+  color: var(--v3-ink);
+  --v3-ink: #1b160e;
+  --v3-mut: rgba(27, 22, 14, 0.7);
+  --v3-faint: rgba(27, 22, 14, 0.46);
+  --v3-line: rgba(27, 22, 14, 0.18);
+  --v3-line-soft: rgba(27, 22, 14, 0.1);
+  --v3-accent: #1c62c9; /* deep blue, legible on white */
+  --v3-accent-deep: #123f82;
+}
+
+/* /v5 only: the Terms // No Risk content sits inside a black container that
+   floats on the light section. Flip the inner tokens to light-on-dark. */
+.v5-light #risk .v3-wrap {
+  background: #0d0f13;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: clamp(28px, 4.5vw, 60px);
+  color: var(--v3-ink);
+  --v3-ink: #f2f6fc;
+  --v3-mut: rgba(242, 246, 252, 0.66);
+  --v3-faint: rgba(242, 246, 252, 0.44);
+  --v3-line: rgba(255, 255, 255, 0.14);
+  --v3-line-soft: rgba(255, 255, 255, 0.08);
+  --v3-accent: #6db4ff;
+  --v3-accent-deep: #3d8fef;
+  --v3-panel: rgba(255, 255, 255, 0.05);
+  --v3-panel-2: rgba(255, 255, 255, 0.08);
+}
+
+/* /v5 only: the "meet the advocate" section runs full-height (photo + copy
+   stretch to fill the viewport, echoing the hero). Scoped to .v5-page so /v4
+   is unaffected even when it's toggled to blue. */
+.v5-page #meet {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+.v5-page #meet > .v3-wrap {
+  flex: 1;
+}
+
+/* .v5-dark — re-assert the dark palette for a section nested inside a light
+   block (used for the register section inside the light urgency stack). */
+.v5-dark {
+  --v3-bg: #060607;
+  --v3-bg2: #0b0c0e;
+  --v3-panel: rgba(255, 255, 255, 0.04);
+  --v3-panel-2: rgba(255, 255, 255, 0.06);
+  --v3-line: rgba(255, 255, 255, 0.12);
+  --v3-line-soft: rgba(255, 255, 255, 0.07);
+  --v3-ink: #f4f1ea;
+  --v3-mut: rgba(244, 241, 234, 0.62);
+  --v3-faint: rgba(244, 241, 234, 0.36);
+  --v3-accent: #f2a93b;
+  --v3-accent-deep: #d98e1f;
+  --v3-accent-2: #f2a93b;
+  --v3-heading: #f4f1ea;
+  background: var(--v3-bg);
+  color: var(--v3-ink);
 }
 
 /* Ambient canvas: fixed grid + grain + radial glow ------------------------- */
@@ -717,15 +963,59 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.1;
-  filter: grayscale(1) contrast(1.1) brightness(0.7);
-  mask-image: radial-gradient(ellipse 82% 74% at 50% 48%, #000 18%, transparent 86%);
+  opacity: 0.5;
+  filter: grayscale(0.55) contrast(1.05) brightness(0.85);
+  mask-image: radial-gradient(ellipse 92% 82% at 50% 48%, #000 30%, transparent 92%);
+}
+/* readability veil over the per-step imagery — dark on /v4, cream on /v5 (light),
+   heavier on the left (copy) and lighter on the right (cards). */
+.v4-mech-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--v3-bg) 0%,
+    color-mix(in srgb, var(--v3-bg) 80%, transparent) 44%,
+    color-mix(in srgb, var(--v3-bg) 55%, transparent) 100%
+  );
+}
+/* step cards: much lighter drop shadow (was 0 30px 80px black). */
+.v3-pin-step {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+.v5-light .v3-pin-step {
+  box-shadow: 0 6px 18px rgba(27, 22, 14, 0.08);
 }
 
 /* v4 evidence locker — hide the scrollbar (navigated with the buttons below) */
 .v4-locker-scroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+/* Recorded-call cards: drop the heavy panel shadow — the horizontal scroller
+   clips overflow, so the shadow gets cut and the cards look chopped. */
+.v4-locker-scroll .v3-panel {
+  box-shadow: none;
+}
+/* /v5: ink-black exhibit cards with light content on top. Flip the inner tokens
+   to light-on-dark so the label, waveform, title, borders and buttons invert. */
+.v5-light .v4-locker-scroll .v3-panel {
+  background: #16181c;
+  color: var(--v3-ink);
+  --v3-ink: #f2f6fc;
+  --v3-mut: rgba(242, 246, 252, 0.68);
+  --v3-faint: rgba(242, 246, 252, 0.5);
+  --v3-line: rgba(255, 255, 255, 0.14);
+  --v3-line-soft: rgba(255, 255, 255, 0.09);
+  --v3-accent: #6db4ff;
+  --v3-accent-deep: #3d8fef;
+  --v3-panel: rgba(255, 255, 255, 0.05);
+  --v3-panel-2: rgba(255, 255, 255, 0.08);
+}
+.v5-light .v4-locker-scroll .v3-btn-primary {
+  color: #0a1a33; /* dark label on the bright-blue playing button */
 }
 .v4-locker-scroll::-webkit-scrollbar {
   display: none;
@@ -833,8 +1123,8 @@
   color: var(--v3-accent);
 }
 .v4-pain-point {
-  font-size: clamp(17px, 2.4vw, 23px);
-  line-height: 1.4;
+  font-size: clamp(21px, 3.1vw, 30px);
+  line-height: 1.35;
   color: var(--v3-ink);
 }
 .v4-pain-detail {
@@ -854,7 +1144,7 @@
 }
 .v4-pain-para {
   color: var(--v3-mut);
-  font-size: 15px;
+  font-size: clamp(16px, 1.9vw, 19px);
   line-height: 1.6;
 }
 .v4-pain-meter {
@@ -1062,8 +1352,6 @@
 }
 .v3-gather.settled .v4-gather-neon {
   color: var(--v3-accent);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--v3-accent) 60%, transparent),
-    0 0 22px color-mix(in srgb, var(--v3-accent) 32%, transparent);
   animation: v4NeonGlitch 3.4s steps(1, end) 0.5s infinite;
 }
 .v3-gather.settled .v4-gather-neon::after {
@@ -1074,8 +1362,6 @@
   bottom: -0.04em;
   height: 0.08em;
   background: var(--v3-accent);
-  box-shadow: 0 0 8px var(--v3-accent),
-    0 0 18px color-mix(in srgb, var(--v3-accent) 55%, transparent);
   transform: scaleX(0);
   transform-origin: left center;
   animation: v4NeonUnderline 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
@@ -1091,8 +1377,7 @@
   100% {
     transform: none;
     opacity: 1;
-    text-shadow: 0 0 8px color-mix(in srgb, var(--v3-accent) 60%, transparent),
-      0 0 22px color-mix(in srgb, var(--v3-accent) 32%, transparent);
+    text-shadow: none;
   }
   89% {
     transform: translate(-2px, 1px);
@@ -1216,7 +1501,7 @@
 .v4-stack-spacer {
   height: 100svh;
 }
-.v4-stack > #register {
+.v4-stack #register {
   position: relative;
   z-index: 1;
   background: var(--v3-bg);
@@ -1493,6 +1778,43 @@
   .v4-urg-cell-detail {
     transition: none;
   }
+}
+
+/* In-nav demo toggles (/v4): Version (V4/V5) + accent swatches. Colors come
+   from the header's tokens, so they stay legible on the dark v4 nav and the
+   white v5 nav alike. */
+.v4-navtoggles {
+  align-items: center;
+  gap: 10px;
+}
+.v4-navtoggle-group {
+  display: inline-flex;
+  border: 1px solid var(--v3-line);
+  border-radius: 999px;
+  overflow: hidden;
+  font-family: var(--v3-mono);
+}
+.v4-navtoggle-group button {
+  padding: 5px 12px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--v3-mut);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.v4-navtoggle-group button:hover {
+  color: var(--v3-ink);
+}
+.v4-navtoggle-group button[aria-pressed="true"] {
+  color: var(--v3-accent);
+  background: color-mix(in srgb, var(--v3-accent) 14%, transparent);
+}
+.v4-navtoggle-group button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--v3-accent) 55%, transparent);
 }
 
 /* Sticky CTA (bottom, appears on scroll) */

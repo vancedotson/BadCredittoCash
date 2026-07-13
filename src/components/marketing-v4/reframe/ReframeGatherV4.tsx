@@ -92,14 +92,16 @@ export function ReframeGatherV4() {
           </div>
         </div>
       </div>
-
-      {/* the two statutes, revealed after the scene */}
-      <ReframeLawsV4 />
     </section>
   );
 }
 
-function ReframeLawsV4() {
+/**
+ * The two statutes (FCRA / FDCPA). Rendered separately from the gather scene so
+ * the page can place it wherever it wants (v4/v5 put it below "meet the
+ * advocate"). The `v4-laws` class is a scope hook (no default styling).
+ */
+export function ReframeLawsV4() {
   const ref = useRevealChildren<HTMLDivElement>();
   // Split off the opening sentence so it can get a left→right highlight sweep.
   const body = site.reframe.body;
@@ -108,7 +110,7 @@ function ReframeLawsV4() {
   const lead = cut >= 0 ? body.slice(0, cut + marker.length) : body;
   const rest = cut >= 0 ? body.slice(cut + marker.length) : "";
   return (
-    <div className="v3-section" style={{ borderTop: "1px solid var(--v3-line-soft)" }}>
+    <div className="v3-section v4-laws" style={{ borderTop: "1px solid var(--v3-line-soft)" }}>
       <div className="v3-wrap" ref={ref}>
         <Reveal>
           <p style={{ fontSize: "clamp(20px,3vw,30px)", color: "var(--v3-mut)", maxWidth: 780, lineHeight: 1.5 }}>

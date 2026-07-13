@@ -16,7 +16,9 @@ const delay = (i: number) => ((i % 4) + 1) as 1 | 2 | 3 | 4;
 /* Per-line status + the three "procedure" step colors (gold, lime, green) —
    the same palette the Mechanism section walks through. */
 const STATUS = ["ACCRUING", "COMPOUNDING", "EXPIRING"];
-const CELL_COLORS = ["#f2a93b", "#c3cf3e", "#33c06a"];
+// The "procedure" step colors, read from CSS vars so the accent theme (gold on
+// /v4, blue on /v5) drives them.
+const stepVar = (i: number) => `var(--v3-step-${i})`;
 // Short reassurance revealed on hover — calms the concern each line raises.
 const REASSURE = [
   "The sooner we look, the sooner you have a plan to make them stop.",
@@ -49,7 +51,7 @@ export function UrgencyLedger() {
   const [hover, setHover] = useState<number | null>(null);
   const SEGMENTS = 14;
   const FILLED = 11;
-  const glow = hover != null ? CELL_COLORS[hover] : null;
+  const glow = hover != null ? stepVar(hover) : null;
 
   return (
     <>
@@ -80,7 +82,7 @@ export function UrgencyLedger() {
               className="v4-urg-cell v3-reveal"
               data-delay={delay(i)}
               tabIndex={0}
-              style={{ "--c": CELL_COLORS[i] } as CSSProperties}
+              style={{ "--c": stepVar(i) } as CSSProperties}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover((h) => (h === i ? null : h))}
               onFocus={() => setHover(i)}

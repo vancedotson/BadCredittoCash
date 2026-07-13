@@ -71,7 +71,7 @@ export function TrustStripSection() {
     <div
       className="v4-combo flex items-stretch"
       style={{
-        background: "rgba(0,0,0,0.45)",
+        background: "var(--v3-strip-bg, rgba(0,0,0,0.45))",
         borderTop: "1px solid var(--v3-line-soft)",
         borderBottom: "1px solid var(--v3-line-soft)",
       }}
@@ -82,11 +82,12 @@ export function TrustStripSection() {
           flex: "0 0 auto",
           padding: "0 18px",
           fontSize: 10.5,
+          fontWeight: 700,
           letterSpacing: "0.24em",
           textTransform: "uppercase",
           color: "var(--v3-accent)",
           borderRight: "1px solid var(--v3-line)",
-          background: "rgba(0,0,0,0.5)",
+          background: "var(--v3-strip-tab, rgba(0,0,0,0.5))",
         }}
       >
         <span

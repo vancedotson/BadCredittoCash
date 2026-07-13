@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { site } from "@/config/site-v3";
+import { NavToggles } from "./DemoToggles";
 
 /**
  * v4 header — the Case File nav (kept, per request) PLUS the animated gold
@@ -55,13 +56,16 @@ export function HeaderV4() {
             </a>
           ))}
         </nav>
-        <Link
-          href={site.cta.primary.href}
-          className="v3-btn v3-btn-ghost hidden sm:inline-flex"
-          style={{ minHeight: 42, fontSize: 13, padding: "0 18px" }}
-        >
-          {site.cta.secondary.label}
-        </Link>
+        <div className="flex items-center gap-4">
+          <NavToggles />
+          <Link
+            href={site.cta.primary.href}
+            className="v3-btn v3-btn-ghost hidden sm:inline-flex"
+            style={{ minHeight: 42, fontSize: 13, padding: "0 18px" }}
+          >
+            {site.cta.secondary.label}
+          </Link>
+        </div>
       </div>
 
       {/* Bottom-border beam: a static gold hairline + a gold highlight that

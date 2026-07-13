@@ -13,32 +13,57 @@ import { PlayIcon, ChevronRightIcon } from "@/components/marketing-v2/Icons";
  * or under reduced motion. Clicking Play expands that card to reveal a transcript
  * slot while the others compress. A faint audio-wave animates in the background.
  */
-// mechanism step colors (gold → lime → green) for the cursor-reveal wave
-const STEP_COLORS = ["#f2a93b", "#c3cf3e", "#33c06a"];
-const RGB = STEP_COLORS.map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
-const mechColor = (t: number) => {
-  const x = Math.min(0.999, Math.max(0, t)) * 2;
-  const [a, b] = x < 1 ? [RGB[0], RGB[1]] : [RGB[1], RGB[2]];
-  const f = x < 1 ? x : x - 1;
-  const c = a.map((v, i) => Math.round(v + (b[i] - v) * f));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
+// The cursor-reveal wave walks the "procedure" step colors. The actual hexes
+// come from the accent theme (CSS --v3-step-*), read at runtime so /v5 (blue)
+// recolors the wave too. Fallback matches the /v4 gold walk for SSR.
+const FALLBACK_STEPS = ["#f2a93b", "#c3cf3e", "#33c06a"];
+const toRgb = (h: string) => {
+  const s = h.trim().replace("#", "");
+  return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16));
 };
-// deterministic bar set — slower durations than before
+const waveColorsFrom = (steps: string[]) => {
+  const rgb = steps.map(toRgb);
+  return Array.from({ length: 96 }).map((_, k) => {
+    const x = Math.min(0.999, Math.max(0, k / 95)) * 2;
+    const [a, b] = x < 1 ? [rgb[0], rgb[1]] : [rgb[1], rgb[2]];
+    const f = x < 1 ? x : x - 1;
+    const c = a.map((v, i) => Math.round(v + (b[i] - v) * f));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  });
+};
+// deterministic bar geometry — slower durations than before
 const WAVE = Array.from({ length: 96 }).map((_, k) => ({
   h: 16 + ((k * 17 + k * k) % 80),
   delay: (k % 12) * 0.12,
   dur: 2.6 + (k % 5) * 0.35,
-  color: mechColor(k / 95),
 }));
 
 export function EvidenceLockerV4() {
   const headRef = useReveal<HTMLDivElement>();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const [playing, setPlaying] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
+  const [waveColors, setWaveColors] = useState<string[]>(() =>
+    waveColorsFrom(FALLBACK_STEPS),
+  );
   const reduced = usePrefersReducedMotion();
   const clips = site.proofCalls.clips;
   const loop = [...clips, ...clips]; // duplicated for a seamless loop
+
+  // Recolor the wave from the active accent theme (--v3-step-* on the .v3 root).
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const root = sectionRef.current?.closest(".v3") as HTMLElement | null;
+      if (!root) return;
+      const cs = getComputedStyle(root);
+      const steps = [0, 1, 2].map(
+        (i) => cs.getPropertyValue(`--v3-step-${i}`).trim() || FALLBACK_STEPS[i],
+      );
+      setWaveColors(waveColorsFrom(steps));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const nudge = (dir: number) =>
     scrollRef.current?.scrollBy({ left: dir * 380, behavior: "smooth" });
@@ -66,6 +91,7 @@ export function EvidenceLockerV4() {
 
   return (
     <section
+      ref={sectionRef}
       className="v3-section relative"
       id="proof"
       onMouseMove={(e) => {
@@ -97,7 +123,7 @@ export function EvidenceLockerV4() {
             key={k}
             style={{
               height: `${b.h}%`,
-              backgroundColor: b.color,
+              backgroundColor: waveColors[k],
               animationDelay: `${b.delay}s`,
               animationDuration: `${b.dur}s`,
             }}
@@ -136,8 +162,9 @@ export function EvidenceLockerV4() {
       >
         {loop.map((c, idx) => {
           const on = playing === idx;
-          const compressed = playing !== null && !on;
-          const mainW = compressed ? 268 : 300;
+          // Fixed main width so the clicked card stays anchored and the
+          // transcript opens to its right (no leftward shift from compression).
+          const mainW = 300;
           const transW = on ? 340 : 0;
           return (
             <article
