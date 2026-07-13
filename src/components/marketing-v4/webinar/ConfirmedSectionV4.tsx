@@ -67,9 +67,12 @@ export function ConfirmedSectionV4() {
         {/* TOP CONTAINER — where they are in the webinar journey (this = step 2) */}
         <FunnelProgress current={2} note="Almost there. Your training is next." />
 
-        <div className="mt-10 grid items-start gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-          {/* Left — importance + what you'll learn (two bullets) */}
-          <div>
+        {/* On mobile the action must not be buried: order heading -> quiz -> learn.
+            On lg the grid places heading (col1/row1) + learn (col1/row2) beside the
+            quiz (col2, spanning both rows) — the original desktop layout. */}
+        <div className="mt-10 grid items-start gap-x-12 gap-y-8 lg:grid-cols-[1.1fr_0.9fr]">
+          {/* Heading block */}
+          <div className="order-1 lg:col-start-1 lg:row-start-1">
             <Kicker>{wb.confirm.kicker}</Kicker>
             <h1 className="v3-display mt-5" style={{ fontSize: "clamp(34px,5.2vw,66px)", lineHeight: 1.02 }}>
               You&apos;re in.{" "}
@@ -78,26 +81,27 @@ export function ConfirmedSectionV4() {
             <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
               {wb.confirm.body}
             </p>
-
-            <div className="mt-8">
-              <span className="v3-mono" style={labelStyle}>
-                What you&apos;ll learn
-              </span>
-              <ul className="mt-3 flex flex-col gap-3">
-                {wb.learn.slice(0, 2).map((l) => (
-                  <li key={l} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 15.5, lineHeight: 1.5 }}>
-                    <span style={{ color: "var(--v3-accent)", marginTop: 3 }}>
-                      <CheckIcon className="h-4 w-4" />
-                    </span>
-                    {l}
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
 
-          {/* Right — the quiz card (question + options, no progress bar now) */}
-          <Reveal delay={1}>
+          {/* What you'll learn — below the quiz on mobile, under the heading on desktop */}
+          <div className="order-3 lg:col-start-1 lg:row-start-2">
+            <span className="v3-mono" style={labelStyle}>
+              What you&apos;ll learn
+            </span>
+            <ul className="mt-3 flex flex-col gap-3">
+              {wb.learn.slice(0, 2).map((l) => (
+                <li key={l} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 15.5, lineHeight: 1.5 }}>
+                  <span style={{ color: "var(--v3-accent)", marginTop: 3 }}>
+                    <CheckIcon className="h-4 w-4" />
+                  </span>
+                  {l}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Quiz card — right after the heading on mobile */}
+          <Reveal delay={1} className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
               <p style={{ fontSize: 15.5, color: "var(--v3-ink)", lineHeight: 1.5 }}>
                 {quiz.intro}
@@ -195,7 +199,7 @@ export function ConfirmedSectionV4() {
               <div className="mt-5 text-center" style={{ borderTop: "1px solid var(--v3-line)", paddingTop: 16 }}>
                 <Link
                   href="/webinar/room"
-                  className="v3-mono"
+                  className="v3-mono inline-block py-1.5"
                   style={{ fontSize: 12, color: "var(--v3-faint)", letterSpacing: "0.04em" }}
                 >
                   Prefer to skip? {wb.confirm.watchCta}

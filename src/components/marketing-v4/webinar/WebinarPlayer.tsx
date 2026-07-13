@@ -155,8 +155,10 @@ export function WebinarPlayer({
             <PlayIcon className="h-8 w-8" />
           </span>
         )}
+        {/* Title overlay is redundant with the page <h1>; hide on phones where the
+            short 16:9 frame makes it collide with the play button. */}
         <span
-          className="v3-display absolute px-6 text-center"
+          className="v3-display absolute hidden px-6 text-center sm:block"
           style={{ bottom: 64, fontSize: "clamp(16px,2.4vw,26px)", color: "var(--v3-ink)", maxWidth: "80%" }}
         >
           {title}

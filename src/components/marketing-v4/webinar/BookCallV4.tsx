@@ -28,9 +28,12 @@ export function BookCallV4() {
   return (
     <section className="v3-section" style={{ paddingTop: "clamp(40px,6vw,84px)" }}>
       <SectionScan />
-      <div className="v3-wrap grid items-start gap-12 lg:grid-cols-[1.05fr_0.95fr]" ref={ref}>
-        {/* Left — the offer + qualification */}
-        <div>
+      {/* On mobile the booking form must not be buried: order heading -> form ->
+          details. On lg the grid keeps heading (col1/row1) + details (col1/row2)
+          beside the form (col2, spanning both rows) — the original desktop layout. */}
+      <div className="v3-wrap grid items-start gap-x-12 gap-y-8 lg:grid-cols-[1.05fr_0.95fr]" ref={ref}>
+        {/* Heading block */}
+        <div className="order-1 lg:col-start-1 lg:row-start-1">
           <Kicker>{wb.call.kicker}</Kicker>
           <h1 className="v3-display mt-5" style={{ fontSize: "clamp(34px,5vw,64px)", lineHeight: 1.03 }}>
             {wb.call.heading}
@@ -38,9 +41,12 @@ export function BookCallV4() {
           <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
             {wb.call.body}
           </p>
+        </div>
 
+        {/* Details — below the form on mobile, under the heading on desktop */}
+        <div className="order-3 lg:col-start-1 lg:row-start-2">
           {/* What the call covers */}
-          <div className="mt-8">
+          <div>
             <span className="v3-mono" style={labelStyle}>
               On the call
             </span>
@@ -100,8 +106,8 @@ export function BookCallV4() {
           </div>
         </div>
 
-        {/* Right — the booking card */}
-        <Reveal delay={1}>
+        {/* Booking card — right after the heading on mobile */}
+        <Reveal delay={1} className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2">
           <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
             <span className="v3-display" style={{ fontSize: 24 }}>
               Book your call
