@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { track, getUtmParams } from "@/lib/tracking";
-import { CheckIcon } from "@/components/marketing-v2/Icons";
+import { CheckIcon, ArrowRightIcon } from "@/components/marketing-v2/Icons";
 
 /**
  * v3 "terminal" registration form. Same behaviour as the v1/v2 forms — posts to
@@ -228,8 +228,12 @@ export function RegistrationFormV3() {
       <button
         type="submit"
         disabled={status === "loading"}
-        className="v3-btn v3-btn-primary mt-1 w-full disabled:opacity-60"
+        className="v3-btn v3-btn-primary v3-clip mt-1 w-full disabled:opacity-60"
+        style={{ paddingLeft: 12 }}
       >
+        <span className="v3-btn-badge">
+          <ArrowRightIcon className="h-4 w-4" />
+        </span>
         {status === "loading" ? "Opening your case…" : "Open my case"}
       </button>
       <p

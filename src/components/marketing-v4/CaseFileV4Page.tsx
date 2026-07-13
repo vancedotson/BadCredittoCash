@@ -6,9 +6,6 @@ import { HeroV4 } from "./HeroV4";
 import {
   Intro,
   Faq,
-  RiskReversal,
-  Urgency,
-  RegisterSection,
   Footer,
 } from "../marketing-v3/shared/sections";
 import { ResultsLedger } from "../marketing-v3/shared/signature";
@@ -20,6 +17,9 @@ import { TrustStripSection } from "./truststrip/TrustStripSection";
 import { PainMirrorV4 } from "./pain/PainMirrorV4";
 import { ReframeGatherV4 } from "./reframe/ReframeGatherV4";
 import { MeetVanceV4 } from "./meetvance/MeetVanceV4";
+import { RiskSectionV4 } from "./risk/RiskSectionV4";
+import { UrgencySectionV4 } from "./urgency/UrgencySectionV4";
+import { RegisterSectionV4 } from "./register/RegisterSectionV4";
 
 /* v4 — the chosen "Case File" direction, iterated. Reuses the shared v3
    section library; overrides only the header (adds the gold beam) and the hero
@@ -39,10 +39,15 @@ export function CaseFileV4Page() {
       <ResultsLedger />
       <TestimonialsSectionV4 />
       <HowItWorksSectionV4 />
+      <RiskSectionV4 />
+      {/* Sticky reveal: urgency pins full-height, holds through a transparent
+          spacer (the dwell), then the register section scrolls up over it. */}
+      <div className="v4-stack">
+        <UrgencySectionV4 />
+        <div className="v4-stack-spacer" aria-hidden />
+        <RegisterSectionV4 />
+      </div>
       <Faq />
-      <RiskReversal />
-      <Urgency />
-      <RegisterSection />
       <Footer />
       <Intro label={site.ev.kickers.hero} />
     </>

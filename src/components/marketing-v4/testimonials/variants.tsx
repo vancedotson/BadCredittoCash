@@ -7,10 +7,10 @@ import { PersonIcon } from "@/components/marketing-v2/Icons";
 // ⚠️ PLACEHOLDER testimonials — extra entries so the wall shows 8. Swap all of
 // these for real quotes with names/photos/permissions before launch.
 const EXTRA = [
-  { quote: "I stopped dreading my phone.", name: "Client ⚠️", location: "Oklahoma City", result: "The dread lifted", photo: "" },
-  { quote: "He explained everything. No runaround.", name: "Client ⚠️", location: "Oklahoma City", result: "Straight answers", photo: "" },
-  { quote: "For once, someone was in my corner.", name: "Client ⚠️", location: "Oklahoma City", result: "Backed up", photo: "" },
-  { quote: "I only wish I'd called sooner.", name: "Client ⚠️", location: "Oklahoma City", result: "Only regret: waiting", photo: "" },
+  { quote: "I stopped dreading my phone.", name: "Client", location: "Oklahoma City", result: "The dread lifted", photo: "" },
+  { quote: "He explained everything. No runaround.", name: "Client", location: "Oklahoma City", result: "Straight answers", photo: "" },
+  { quote: "For once, someone was in my corner.", name: "Client", location: "Oklahoma City", result: "Backed up", photo: "" },
+  { quote: "I only wish I'd called sooner.", name: "Client", location: "Oklahoma City", result: "Only regret: waiting", photo: "" },
 ];
 const items = [...site.testimonials.items, ...EXTRA];
 

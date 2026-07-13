@@ -34,7 +34,7 @@ export function TestimonialsSectionV4() {
           className="v3-mono mt-8"
           style={{ fontSize: 11, color: "var(--v3-faint)", letterSpacing: "0.08em" }}
         >
-          ⚠️ Placeholder statements: real names, photos &amp; permissions pending.
+          Placeholder statements: real names, photos &amp; permissions pending.
         </p>
       </div>
     </section>

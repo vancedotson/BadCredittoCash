@@ -2,7 +2,6 @@
 
 import "../v3/v3.css";
 import { Canvas } from "@/components/marketing-v3/shared/primitives";
-import { StickyCta } from "@/components/marketing-v3/shared/StickyCta";
 import { usePageProgress } from "@/components/marketing-v3/shared/hooks";
 import { CaseFileV4Page } from "@/components/marketing-v4/CaseFileV4Page";
 
@@ -23,7 +22,6 @@ export default function V4Page() {
       <div className="v3-content">
         <CaseFileV4Page />
       </div>
-      <StickyCta />
     </div>
   );
 }

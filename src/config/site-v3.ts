@@ -102,7 +102,7 @@ export const site = {
       "Find out if they owe you",
     ],
     // ⚠️ PLACEHOLDER — real aggregate proof (swap in Vance's true numbers).
-    rating: { stars: "4.9", count: "500+ Oklahomans helped ⚠️" },
+    rating: { stars: "4.9", count: "500+ Oklahomans helped" },
   },
 
   // SECTION 2 — Pain Mirror
@@ -242,28 +242,28 @@ export const site = {
     items: [
       {
         quote: "They stopped calling within a week.",
-        name: "Client ⚠️",
+        name: "Client",
         location: "Oklahoma City",
         result: "Calls stopped in ~1 week",
         photo: "",
       },
       {
         quote: "I didn't think it was real. It was.",
-        name: "Client ⚠️",
+        name: "Client",
         location: "Oklahoma City",
         result: "Inaccurate items challenged",
         photo: "",
       },
       {
         quote: "For the first time in years, I could breathe.",
-        name: "Client ⚠️",
+        name: "Client",
         location: "Oklahoma City",
         result: "The harassment stopped",
         photo: "",
       },
       {
         quote: "The calls stopped. So did the stress.",
-        name: "Client ⚠️",
+        name: "Client",
         location: "Oklahoma City",
         result: "Peace of mind back",
         photo: "",
@@ -323,7 +323,7 @@ export const site = {
     points: [
       "The calls keep coming.",
       "The wrong information keeps hurting your score and your approvals.",
-      "Some legal claims are time-sensitive. ⚠️",
+      "Some legal claims are time-sensitive.",
     ],
     scarcity: "Slots are limited, it's just me.",
   },
@@ -344,8 +344,8 @@ export const site = {
   footer: {
     disclaimers: [
       "Results vary and are not guaranteed. Individual outcomes depend on the specifics of your situation.",
-      "Vance Dotson is a consumer advocate. This website is for general information and is not legal advice. ⚠️",
-      "Licensed & bonded for credit services in Oklahoma. ⚠️",
+      "Vance Dotson is a consumer advocate. This website is for general information and is not legal advice.",
+      "Licensed & bonded for credit services in Oklahoma.",
     ],
     links: [
       { label: "Privacy", href: "#" },

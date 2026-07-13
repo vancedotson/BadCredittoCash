@@ -603,6 +603,61 @@
   }
 }
 
+/* v4 risk / no-risk — rubber-stamp seal */
+.v4-risk-stamp {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 128px;
+  border-radius: 999px;
+  border: 2px solid var(--v3-accent);
+  color: var(--v3-accent);
+  transform: rotate(-9deg);
+  opacity: 0.92;
+  text-align: center;
+}
+.v4-risk-stamp::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--v3-accent) 55%, transparent);
+}
+
+/* v4 terms clause — expands on hover/focus to reveal a calming line */
+.v4-risk-clause {
+  outline: none;
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+.v4-risk-clause:hover,
+.v4-risk-clause:focus-within {
+  background: rgba(255, 255, 255, 0.03);
+}
+.v4-risk-clause-detail {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.4s ease, margin-top 0.4s ease;
+}
+.v4-risk-clause:hover .v4-risk-clause-detail,
+.v4-risk-clause:focus-within .v4-risk-clause-detail {
+  max-height: 140px;
+  margin-top: 8px;
+  opacity: 1;
+}
+.v4-risk-clause:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--v3-accent) 45%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-risk-clause-detail {
+    transition: none;
+  }
+}
+
 /* v4 how-it-works — connector rails that draw on scroll-reveal */
 .v4-hiw-railline {
   transform: scaleX(0);
@@ -1139,6 +1194,305 @@
 .v3-switcher button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--v3-accent) 55%, transparent);
+}
+
+/* ===== v4 Urgency ("Clock // Time-sensitive") variants ================== */
+
+/* Sticky reveal: the urgency section pins full-height while the register
+   section scrolls up and covers it. The stack bounds the sticky travel so it
+   unpins once register has scrolled past (FAQ/footer flow normally after). */
+.v4-stack {
+  position: relative;
+}
+.v4-urg-sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* Transparent runway: urgency stays pinned across it before register covers. */
+.v4-stack-spacer {
+  height: 100svh;
+}
+.v4-stack > #register {
+  position: relative;
+  z-index: 1;
+  background: var(--v3-bg);
+}
+
+/* A — Cost Ledger (chosen Urgency design). A hairline row of accruing
+   consequence cells; hovering/focusing a cell lights it in its "procedure"
+   step color (--c), expands it (line 1 opens right, line 2 both ways, line 3
+   left — a flex row redistributes space), and reveals a reassurance line. */
+.v4-urg-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--v3-line);
+  border: 1px solid var(--v3-line);
+}
+@media (min-width: 900px) {
+  .v4-urg-ledger {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+.v4-urg-cell {
+  position: relative;
+  background: #0a0a0c;
+  padding: 26px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 220px;
+  min-width: 0;
+  outline: none;
+  transition: background 0.35s ease, box-shadow 0.4s ease,
+    flex-grow 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (min-width: 900px) {
+  .v4-urg-cell {
+    flex: 1 1 0;
+  }
+  .v4-urg-cell:hover,
+  .v4-urg-cell:focus-within {
+    flex-grow: 2.3;
+  }
+}
+.v4-urg-cell:hover,
+.v4-urg-cell:focus-within {
+  background: #101014;
+  box-shadow: inset 0 0 0 1px var(--c),
+    0 24px 60px color-mix(in srgb, var(--c) 20%, transparent);
+  z-index: 2;
+}
+.v4-urg-cell:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--c),
+    0 24px 60px color-mix(in srgb, var(--c) 20%, transparent);
+}
+.v4-urg-cell-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--v3-faint);
+}
+.v4-urg-cell-status {
+  color: var(--v3-accent);
+  transition: color 0.35s ease;
+}
+.v4-urg-cell:hover .v4-urg-cell-status,
+.v4-urg-cell:focus-within .v4-urg-cell-status {
+  color: var(--c);
+}
+.v4-urg-cell-body {
+  margin-top: auto;
+}
+.v4-urg-cell-stmt {
+  font-size: clamp(19px, 2.2vw, 25px);
+  color: var(--v3-ink);
+  line-height: 1.3;
+}
+.v4-urg-cell-detail {
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--v3-mut);
+  line-height: 1.55;
+  transition: max-height 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.4s ease, margin-top 0.4s ease;
+}
+.v4-urg-cell:hover .v4-urg-cell-detail,
+.v4-urg-cell:focus-within .v4-urg-cell-detail {
+  max-height: 130px;
+  margin-top: 14px;
+  opacity: 1;
+}
+.v4-urg-cell-meter {
+  height: 3px;
+  margin-top: 18px;
+  background: var(--v3-line-soft);
+  overflow: hidden;
+}
+.v4-urg-cell-meter > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--v3-accent-deep), var(--v3-accent));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1), background 0.35s ease;
+}
+.v4-urg-cell.in .v4-urg-cell-meter > span {
+  transform: scaleX(1);
+}
+.v4-urg-cell:hover .v4-urg-cell-meter > span,
+.v4-urg-cell:focus-within .v4-urg-cell-meter > span {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--c) 45%, #000),
+    var(--c)
+  );
+}
+
+/* Radar reticle (ambient, section background). */
+.v4-urg-radar {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+}
+.v4-urg-ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid var(--v3-line-soft);
+}
+.v4-urg-ring:first-of-type {
+  border-color: var(--v3-line);
+}
+.v4-urg-radar-x,
+.v4-urg-radar-y {
+  position: absolute;
+  background: var(--v3-line-soft);
+}
+.v4-urg-radar-x {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+}
+.v4-urg-radar-y {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+.v4-urg-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--v3-accent) 22%, transparent) 42deg,
+    transparent 62deg
+  );
+  animation: v4radarSweep 4s linear infinite;
+}
+.v4-urg-radar-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 999px;
+  background: var(--v3-accent);
+  box-shadow: 0 0 14px var(--v3-accent);
+  animation: v4pulse 1.6s ease-in-out infinite;
+}
+/* Full-section ambient radar (cost ledger). */
+.v4-urg-ledger-radar {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.v4-urg-radar--section {
+  position: absolute;
+  top: 50%;
+  left: auto;
+  right: -6%;
+  transform: translateY(-50%);
+  width: min(680px, 62%);
+  max-width: none;
+  margin: 0;
+  opacity: 0.4;
+  -webkit-mask-image: radial-gradient(closest-side, #000 58%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 58%, transparent 100%);
+}
+/* Hover-driven color glow (the "procedure" step color) behind the ledger. */
+.v4-urg-bg-glow {
+  position: absolute;
+  right: -6%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52%;
+  height: 78%;
+  border-radius: 999px;
+  filter: blur(100px);
+  opacity: 0;
+  transition: opacity 0.6s ease, background-color 0.5s ease;
+}
+@keyframes v4radarSweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes v4pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.32;
+  }
+}
+
+/* Single-advocate capacity meter. */
+.v4-urg-cap {
+  display: flex;
+  gap: 5px;
+}
+.v4-urg-cap > span {
+  height: 30px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--v3-line-soft);
+}
+.v4-urg-cap > span[data-on="1"] {
+  background: linear-gradient(180deg, var(--v3-accent), var(--v3-accent-deep));
+}
+/* Compact inline capacity strip (ledger footer). */
+.v4-urg-cap--sm {
+  gap: 4px;
+}
+.v4-urg-cap--sm > span {
+  height: 18px;
+  width: 9px;
+  flex: 0 0 auto;
+  border-radius: 1.5px;
+}
+/* The empty spots glow gold in sequence — a smooth "filling up" wave. */
+.v4-urg-cap-load {
+  animation: v4capFill 2.8s ease-in-out infinite;
+}
+@keyframes v4capFill {
+  0%,
+  100% {
+    background: var(--v3-line-soft);
+  }
+  50% {
+    background: color-mix(in srgb, var(--v3-accent) 60%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v4-urg-sweep,
+  .v4-urg-radar-core,
+  .v4-urg-cap-load {
+    animation: none;
+  }
+  .v4-urg-cell,
+  .v4-urg-cell-meter > span,
+  .v4-urg-cell-detail {
+    transition: none;
+  }
 }
 
 /* Sticky CTA (bottom, appears on scroll) */
