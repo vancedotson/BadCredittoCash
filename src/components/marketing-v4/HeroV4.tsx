@@ -66,7 +66,7 @@ export function HeroV4() {
 
           <h1
             className="v3-display mt-6"
-            style={{ fontSize: "clamp(48px,8vw,104px)", lineHeight: 0.9 }}
+            style={{ fontSize: "clamp(36px,8vw,104px)", lineHeight: 0.9 }}
           >
             The calls stop.{" "}
             <span className="v3-accent-text">Find out</span> if they owe you.

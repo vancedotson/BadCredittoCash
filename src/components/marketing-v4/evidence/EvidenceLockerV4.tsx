@@ -44,6 +44,7 @@ export function EvidenceLockerV4() {
   const sectionRef = useRef<HTMLElement>(null);
   const [playing, setPlaying] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
+  const [coarse, setCoarse] = useState(false);
   const [waveColors, setWaveColors] = useState<string[]>(() =>
     waveColorsFrom(FALLBACK_STEPS),
   );
@@ -65,15 +66,25 @@ export function EvidenceLockerV4() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Touch/coarse pointers: no hover, and the auto-scroll fights swiping — so we
+  // pause it and let cards stack the transcript below instead of sideways.
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const on = () => setCoarse(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+
   const nudge = (dir: number) =>
     scrollRef.current?.scrollBy({ left: dir * 380, behavior: "smooth" });
 
   // Seamless infinite scroll right→left. When we pass one full set of cards,
   // subtract that width so it wraps with no visible jump. Pauses when the cards
-  // are hovered, a card is playing, or under prefers-reduced-motion.
+  // are hovered, a card is playing, on touch, or under prefers-reduced-motion.
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || reduced || hovered || playing !== null) return;
+    if (!el || reduced || hovered || playing !== null || coarse) return;
     let raf = 0;
     const step = () => {
       const first = el.children[0] as HTMLElement | undefined;
@@ -87,7 +98,7 @@ export function EvidenceLockerV4() {
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [reduced, hovered, playing, clips.length]);
+  }, [reduced, hovered, playing, coarse, clips.length]);
 
   return (
     <section
@@ -162,8 +173,8 @@ export function EvidenceLockerV4() {
       >
         {loop.map((c, idx) => {
           const on = playing === idx;
-          // Fixed main width so the clicked card stays anchored and the
-          // transcript opens to its right (no leftward shift from compression).
+          // Desktop: fixed main width, transcript opens to the RIGHT.
+          // Touch: full-width card, transcript stacks BELOW (no 640px sideways push).
           const mainW = 300;
           const transW = on ? 340 : 0;
           return (
@@ -171,6 +182,8 @@ export function EvidenceLockerV4() {
               key={idx}
               className="v3-panel v3-corner relative flex shrink-0 overflow-hidden"
               style={{
+                flexDirection: coarse ? "column" : "row",
+                width: coarse ? "min(320px, 82vw)" : undefined,
                 borderColor: on ? "var(--v3-accent)" : "var(--v3-line)",
                 borderRadius: 4,
                 transition: "border-color 0.4s ease",
@@ -179,7 +192,7 @@ export function EvidenceLockerV4() {
               {/* main */}
               <div
                 className="shrink-0 p-6"
-                style={{ width: mainW, transition: "width 0.5s cubic-bezier(0.16,1,0.3,1)" }}
+                style={{ width: coarse ? "100%" : mainW, transition: "width 0.5s cubic-bezier(0.16,1,0.3,1)" }}
               >
                 <div className="flex items-center justify-between">
                   <span
@@ -219,17 +232,27 @@ export function EvidenceLockerV4() {
                 </button>
               </div>
 
-              {/* transcript slot — revealed when this card is playing */}
+              {/* transcript slot — opens right on desktop, stacks below on touch */}
               <div
                 className="shrink-0 overflow-hidden"
-                style={{
-                  width: transW,
-                  transition: "width 0.5s cubic-bezier(0.16,1,0.3,1)",
-                  borderLeft: "1px solid var(--v3-line)",
-                  background: "rgba(0,0,0,0.25)",
-                }}
+                style={
+                  coarse
+                    ? {
+                        width: "100%",
+                        maxHeight: on ? 360 : 0,
+                        transition: "max-height 0.5s cubic-bezier(0.16,1,0.3,1)",
+                        borderTop: on ? "1px solid var(--v3-line)" : "none",
+                        background: "rgba(0,0,0,0.25)",
+                      }
+                    : {
+                        width: transW,
+                        transition: "width 0.5s cubic-bezier(0.16,1,0.3,1)",
+                        borderLeft: "1px solid var(--v3-line)",
+                        background: "rgba(0,0,0,0.25)",
+                      }
+                }
               >
-                <div className="p-6" style={{ width: 340 }}>
+                <div className="p-6" style={{ width: coarse ? "100%" : 340 }}>
                   <span
                     className="v3-mono"
                     style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-faint)" }}

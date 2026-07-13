@@ -17,7 +17,7 @@ import { TrustStripSection } from "./truststrip/TrustStripSection";
 import { PainMirrorV4 } from "./pain/PainMirrorV4";
 import { ReframeGatherV4, ReframeLawsV4 } from "./reframe/ReframeGatherV4";
 import { MeetVanceV4 } from "./meetvance/MeetVanceV4";
-import { RiskSectionV4 } from "./risk/RiskSectionV4";
+import { RiskV3 } from "./risk/RiskV3";
 import { UrgencySectionV4 } from "./urgency/UrgencySectionV4";
 import { RegisterSectionV4 } from "./register/RegisterSectionV4";
 
@@ -56,7 +56,7 @@ export function CaseFileV5Page() {
 
       <div className="v5-light">
         <HowItWorksSectionV4 />
-        <RiskSectionV4 />
+        <RiskV3 />
       </div>
 
       {/* Sticky reveal: urgency (light) pins full-height, holds through a

@@ -28,7 +28,7 @@ export function HiwNumerals() {
         >
           <span
             className="v3-display"
-            style={{ fontSize: "clamp(64px,10vw,140px)", lineHeight: 0.8, color: "var(--v3-accent)", minWidth: 120 }}
+            style={{ fontSize: "clamp(44px,10vw,140px)", lineHeight: 0.8, color: "var(--v3-accent)", minWidth: 120 }}
           >
             {num(i)}
           </span>

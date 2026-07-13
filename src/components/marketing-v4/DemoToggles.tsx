@@ -20,21 +20,39 @@ export const useDemo = () => useContext(DemoContext);
 
 const VERSIONS: Version[] = ["1", "2", "3"];
 
-/** The in-nav version toggle (V1 / V2 / V3). Renders nothing without a provider. */
-export function NavToggles() {
+/**
+ * The version toggle (V1 / V2 / V3). Renders nothing without a provider.
+ * `panel` = rendered inside the mobile hamburger menu (always shown); otherwise
+ * it's the desktop bar instance (hidden below md). `onPick` fires after a switch
+ * (used to close the mobile menu).
+ */
+export function NavToggles({
+  panel = false,
+  onPick,
+}: {
+  panel?: boolean;
+  onPick?: () => void;
+}) {
   const demo = useDemo();
   if (!demo) return null;
   const { version, setVersion } = demo;
 
   return (
-    <div className="v4-navtoggles hidden md:flex">
-      <div className="v4-navtoggle-group" role="group" aria-label="Design version">
+    <div
+      className={`v4-navtoggles ${panel ? "v4-navtoggles--panel" : "hidden md:flex"}`}
+      role="group"
+      aria-label="Design version"
+    >
+      <div className="v4-navtoggle-group">
         {VERSIONS.map((v) => (
           <button
             key={v}
             type="button"
             aria-pressed={version === v}
-            onClick={() => setVersion(v)}
+            onClick={() => {
+              setVersion(v);
+              onPick?.();
+            }}
           >
             V{v}
           </button>

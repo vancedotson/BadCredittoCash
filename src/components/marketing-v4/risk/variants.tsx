@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { site } from "@/config/site-v3";
 import { Kicker, Reveal } from "../../marketing-v3/shared/primitives";
 import { useRevealChildren } from "../../marketing-v3/shared/hooks";
+import { PlayIcon } from "@/components/marketing-v2/Icons";
 
 const kicker = site.ev.kickers.risk;
 const points = site.riskReversal.points;
@@ -33,6 +35,21 @@ export function RiskPanel() {
             <span style={{ color: "var(--v3-accent)" }}>nothing to lose</span> by
             looking.
           </span>
+        </Reveal>
+        <Reveal className="mt-9 flex flex-wrap items-center gap-4" delay={1}>
+          <Link
+            href={site.cta.primary.href}
+            className="v3-btn v3-btn-primary v3-clip"
+            style={{ paddingLeft: 12 }}
+          >
+            <span className="v3-btn-badge">
+              <PlayIcon className="h-4 w-4" />
+            </span>
+            {site.cta.primary.label}
+          </Link>
+          <Link href={site.cta.secondary.href} className="v3-btn v3-btn-ghost">
+            {site.cta.secondary.label} →
+          </Link>
         </Reveal>
       </div>
 
