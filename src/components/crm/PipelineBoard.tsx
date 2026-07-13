@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Contact } from "@/lib/store";
@@ -12,6 +12,7 @@ import {
   type Stage,
 } from "@/lib/stages";
 import { SegmentBadge } from "@/components/crm/ui";
+import { ChevronRightIcon } from "@/components/marketing-v2/Icons";
 
 const inputClass =
   "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate/60 focus:border-trust";
@@ -45,6 +46,11 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   const [lostIds, setLostIds] = useState<string[] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [mobileStage, setMobileStage] = useState<Stage>("new");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  function scrollByCol(dir: number) {
+    scrollRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
+  }
 
   const stageOf = (c: Contact): Stage => ov[c.id] ?? c.stage;
   const sourceOf = (c: Contact) => c.utm?.utm_source ?? c.source ?? "direct";
@@ -167,18 +173,26 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
         </div>
       ) : null}
 
-      {/* Desktop kanban — active stages */}
-      <div className="hidden gap-4 overflow-x-auto pb-2 md:flex">
-        {ACTIVE_STAGES.map((stage) => (
-          <Column key={stage} stage={stage} cards={cardsIn(stage)} collapsed={collapsed.has(stage)} onToggleCollapse={() => toggleCollapse(stage)} over={overStage === stage} drop={dropHandlers(stage)} cardProps={cardProps} />
-        ))}
-      </div>
-
-      {/* Desktop — closed outcomes, visually separated */}
-      <div className="hidden gap-4 md:flex">
-        {CLOSED_STAGES.map((stage) => (
-          <Column key={stage} stage={stage} cards={cardsIn(stage)} collapsed={collapsed.has(stage)} onToggleCollapse={() => toggleCollapse(stage)} over={overStage === stage} drop={dropHandlers(stage)} cardProps={cardProps} closed />
-        ))}
+      {/* Desktop kanban — all stages in one horizontal, scrollable row */}
+      <div className="hidden md:block">
+        <div className="mb-2 flex items-center justify-end gap-2">
+          <button type="button" onClick={() => scrollByCol(-1)} aria-label="Scroll left" className="grid h-8 w-8 place-items-center rounded-lg border border-mist bg-card text-slate transition-colors hover:bg-cloud hover:text-heading">
+            <ChevronRightIcon className="h-4 w-4 rotate-180" />
+          </button>
+          <button type="button" onClick={() => scrollByCol(1)} aria-label="Scroll right" className="grid h-8 w-8 place-items-center rounded-lg border border-mist bg-card text-slate transition-colors hover:bg-cloud hover:text-heading">
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+        </div>
+        <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2">
+          {ACTIVE_STAGES.map((stage) => (
+            <Column key={stage} stage={stage} cards={cardsIn(stage)} collapsed={collapsed.has(stage)} onToggleCollapse={() => toggleCollapse(stage)} over={overStage === stage} drop={dropHandlers(stage)} cardProps={cardProps} />
+          ))}
+          {/* divider: active pipeline | closed outcomes */}
+          <div className="w-px shrink-0 self-stretch bg-mist" aria-hidden />
+          {CLOSED_STAGES.map((stage) => (
+            <Column key={stage} stage={stage} cards={cardsIn(stage)} collapsed={collapsed.has(stage)} onToggleCollapse={() => toggleCollapse(stage)} over={overStage === stage} drop={dropHandlers(stage)} cardProps={cardProps} closed />
+          ))}
+        </div>
       </div>
 
       {/* Mobile — stage picker + single column */}

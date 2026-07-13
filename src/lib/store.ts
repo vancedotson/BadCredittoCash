@@ -16,6 +16,7 @@ import {
   STAGE_PROBABILITY,
   type Stage,
 } from "./stages";
+import { type TaskPriority, type TaskType, type Recurrence } from "./tasks";
 
 export type Lead = {
   id: string;
@@ -54,9 +55,25 @@ export type Task = {
   id: string;
   email: string;
   title: string;
-  dueDate?: string; // ISO date
+  dueDate?: string; // ISO (date, or date+time)
   done: boolean;
   createdAt: string;
+  priority?: TaskPriority; // default "normal"
+  type?: TaskType; // default "follow_up"
+  owner?: string;
+  notes?: string;
+  recurrence?: Recurrence; // default "none"
+  completedAt?: string;
+};
+
+export type TaskInput = {
+  title: string;
+  dueDate?: string;
+  priority?: TaskPriority;
+  type?: TaskType;
+  owner?: string;
+  notes?: string;
+  recurrence?: Recurrence;
 };
 
 export type DashboardStats = {
@@ -124,6 +141,15 @@ export type CrmStats = {
 export type SourceStat = { source: string; contacts: number; booked: number; convPct: number };
 export type TimePoint = { date: string; label: string; count: number };
 export type TaskWithContact = Task & { contactName: string; contactId: string };
+export type ContactOption = { id: string; name: string; email: string };
+export type TaskStats = {
+  open: number;
+  overdue: number;
+  dueToday: number;
+  thisWeek: number;
+  completedThisWeek: number;
+  completionRatePct: number;
+};
 
 export type PipelineStageStat = { stage: Stage; count: number; avgAgeDays: number };
 export type PipelineStats = {
@@ -150,7 +176,7 @@ type StoreState = {
 
 // Bump when the seed shape changes so a long-running dev server (which pins state
 // to globalThis across hot-reloads) reseeds instead of serving a stale shape.
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -257,11 +283,14 @@ function seedState(): StoreState {
   ];
 
   const tasks: Task[] = [
-    { id: "task_1", email: "sofia@example.com", title: "Call back about the strategy call", dueDate: new Date(now - 1 * DAY).toISOString(), done: false, createdAt: new Date(now - 9 * DAY).toISOString() },
-    { id: "task_2", email: "grace@example.com", title: "Send prep checklist before the call", dueDate: new Date(now).toISOString(), done: false, createdAt: new Date(now - 5 * DAY).toISOString() },
-    { id: "task_3", email: "ana@example.com", title: "Draft dispute letters for 2 medical collections", dueDate: new Date(now + 2 * DAY).toISOString(), done: false, createdAt: new Date(now - 9 * DAY).toISOString() },
-    { id: "task_4", email: "marcus@example.com", title: "Nudge: clicked book but didn't finish", dueDate: new Date(now + 1 * DAY).toISOString(), done: false, createdAt: new Date(now - 8 * DAY).toISOString() },
-    { id: "task_5", email: "ana@example.com", title: "Confirm intake packet received", done: true, createdAt: new Date(now - 10 * DAY).toISOString() },
+    { id: "task_1", email: "sofia@example.com", title: "Call back about the strategy call", type: "call", priority: "high", owner: "Vance", dueDate: new Date(now - 1 * DAY).toISOString(), done: false, createdAt: new Date(now - 9 * DAY).toISOString() },
+    { id: "task_2", email: "grace@example.com", title: "Send prep checklist before the call", type: "email", priority: "high", owner: "Vance", dueDate: new Date(now).toISOString(), done: false, createdAt: new Date(now - 5 * DAY).toISOString() },
+    { id: "task_3", email: "ana@example.com", title: "Draft dispute letters for 2 medical collections", type: "document", priority: "high", owner: "Vance", dueDate: new Date(now + 2 * DAY).toISOString(), done: false, createdAt: new Date(now - 9 * DAY).toISOString() },
+    { id: "task_4", email: "marcus@example.com", title: "Nudge: clicked book but didn't finish", type: "follow_up", priority: "normal", owner: "Team", dueDate: new Date(now + 1 * DAY).toISOString(), done: false, createdAt: new Date(now - 8 * DAY).toISOString() },
+    { id: "task_5", email: "hannah@example.com", title: "Re-send the booking link", type: "email", priority: "normal", dueDate: new Date(now - 2 * DAY).toISOString(), done: false, createdAt: new Date(now - 4 * DAY).toISOString() },
+    { id: "task_6", email: "nia@example.com", title: "Weekly value email", type: "email", priority: "low", recurrence: "weekly", owner: "Team", dueDate: new Date(now + 4 * DAY).toISOString(), done: false, createdAt: new Date(now - 6 * DAY).toISOString() },
+    { id: "task_7", email: "ana@example.com", title: "Confirm intake packet received", type: "follow_up", priority: "normal", owner: "Vance", done: true, completedAt: new Date(now - 8 * DAY).toISOString(), createdAt: new Date(now - 10 * DAY).toISOString() },
+    { id: "task_8", email: "grace@example.com", title: "Log the discovery call notes", type: "document", priority: "normal", owner: "Vance", done: true, completedAt: new Date(now - 2 * DAY).toISOString(), createdAt: new Date(now - 5 * DAY).toISOString() },
   ];
 
   return { version: SEED_VERSION, leads, events, notes, tasks, counter: 30000 };
@@ -517,8 +546,20 @@ export async function listNotes(email: string): Promise<Note[]> {
   return notes.filter((n) => n.email === email).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function addTask(email: string, title: string, dueDate?: string): Promise<Task> {
-  const task: Task = { id: nextId("task"), email, title, dueDate, done: false, createdAt: new Date().toISOString() };
+export async function addTask(email: string, input: TaskInput): Promise<Task> {
+  const task: Task = {
+    id: nextId("task"),
+    email,
+    title: input.title,
+    dueDate: input.dueDate,
+    done: false,
+    createdAt: new Date().toISOString(),
+    priority: input.priority ?? "normal",
+    type: input.type ?? "follow_up",
+    owner: input.owner,
+    notes: input.notes,
+    recurrence: input.recurrence ?? "none",
+  };
   tasks.unshift(task);
   return task;
 }
@@ -527,11 +568,82 @@ export async function listTasks(email: string): Promise<Task[]> {
   return tasks.filter((t) => t.email === email);
 }
 
+// When a recurring task is completed, spawn its next occurrence.
+function spawnRecurrence(task: Task): void {
+  if (!task.recurrence || task.recurrence === "none" || !task.dueDate) return;
+  const next = new Date(task.dueDate);
+  if (task.recurrence === "weekly") next.setDate(next.getDate() + 7);
+  else next.setMonth(next.getMonth() + 1);
+  tasks.unshift({
+    id: nextId("task"),
+    email: task.email,
+    title: task.title,
+    dueDate: next.toISOString(),
+    done: false,
+    createdAt: new Date().toISOString(),
+    priority: task.priority,
+    type: task.type,
+    owner: task.owner,
+    notes: task.notes,
+    recurrence: task.recurrence,
+  });
+}
+
 export async function toggleTask(id: string): Promise<Task | null> {
   const task = tasks.find((t) => t.id === id);
   if (!task) return null;
   task.done = !task.done;
+  task.completedAt = task.done ? new Date().toISOString() : undefined;
+  if (task.done) spawnRecurrence(task);
   return task;
+}
+
+export async function updateTask(
+  id: string,
+  patch: Partial<Pick<Task, "title" | "dueDate" | "priority" | "type" | "owner" | "notes" | "recurrence" | "done">>,
+): Promise<Task | null> {
+  const task = tasks.find((t) => t.id === id);
+  if (!task) return null;
+  const { done, ...rest } = patch;
+  Object.assign(task, rest);
+  if (done !== undefined && done !== task.done) {
+    task.done = done;
+    task.completedAt = done ? new Date().toISOString() : undefined;
+    if (done) spawnRecurrence(task);
+  }
+  return task;
+}
+
+export async function deleteTask(id: string): Promise<boolean> {
+  const i = tasks.findIndex((t) => t.id === id);
+  if (i === -1) return false;
+  tasks.splice(i, 1);
+  return true;
+}
+
+/** Lightweight contact list for task pickers. */
+export async function listContactOptions(): Promise<ContactOption[]> {
+  backfillContacts();
+  return leads
+    .map((l) => ({ id: l.id, name: l.name, email: l.email }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function getTaskStats(): Promise<TaskStats> {
+  const now = Date.now();
+  const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
+  const tomorrow = startOfToday + DAY;
+  const weekEnd = startOfToday + 7 * DAY;
+  const weekAgo = now - 7 * DAY;
+  const open = tasks.filter((t) => !t.done);
+  const due = (t: Task) => (t.dueDate ? new Date(t.dueDate).getTime() : null);
+  const overdue = open.filter((t) => { const d = due(t); return d !== null && d < startOfToday; }).length;
+  const dueToday = open.filter((t) => { const d = due(t); return d !== null && d >= startOfToday && d < tomorrow; }).length;
+  const thisWeek = open.filter((t) => { const d = due(t); return d !== null && d >= startOfToday && d < weekEnd; }).length;
+  const completedThisWeek = tasks.filter((t) => t.done && t.completedAt && new Date(t.completedAt).getTime() >= weekAgo).length;
+  const doneCount = tasks.filter((t) => t.done).length;
+  const completionRatePct = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
+  return { open: open.length, overdue, dueToday, thisWeek, completedThisWeek, completionRatePct };
 }
 
 export async function listAllTasks(): Promise<TaskWithContact[]> {
