@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { track, getUtmParams } from "@/lib/tracking";
+import { track, getUtmParams, rememberLead } from "@/lib/tracking";
+import { EVENTS } from "@/lib/events";
 import { CheckIcon, ArrowRightIcon } from "@/components/marketing-v2/Icons";
 
 /**
- * v3 "terminal" registration form. Same behaviour as the v1/v2 forms — posts to
- * /api/lead, tracks, then routes to /thank-you — restyled for the dark Evidence
- * Room. Email-first (abandon recovery), uncontrolled inputs (a failed validate
- * never wipes typing), per-field inline valid/invalid states, focus rings.
+ * v3 "terminal" registration form. Posts to /api/lead, tracks, then routes on.
+ * Email-first (abandon recovery), uncontrolled inputs (a failed validate never
+ * wipes typing), per-field inline valid/invalid states, focus rings.
+ *
+ * `redirectTo` / `source` are optional and default to the pre-funnel behaviour
+ * ("/thank-you", "vance-webinar") so /, /v2, /v3 are unchanged. The webinar
+ * funnel (/v4) passes "/webinar/confirmed" to enter the confirmation step.
  */
 type FieldStatus = "idle" | "valid" | "invalid";
 type FieldKey = "email" | "name" | "phone";
@@ -27,7 +31,13 @@ const validators: Record<FieldKey, (v: string) => string | null> = {
   },
 };
 
-export function RegistrationFormV3() {
+export function RegistrationFormV3({
+  redirectTo = "/thank-you",
+  source = "vance-webinar",
+}: {
+  redirectTo?: string;
+  source?: string;
+} = {}) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +95,7 @@ export function RegistrationFormV3() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
-          source: "vance-webinar",
+          source,
           utm: getUtmParams(),
         }),
       });
@@ -93,8 +103,9 @@ export function RegistrationFormV3() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Registration failed.");
       }
-      track("webinar_registered", { source: "vance-webinar", variant: "v3" });
-      router.push("/thank-you");
+      rememberLead({ email: values.email.trim(), name: values.name.trim() });
+      track(EVENTS.registered, { source, variant: "v3" }, values.email.trim());
+      router.push(redirectTo);
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");

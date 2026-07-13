@@ -12,6 +12,9 @@
  * placeholder; real persistence arrives with Supabase.
  */
 
+import { EVENTS } from "./events";
+import { deriveSegment, SEGMENT_LABELS, SEGMENTS_IN_ORDER, type Segment } from "./segments";
+
 export type Lead = {
   id: string;
   name: string;
@@ -35,6 +38,14 @@ export type DashboardStats = {
   leadsToday: number;
   leadsLast7Days: number;
   totalEvents: number;
+};
+
+export type FunnelStage = { key: string; label: string; count: number };
+export type FunnelSegment = { key: Segment; label: string; count: number };
+export type FunnelStats = {
+  stages: FunnelStage[];
+  segments: FunnelSegment[];
+  knownLeads: number; // distinct emails seen in events
 };
 
 // --------------------------------------------------------------------------
@@ -168,6 +179,63 @@ export async function listEvents(limit = 20): Promise<BehaviourEvent[]> {
   return [...events]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
+}
+
+/** Every event fired by one lead (by email) — feeds segment derivation. */
+export async function listEventsForEmail(
+  email: string,
+): Promise<BehaviourEvent[]> {
+  return events
+    .filter((e) => e.email === email)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// The funnel stages in order, mapped to the event that marks each one reached.
+const FUNNEL_STAGES: Array<{ key: string; label: string; event: string }> = [
+  { key: "registered", label: "Registered", event: EVENTS.registered },
+  { key: "confirmed", label: "Confirmation seen", event: EVENTS.confirmedView },
+  { key: "room", label: "Opened the room", event: EVENTS.roomOpened },
+  { key: "watch25", label: "Watched 25%", event: EVENTS.watch25 },
+  { key: "watch50", label: "Watched 50%", event: EVENTS.watch50 },
+  { key: "watch75", label: "Watched 75%", event: EVENTS.watch75 },
+  { key: "watch90", label: "Watched 90%", event: EVENTS.watch90 },
+  { key: "completed", label: "Finished", event: EVENTS.completed },
+  { key: "booked", label: "Booked the call", event: EVENTS.booked },
+];
+
+/**
+ * The funnel as stages + behavioral segments, counted by DISTINCT lead (email).
+ * This is the ebook's stage view (§5) plus the six segments (§4.2) — it makes
+ * the weak stage visible instead of a flat event total.
+ */
+export async function getFunnelStats(): Promise<FunnelStats> {
+  // Group each known email's fired event names.
+  const byEmail = new Map<string, Set<string>>();
+  for (const e of events) {
+    if (!e.email) continue;
+    const set = byEmail.get(e.email) ?? new Set<string>();
+    set.add(e.event);
+    byEmail.set(e.email, set);
+  }
+
+  const stages: FunnelStage[] = FUNNEL_STAGES.map((s) => ({
+    key: s.key,
+    label: s.label,
+    count: [...byEmail.values()].filter((set) => set.has(s.event)).length,
+  }));
+
+  const tally = new Map<Segment, number>();
+  for (const set of byEmail.values()) {
+    const seg = deriveSegment([...set].map((event) => ({ event })));
+    tally.set(seg, (tally.get(seg) ?? 0) + 1);
+  }
+  const segments: FunnelSegment[] = SEGMENTS_IN_ORDER.map((key) => ({
+    key,
+    label: SEGMENT_LABELS[key],
+    count: tally.get(key) ?? 0,
+  }));
+
+  return { stages, segments, knownLeads: byEmail.size };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {

@@ -51,7 +51,7 @@ export function RegisterSectionV4() {
               {site.register.heading}
             </span>
           </div>
-          <RegistrationFormV3 />
+          <RegistrationFormV3 redirectTo="/webinar/confirmed" />
         </div>
       </div>
     </section>

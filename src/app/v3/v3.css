@@ -1736,6 +1736,27 @@
   }
 }
 
+/* Active step node in the confirmation quiz progress bar — a soft accent ring
+   pulses outward so it's obvious which step you're on. */
+@keyframes v4StepPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--v3-accent) 45%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--v3-accent) 0%, transparent);
+  }
+}
+.v4-step-active {
+  animation: v4StepPulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .v4-step-active {
+    animation: none;
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--v3-accent) 14%, transparent);
+  }
+}
+
 /* Single-advocate capacity meter. */
 .v4-urg-cap {
   display: flex;

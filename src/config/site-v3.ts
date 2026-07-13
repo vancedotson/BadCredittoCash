@@ -340,6 +340,150 @@ export const site = {
     webinarNote: "Free online training · watch on any device",
   },
 
+  // WEBINAR FUNNEL — evergreen, on-demand training whose end action is booking
+  // a free strategy call (an application funnel, not a paid checkout). Copy is
+  // written compliance-safe: no fake countdowns, no guarantee %. ⚠️ items need
+  // Vance's confirmation before going live.
+  webinar: {
+    // ⚠️ DRAFT titles — pick/confirm one with Vance. Result + mechanism + who.
+    titleOptions: [
+      "How to stop the collector calls and challenge the errors on your report, using the federal law that's already on your side.",
+      "How to find out if the collectors owe you, without paying a credit-repair mill, using the FCRA and FDCPA.",
+      "The two federal laws that stop harassment and clean up inaccurate credit reporting, even if your own disputes came back verified.",
+    ],
+    // The named mechanism — the "new way" the whole training hangs on.
+    mechanism: {
+      name: "The Violation Ledger",
+      oneLiner:
+        "Every harassing call and every inaccurate line on your report, logged as what it legally is: a violation you can hold them to. That ledger is what turns a complaint into leverage.",
+    },
+    // Evergreen and honest: on-demand, no live date, no countdown.
+    format: "Free on-demand training. Watch on any device.",
+    runtime: "About 35 minutes.", // ⚠️ set to the real runtime once recorded
+    learn: [
+      "Why your own disputes came back verified, and what the bureaus are actually required to do.",
+      "The two federal laws that already protect you, in plain English.",
+      "How to spot a violation on a collector call or a credit report.",
+      "What find out if they owe you really means, and when it applies.",
+      "The first move to make this week, whether or not we ever talk.",
+    ],
+
+    // Confirmation page — the single biggest show-up lever (ebook §2.2).
+    confirm: {
+      kicker: "CONFIRMED // YOUR SEAT IS SAVED",
+      heading: "You're in. Your training is ready.",
+      body: "This is the whole thing, start to finish. Give it your attention once and you'll see exactly how I stop the calls and go after inaccurate reporting. Watch it now while it's in front of you, before the week swallows it.",
+      goalPrompt:
+        "Before you watch: reply to the email I just sent and tell me the one thing you most want fixed. I read every one.",
+      prepare: [
+        "A few quiet minutes where you can actually listen.",
+        "Your most recent credit report, if you have it handy. Not required.",
+      ],
+      watchCta: "Watch the training now",
+      // Short 3-step concern quiz shown before the training. Surfaces what the
+      // person most wants fixed (used to tailor follow-up); submit -> the room.
+      quiz: {
+        intro: "First, three quick questions so I can point you at the right part.",
+        steps: [
+          {
+            id: "concern",
+            question: "What's weighing on you most right now?",
+            options: [
+              "The collector calls won't stop",
+              "Wrong or unfamiliar items on my report",
+              "My credit is blocking a loan, apartment, or job",
+              "Honestly, all of it",
+            ],
+          },
+          {
+            id: "tried",
+            question: "Have you tried to fix it before?",
+            options: [
+              "I disputed it myself",
+              "I paid a credit-repair company",
+              "No, this is my first real attempt",
+              "I wasn't sure it was even possible",
+            ],
+          },
+          {
+            id: "urgency",
+            question: "How soon do you want this handled?",
+            options: [
+              "As soon as possible, it's urgent",
+              "In the next few weeks",
+              "I'm just exploring for now",
+            ],
+          },
+        ],
+        submitLabel: "Take me to the training",
+        // Per-step reassurance shown beside "STEP x OF 3" (index = step).
+        progress: [
+          "Just three quick questions.",
+          "Halfway there.",
+          "Almost there, last one.",
+        ],
+      },
+    },
+
+    // The webinar room — focus + belief shift, with a timed CTA at the pitch.
+    room: {
+      kicker: "TRAINING // NOW PLAYING",
+      heading: "How the law stops the calls and challenges the errors.",
+      subhead:
+        "Watch start to finish. The part most people need comes near the end.",
+      chapters: [
+        "Why disputes come back verified",
+        "The two laws, in plain English",
+        "How to read a violation",
+        "What to do if they broke the rules",
+      ],
+      stayHook:
+        "Stay to the end. That's where I show you the exact next step for your own report.",
+      // Revealed only at the pitch mark, never before (ebook §3.4, block 8).
+      pitchCue:
+        "Now you've seen how it works. If you want me to look at your specific situation, here's the shortcut.",
+      offerCta: "Book my free strategy call",
+      // Short line for the sticky book-a-call bar at the bottom of the room.
+      bookBarNote: "Ready to see if you have a case?",
+    },
+
+    // Book-the-call (the "offer") page — application-style qualification.
+    call: {
+      kicker: "INTAKE // BOOK YOUR CALL",
+      heading: "Book your free strategy call.",
+      body: "You've seen the method. This call is where we point it at your situation. We look at what's happening to you, see whether you have a case, and I tell you the honest next step. No cost, no obligation.",
+      covers: [
+        "We review the calls you're getting and the items on your report.",
+        "We find out whether there's a violation to hold them to.",
+        "You leave knowing exactly where you stand, either way.",
+      ],
+      whoFor: [
+        "You're getting collector calls that won't stop.",
+        "There's inaccurate or unfamiliar information on your report.",
+        "You tried disputing it yourself and it came back.",
+      ],
+      whoNotFor: [
+        "Your report is accurate and no one is contacting you. Then you probably don't need me, and I'll tell you so.",
+      ],
+      cta: "Book my free call",
+      // Honest scarcity only — a real reason, not a timer.
+      slotsNote:
+        "It's just me, so I open a limited number of call slots each week.",
+    },
+
+    // Onboarding after booking — decision momentum + "start here" (ebook §2.2).
+    booked: {
+      kicker: "CONFIRMED // CALL BOOKED",
+      heading: "Your call is booked.",
+      body: "Good move. Here's how to make our time count. Do these three things before we talk and we'll get much further, much faster.",
+      checklist: [
+        "Pull your credit reports from all three bureaus. They're free at annualcreditreport.com.",
+        "Gather any collection letters, texts, or voicemails you still have.",
+        "Write down the items you think are wrong or aren't yours.",
+      ],
+    },
+  },
+
   // FOOTER (compliance-critical)
   footer: {
     disclaimers: [

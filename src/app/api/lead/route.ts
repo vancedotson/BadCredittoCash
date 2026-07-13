@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createLead, recordEvent, type Lead } from "@/lib/store";
+import { EVENTS } from "@/lib/events";
+import { enrollNewRegistration } from "@/lib/automations";
 
 /**
  * Receives webinar registrations and saves them to our own data store
@@ -34,10 +36,13 @@ export async function POST(request: Request) {
     });
 
     await recordEvent({
-      event: "webinar_registered",
+      event: EVENTS.registered,
       email: lead.email,
       props: { source: lead.source },
     });
+
+    // Enter the pre-webinar (get-them-to-watch) sequence. Stubbed delivery.
+    await enrollNewRegistration(lead.email);
 
     return NextResponse.json({ ok: true, id: lead.id });
   } catch (err) {
