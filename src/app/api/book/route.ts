@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { recordEvent } from "@/lib/store";
+import { recordEvent, upsertLeadByEmail } from "@/lib/store";
 import { EVENTS } from "@/lib/events";
 import { onBooked } from "@/lib/automations";
 
@@ -35,6 +35,13 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Ensure the booker is a CRM contact (they may never have registered).
+    await upsertLeadByEmail(email, {
+      name,
+      phone: body.phone?.trim() || undefined,
+      utm: body.utm,
+    });
+
     await recordEvent({
       event: EVENTS.booked,
       email,

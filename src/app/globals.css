@@ -94,6 +94,15 @@
   }
 }
 
+/* CRM headings use Poppins (a popular geometric sans, bold) instead of the
+   marketing Staatliches caps display. Scoped to .crm-scope so the public site
+   is untouched. Weight comes from the utility classes (font-bold / font-semibold). */
+.crm-scope :is(h1, h2, h3, h4) {
+  font-family: var(--font-poppins), var(--font-inter), Arial, sans-serif;
+  letter-spacing: -0.015em;
+  text-transform: none;
+}
+
 /* Periodic "shine" sweep across a button — quick pass fully off both edges,
    then a long pause off-screen (so no sliver parks on the right). */
 @keyframes shine {
