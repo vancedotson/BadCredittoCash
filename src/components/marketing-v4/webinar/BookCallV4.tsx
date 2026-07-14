@@ -12,16 +12,16 @@ import { buildDays, slotLabelOf, type Day } from "../book/slots";
 import { SlotPicker } from "../book/SlotPicker";
 
 /**
- * /webinar/call — the "offer" page. Left: heading + what the call covers. Right:
- * a two-step booking card (step 1 = your details, step 2 = pick a time from the
- * availability calendar + a short intake, then finalize). Fires call_page_view on
- * load, call_booking_started the moment they engage, and call_booked on success
- * (the conversion) before routing to the booked/onboarding page.
+ * /webinar/call — the "offer" page. Left (40%): heading + what the call covers,
+ * top-aligned. Right (60%): a two-step booking card (step 1 = your details,
+ * step 2 = pick a time from a stacked availability list + a short intake, then
+ * finalize). Fires call_page_view on load, call_booking_started on first
+ * engagement, and call_booked on success before routing to the booked page.
  */
 const wb = site.webinar;
 
 const labelStyle = {
-  fontSize: 10,
+  fontSize: 11.5,
   letterSpacing: "0.2em",
   textTransform: "uppercase" as const,
   color: "var(--v3-faint)",
@@ -31,10 +31,8 @@ const inputStyle = {
   border: "1px solid var(--v3-line)",
   color: "var(--v3-ink)",
   fontFamily: "var(--v3-mono)",
-  fontSize: 15,
+  fontSize: 16.5,
 } as const;
-
-const CALL_FACTS = ["By phone", "Directly with Vance", "Free, no obligation"];
 
 // Short pre-call intake — a few quick questions so the call starts warm. Easy to
 // edit here; answers ride along to the CRM on the booking.
@@ -55,9 +53,9 @@ export function BookCallV4() {
   return (
     <section className="v3-section" style={{ paddingTop: "clamp(40px,6vw,84px)" }}>
       <SectionScan />
-      <div className="v3-wrap grid items-start gap-x-12 gap-y-8 lg:grid-cols-[1.05fr_0.95fr]" ref={ref}>
-        {/* Heading */}
-        <div className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
+      <div className="v3-wrap grid items-start gap-x-12 gap-y-8 lg:grid-cols-[2fr_3fr]" ref={ref}>
+        {/* Left column — heading + what the call covers, grouped at the top */}
+        <div className="min-w-0">
           <Kicker>{wb.call.kicker}</Kicker>
           <h1 className="v3-display mt-5" style={{ fontSize: "clamp(34px,5vw,64px)", lineHeight: 1.03 }}>
             {wb.call.heading}
@@ -65,25 +63,24 @@ export function BookCallV4() {
           <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
             {wb.call.body}
           </p>
+
+          <div className="mt-8">
+            <span className="v3-mono" style={labelStyle}>On the call</span>
+            <ul className="mt-3 flex flex-col gap-2.5">
+              {wb.call.covers.map((c) => (
+                <li key={c} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 16 }}>
+                  <span style={{ color: "var(--v3-accent)", marginTop: 2 }}>
+                    <CheckIcon className="h-4 w-4" />
+                  </span>
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        {/* What the call covers — below the card on mobile, under the heading on desktop */}
-        <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
-          <span className="v3-mono" style={labelStyle}>On the call</span>
-          <ul className="mt-3 flex flex-col gap-2.5">
-            {wb.call.covers.map((c) => (
-              <li key={c} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 15.5 }}>
-                <span style={{ color: "var(--v3-accent)", marginTop: 2 }}>
-                  <CheckIcon className="h-4 w-4" />
-                </span>
-                {c}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Booking card — two-step wizard */}
-        <Reveal delay={1} className="order-2 min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+        {/* Booking card — two-step wizard (60%) */}
+        <Reveal delay={1} className="min-w-0">
           <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
             <BookingWizard />
           </div>
@@ -107,7 +104,7 @@ function BookingWizard() {
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      const d = buildDays();
+      const d = buildDays().slice(0, 6);
       setDays(d);
       setDayKey(d[0]?.key ?? "");
       const lead = getRememberedLead();
@@ -179,20 +176,14 @@ function BookingWizard() {
     <div>
       {/* Card header (constant across steps) */}
       <div className="flex items-center justify-between gap-2">
-        <span className="v3-display" style={{ fontSize: 24 }}>{step === 1 ? "Book your call" : "Pick a time"}</span>
-        <span className="v3-mono" style={{ fontSize: 11, color: "var(--v3-faint)", letterSpacing: "0.1em" }}>STEP {step} / 2</span>
+        <span className="v3-display" style={{ fontSize: 28 }}>{step === 1 ? "Book your call" : "Pick a time"}</span>
+        <span className="v3-mono" style={{ fontSize: 12, color: "var(--v3-faint)", letterSpacing: "0.1em" }}>STEP {step} / 2</span>
       </div>
-      <p className="v3-mono mt-2" style={{ fontSize: 12, color: "var(--v3-faint)" }}>{wb.call.slotsNote}</p>
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t pt-4" style={{ borderColor: "var(--v3-line)" }}>
-        {CALL_FACTS.map((f) => (
-          <span key={f} className="v3-mono" style={{ fontSize: 11.5, color: "var(--v3-faint)", letterSpacing: "0.03em" }}>
-            <span style={{ color: "var(--v3-accent)" }}>·</span> {f}
-          </span>
-        ))}
-      </div>
+      <p className="v3-mono mt-2" style={{ fontSize: 13.5, color: "var(--v3-faint)" }}>{wb.call.slotsNote}</p>
+      <div className="mt-5 border-t" style={{ borderColor: "var(--v3-line)" }} />
 
       {step === 1 ? (
-        <form onSubmit={toStep2} noValidate className="mt-6 flex flex-col gap-3.5" onFocus={markStarted}>
+        <form onSubmit={toStep2} noValidate className="mt-5 flex flex-col gap-4" onFocus={markStarted}>
           {[
             { key: "email" as const, label: "Email", type: "email", placeholder: "you@example.com" },
             { key: "name" as const, label: "Name", type: "text", placeholder: "Your name" },
@@ -208,26 +199,28 @@ function BookingWizard() {
                 value={values[f.key]}
                 placeholder={f.placeholder}
                 onChange={(e) => set(f.key, e.currentTarget.value)}
-                className="w-full rounded-sm px-4 py-3 outline-none transition-colors"
+                className="w-full rounded-sm px-4 py-3.5 outline-none transition-colors"
                 style={inputStyle}
               />
             </div>
           ))}
-          {error ? <p role="alert" style={{ fontSize: 13, color: "var(--v3-danger)" }}>{error}</p> : null}
-          <button type="submit" className="v3-btn v3-btn-primary v3-clip mt-1 w-full" style={{ paddingLeft: 12 }}>
+          {error ? <p role="alert" style={{ fontSize: 14, color: "var(--v3-danger)" }}>{error}</p> : null}
+          <button type="submit" className="v3-btn v3-btn-primary v3-clip mt-1 w-full" style={{ paddingLeft: 12, fontSize: 16 }}>
             <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
             {wb.call.cta}
           </button>
-          <p className="text-center" style={{ fontSize: 12.5, color: "var(--v3-faint)" }}>Free. No obligation. I&apos;ll confirm by email.</p>
+          <p className="text-center" style={{ fontSize: 13.5, color: "var(--v3-faint)" }}>Free. No obligation. I&apos;ll confirm by email.</p>
         </form>
       ) : (
-        <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-5">
+        <form onSubmit={submit} noValidate className="mt-5 flex flex-col gap-5">
           <SlotPicker
             days={days}
             dayKey={dayKey}
             onDay={(k) => { markStarted(); setDayKey(k); }}
             time={time}
             onTime={(t) => { markStarted(); setTime(t); }}
+            dayLayout="stack"
+            labelSize={11.5}
           />
 
           {/* Short intake */}
@@ -238,14 +231,14 @@ function BookingWizard() {
                 {q.type === "radio" ? (
                   <div className="flex flex-col gap-2">
                     {q.options.map((opt) => (
-                      <label key={opt} className="flex cursor-pointer items-center gap-2.5" style={{ fontSize: 14, color: "var(--v3-mut)" }}>
+                      <label key={opt} className="flex cursor-pointer items-center gap-2.5" style={{ fontSize: 15.5, color: "var(--v3-mut)" }}>
                         <input
                           type="radio"
                           name={q.id}
                           value={opt}
                           checked={answers[q.id] === opt}
                           onChange={() => setAnswer(q.id, opt)}
-                          style={{ accentColor: "var(--v3-accent)" }}
+                          style={{ accentColor: "var(--v3-accent)", width: 16, height: 16 }}
                         />
                         {opt}
                       </label>
@@ -255,7 +248,7 @@ function BookingWizard() {
                   <select
                     value={answers[q.id]}
                     onChange={(e) => setAnswer(q.id, e.currentTarget.value)}
-                    className="w-full rounded-sm px-4 py-3 outline-none"
+                    className="w-full rounded-sm px-4 py-3.5 outline-none"
                     style={inputStyle}
                   >
                     {q.options.map((opt) => (
@@ -267,17 +260,17 @@ function BookingWizard() {
             ))}
           </div>
 
-          {error ? <p role="alert" style={{ fontSize: 13, color: "var(--v3-danger)" }}>{error}</p> : null}
+          {error ? <p role="alert" style={{ fontSize: 14, color: "var(--v3-danger)" }}>{error}</p> : null}
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => { setError(null); setStatus("idle"); setStep(1); }}
               className="v3-mono shrink-0"
-              style={{ fontSize: 12.5, color: "var(--v3-faint)" }}
+              style={{ fontSize: 13.5, color: "var(--v3-faint)" }}
             >
               ← Back
             </button>
-            <button type="submit" disabled={status === "loading"} className="v3-btn v3-btn-primary v3-clip w-full disabled:opacity-60" style={{ paddingLeft: 12 }}>
+            <button type="submit" disabled={status === "loading"} className="v3-btn v3-btn-primary v3-clip w-full disabled:opacity-60" style={{ paddingLeft: 12, fontSize: 16 }}>
               <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
               {status === "loading" ? "Booking your call…" : "Confirm my call"}
             </button>
