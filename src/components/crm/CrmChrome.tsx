@@ -179,7 +179,7 @@ function NotifDropdown({ items, onClose }: { items: NavData["notifications"]; on
           <span className="text-sm font-semibold text-heading">Needs attention</span>
           <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.length}</span>
         </div>
-        <div className="max-h-80 overflow-y-auto p-2">
+        <div className="crm-scroll max-h-80 overflow-y-auto p-2">
           {items.length === 0 ? <p className="px-2 py-6 text-center text-sm text-slate">All clear. Nothing needs attention right now.</p> : items.map((a) => (
             <Link key={a.id} href={a.href} onClick={onClose} className="flex items-start gap-2.5 rounded-lg px-2 py-2 hover:bg-cloud">
               <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: a.tone === "danger" ? "var(--color-red)" : a.tone === "warn" ? "var(--color-gold)" : "var(--color-slate)" }} />

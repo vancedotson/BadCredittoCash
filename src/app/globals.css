@@ -122,6 +122,30 @@
     linear-gradient(110deg, #0b2038 0%, #0f2c4c 55%, #123a63 100%);
 }
 
+/* Thin, subtle scrollbar for popovers/scroll areas — replaces the chunky
+   native scrollbar (with arrow buttons) that looks out of place in a card. */
+.crm-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-mist) transparent;
+}
+.crm-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.crm-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.crm-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-mist);
+  border-radius: 9999px;
+}
+.crm-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate);
+}
+.crm-scroll::-webkit-scrollbar-button {
+  display: none;
+}
+
 /* Periodic "shine" sweep across a button — quick pass fully off both edges,
    then a long pause off-screen (so no sliver parks on the right). */
 @keyframes shine {
