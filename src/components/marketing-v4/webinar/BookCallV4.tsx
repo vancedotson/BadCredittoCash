@@ -115,6 +115,16 @@ export function BookCallV4() {
             <p className="v3-mono mt-2" style={{ fontSize: 12, color: "var(--v3-faint)" }}>
               {wb.call.slotsNote}
             </p>
+            {/* Call facts — the practical reassurances (how, with whom, cost) right
+                where they commit. All truthful: it's a phone call, with Vance
+                himself, free and no-obligation. */}
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t pt-4" style={{ borderColor: "var(--v3-line)" }}>
+              {CALL_FACTS.map((f) => (
+                <span key={f} className="v3-mono" style={{ fontSize: 11.5, color: "var(--v3-faint)", letterSpacing: "0.03em" }}>
+                  <span style={{ color: "var(--v3-accent)" }}>·</span> {f}
+                </span>
+              ))}
+            </div>
             <div className="mt-6">
               <BookingForm />
             </div>
@@ -138,6 +148,10 @@ const TIME_WINDOWS = [
   "Weekday evenings",
   "Weekends",
 ];
+
+// Practical reassurances shown in the booking card. Keep truthful — no invented
+// call duration; "with Vance" is accurate (the slots note is "it's just me").
+const CALL_FACTS = ["By phone", "Directly with Vance", "Free, no obligation"];
 
 function BookingForm() {
   const router = useRouter();
