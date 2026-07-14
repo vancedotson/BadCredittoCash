@@ -32,7 +32,7 @@ const validators: Record<FieldKey, (v: string) => string | null> = {
 };
 
 export function RegistrationFormV3({
-  redirectTo = "/thank-you",
+  redirectTo = "/webinar/confirmed",
   source = "vance-webinar",
 }: {
   redirectTo?: string;

@@ -101,7 +101,7 @@ export function RegistrationForm() {
         throw new Error(body.error ?? "Registration failed.");
       }
       track("webinar_registered", { source: "vance-webinar" });
-      router.push("/thank-you");
+      router.push("/webinar/confirmed");
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");

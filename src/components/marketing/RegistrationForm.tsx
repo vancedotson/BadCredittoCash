@@ -41,7 +41,7 @@ export function RegistrationForm() {
       }
 
       track("webinar_registered", { source: payload.source });
-      router.push("/thank-you");
+      router.push("/webinar/confirmed");
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");
