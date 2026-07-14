@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createLead } from "@/lib/store";
+import { createLead, getSettings } from "@/lib/store";
 import { STAGES_IN_ORDER, type Stage } from "@/lib/stages";
 
 /**
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "A valid name and email are required." }, { status: 400 });
   }
   const stage = STAGES_IN_ORDER.includes(body.stage as Stage) ? (body.stage as Stage) : "new";
+  const owner = body.owner?.trim() || (await getSettings()).defaultOwner;
 
   const lead = await createLead({
     name,
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     phone: body.phone?.trim() || undefined,
     source: body.source?.trim() || "manual",
     stage,
-    owner: body.owner?.trim() || undefined,
+    owner,
     stageChangedAt: new Date().toISOString(),
   });
   return NextResponse.json({ ok: true, lead });

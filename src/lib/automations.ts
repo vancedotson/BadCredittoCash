@@ -14,7 +14,7 @@ import { enqueueSequence } from "./email";
 import { type Segment } from "./segments";
 
 /** Which sequence a lead in each segment should receive. */
-const SEQUENCE_FOR_SEGMENT: Record<Segment, string | null> = {
+export const SEQUENCE_FOR_SEGMENT: Record<Segment, string | null> = {
   booked: null, // converted — no pitch sequences
   booking_abandon: "booking_abandon",
   offer_click_no_book: "offer_click_no_book",

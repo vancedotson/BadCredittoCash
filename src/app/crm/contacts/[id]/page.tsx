@@ -4,6 +4,7 @@ import { getContact } from "@/lib/store";
 import { Card, SegmentBadge, Badge } from "@/components/crm/ui";
 import { Timeline } from "@/components/crm/Timeline";
 import { StageSelect, AddNoteForm, AddTaskForm, TaskItem } from "@/components/crm/mutations";
+import { RecentPin } from "@/components/crm/RecentPin";
 
 export const dynamic = "force-dynamic";
 
@@ -47,9 +48,14 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               ))}
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-xs uppercase tracking-wide text-slate">Stage</span>
-            <StageSelect id={contact.id} stage={contact.stage} />
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <RecentPin id={contact.id} name={contact.name} />
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-xs uppercase tracking-wide text-slate">Stage</span>
+                <StageSelect id={contact.id} stage={contact.stage} />
+              </div>
+            </div>
           </div>
         </div>
       </Card>

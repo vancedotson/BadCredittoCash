@@ -14,10 +14,12 @@ import {
   ACTIVE_STAGES,
   STAGES_IN_ORDER,
   STAGE_PROBABILITY,
+  LOST_REASONS,
   type Stage,
   type Tone,
 } from "./stages";
 import { type TaskPriority, type TaskType, type Recurrence } from "./tasks";
+import { displayEvent, CATEGORY_LABELS, EVENT_CATEGORIES, type EventCategory } from "./event-display";
 
 export type Lead = {
   id: string;
@@ -144,6 +146,11 @@ export type ContactsSummary = {
   byStage: Array<{ stage: Stage; count: number }>;
 };
 
+export type ActivityItem = BehaviourEvent & { contactName?: string; contactId?: string };
+export type ActivityFilter = { search?: string; category?: string; important?: boolean; owner?: string; from?: string; to?: string; limit?: number; offset?: number };
+export type ActivityPage = { items: ActivityItem[]; total: number };
+export type ActivitySummary = { today: number; thisWeek: number; byCategory: Array<{ category: EventCategory; label: string; count: number }> };
+
 export type CrmStats = {
   totalContacts: number;
   newLast7Days: number;
@@ -199,18 +206,62 @@ export type PipelineStats = {
 // --------------------------------------------------------------------------
 // In-memory stub (replace with Supabase). Seeded so the CRM isn't empty.
 // --------------------------------------------------------------------------
+export type CrmProfile = {
+  brandName: string;
+  bookingUrl: string;
+  trainingUrl: string;
+  fromName: string;
+  replyTo: string;
+  timezone: string;
+};
+export type NotifyPrefs = { overdueTasks: boolean; coolingLeads: boolean; noFollowUp: boolean; newBookings: boolean };
+export type CrmPrefs = {
+  defaultContactsPageSize: number;
+  defaultContactsView: string;
+  theme: "light" | "dark" | "system";
+  notify: NotifyPrefs;
+};
+export type CrmSettings = {
+  owners: string[];
+  tags: string[]; // registry, merged with tags actually seen on contacts
+  defaultOwner?: string;
+  profile: CrmProfile;
+  prefs: CrmPrefs;
+};
+
 type StoreState = {
   version: number;
   leads: Lead[];
   events: BehaviourEvent[];
   notes: Note[];
   tasks: Task[];
+  settings: CrmSettings;
   counter: number;
 };
 
 // Bump when the seed shape changes so a long-running dev server (which pins state
 // to globalThis across hot-reloads) reseeds instead of serving a stale shape.
-const SEED_VERSION = 3;
+const SEED_VERSION = 5;
+
+function defaultProfile(): CrmProfile {
+  return {
+    brandName: "Vance Dotson",
+    bookingUrl: "https://vancedotson.com/book-a-call",
+    trainingUrl: "https://vancedotson.com/webinar/room",
+    fromName: "Vance Dotson",
+    replyTo: "vance@vancedotson.com",
+    timezone: "America/Chicago",
+  };
+}
+function defaultNotify(): NotifyPrefs {
+  return { overdueTasks: true, coolingLeads: true, noFollowUp: true, newBookings: true };
+}
+function defaultPrefs(): CrmPrefs {
+  return { defaultContactsPageSize: 25, defaultContactsView: "all", theme: "system", notify: defaultNotify() };
+}
+function defaultSettings(): CrmSettings {
+  return { owners: ["Vance", "Team"], tags: ["priority"], defaultOwner: "Vance", profile: defaultProfile(), prefs: defaultPrefs() };
+}
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -327,7 +378,7 @@ function seedState(): StoreState {
     { id: "task_8", email: "grace@example.com", title: "Log the discovery call notes", type: "document", priority: "normal", owner: "Vance", done: true, completedAt: new Date(now - 2 * DAY).toISOString(), createdAt: new Date(now - 5 * DAY).toISOString() },
   ];
 
-  return { version: SEED_VERSION, leads, events, notes, tasks, counter: 30000 };
+  return { version: SEED_VERSION, leads, events, notes, tasks, settings: defaultSettings(), counter: 30000 };
 }
 
 const globalForStore = globalThis as unknown as { __vanceStore?: StoreState };
@@ -335,6 +386,15 @@ if (!globalForStore.__vanceStore || globalForStore.__vanceStore.version !== SEED
   globalForStore.__vanceStore = seedState();
 }
 const state: StoreState = globalForStore.__vanceStore;
+// Defensive migration: fill any missing settings sub-shape so a stale globalThis
+// state (HMR that didn't reseed) can't 500 the CRM.
+if (!state.settings) state.settings = defaultSettings();
+const _s = state.settings;
+_s.owners ??= ["Vance", "Team"];
+_s.tags ??= [];
+_s.profile ??= defaultProfile();
+_s.prefs ??= defaultPrefs();
+_s.prefs.notify ??= defaultNotify();
 const { leads, events, notes, tasks } = state;
 
 function nextId(prefix: string): string {
@@ -802,13 +862,260 @@ export async function getSourceStats(): Promise<SourceStat[]> {
     .sort((a, b) => b.contacts - a.contacts);
 }
 
-const DEFAULT_OWNERS = ["Vance", "Team"];
-
-/** Distinct owners (data + defaults) for the assign dropdowns. */
+/** Distinct owners (configured + seen in data) for the assign dropdowns. */
 export async function listOwners(): Promise<string[]> {
-  const set = new Set<string>(DEFAULT_OWNERS);
+  const set = new Set<string>(state.settings.owners);
   for (const l of leads) if (l.owner) set.add(l.owner);
   return [...set].sort();
+}
+
+export async function addOwner(name: string): Promise<string[]> {
+  const n = name.trim();
+  if (n && !state.settings.owners.includes(n)) state.settings.owners.push(n);
+  return listOwners();
+}
+
+/** Rename an owner everywhere it's referenced (config + contacts + tasks). */
+export async function renameOwner(from: string, to: string): Promise<string[]> {
+  const t = to.trim();
+  if (!t || t === from) return listOwners();
+  state.settings.owners = uniq(state.settings.owners.map((o) => (o === from ? t : o)));
+  for (const l of leads) if (l.owner === from) l.owner = t;
+  for (const tk of tasks) if (tk.owner === from) tk.owner = t;
+  if (state.settings.defaultOwner === from) state.settings.defaultOwner = t;
+  return listOwners();
+}
+
+/**
+ * Remove an owner. Their contacts/tasks are reassigned to `reassignTo` (or left
+ * unassigned) so nothing is orphaned pointing at a deleted owner.
+ */
+export async function removeOwner(name: string, reassignTo?: string): Promise<string[]> {
+  const to = reassignTo?.trim() || undefined;
+  for (const l of leads) if (l.owner === name) l.owner = to;
+  for (const tk of tasks) if (tk.owner === name) tk.owner = to;
+  state.settings.owners = state.settings.owners.filter((o) => o !== name);
+  if (state.settings.defaultOwner === name) state.settings.defaultOwner = to;
+  return listOwners();
+}
+
+export async function setDefaultOwner(name: string): Promise<void> {
+  state.settings.defaultOwner = name.trim() || undefined;
+}
+
+/** Per-owner workload for the settings owner manager. */
+export async function getOwnerWorkloads(): Promise<Array<{ owner: string; contacts: number; openTasks: number }>> {
+  const names = await listOwners();
+  return names.map((o) => ({
+    owner: o,
+    contacts: leads.filter((l) => l.owner === o).length,
+    openTasks: tasks.filter((t) => t.owner === o && !t.done).length,
+  }));
+}
+
+function normalizeTag(tag: string): string {
+  return tag.trim().replace(/^#/, "");
+}
+function uniq<T>(xs: T[]): T[] {
+  return [...new Set(xs)];
+}
+
+/** Tags with how many contacts carry them (merges the registry so 0-count tags show). */
+export async function listTagsWithCounts(): Promise<Array<{ tag: string; count: number }>> {
+  const m = new Map<string, number>();
+  for (const t of state.settings.tags) m.set(t, 0);
+  for (const l of leads) for (const t of l.tags ?? []) m.set(t, (m.get(t) ?? 0) + 1);
+  return [...m.entries()].map(([tag, count]) => ({ tag, count })).sort((a, b) => a.tag.localeCompare(b.tag));
+}
+
+/** Register a new tag so it's available before any contact carries it. */
+export async function createTag(tag: string): Promise<void> {
+  const t = normalizeTag(tag);
+  if (t && !state.settings.tags.includes(t)) state.settings.tags.push(t);
+}
+
+/** Rename a tag everywhere (registry + contacts). */
+export async function renameTag(from: string, to: string): Promise<void> {
+  const t = normalizeTag(to);
+  if (!t || t === from) return;
+  state.settings.tags = uniq(state.settings.tags.map((x) => (x === from ? t : x)));
+  for (const l of leads) if (l.tags) l.tags = uniq(l.tags.map((x) => (x === from ? t : x)));
+}
+
+/** Merge a tag into another (moves every contact, drops the source from the registry). */
+export async function mergeTag(from: string, into: string): Promise<void> {
+  const t = normalizeTag(into);
+  if (!t || t === from) return;
+  for (const l of leads) if (l.tags?.includes(from)) l.tags = uniq(l.tags.map((x) => (x === from ? t : x)));
+  state.settings.tags = uniq(state.settings.tags.map((x) => (x === from ? t : x)));
+}
+
+/** Remove a tag from the registry and every contact. */
+export async function deleteTag(tag: string): Promise<void> {
+  state.settings.tags = state.settings.tags.filter((t) => t !== tag);
+  for (const l of leads) if (l.tags?.includes(tag)) l.tags = l.tags.filter((t) => t !== tag);
+}
+
+// -------------------------------------------------------------------------
+// Business profile, preferences, and data management
+// -------------------------------------------------------------------------
+
+export async function getSettings(): Promise<CrmSettings> {
+  return state.settings;
+}
+
+export async function updateProfile(patch: Partial<CrmProfile>): Promise<CrmProfile> {
+  const p = state.settings.profile;
+  for (const k of ["brandName", "bookingUrl", "trainingUrl", "fromName", "replyTo", "timezone"] as const) {
+    if (typeof patch[k] === "string") p[k] = (patch[k] as string).trim();
+  }
+  return p;
+}
+
+export async function updatePrefs(patch: Partial<CrmPrefs>): Promise<CrmPrefs> {
+  const p = state.settings.prefs;
+  if (patch.notify) Object.assign(p.notify, patch.notify);
+  if (typeof patch.theme === "string") p.theme = patch.theme;
+  if (typeof patch.defaultContactsView === "string") p.defaultContactsView = patch.defaultContactsView;
+  if (typeof patch.defaultContactsPageSize === "number" && patch.defaultContactsPageSize > 0) {
+    p.defaultContactsPageSize = Math.min(200, Math.floor(patch.defaultContactsPageSize));
+  }
+  return p;
+}
+
+export type StoreStatus = {
+  backend: string;
+  seedVersion: number;
+  counts: { contacts: number; events: number; notes: number; tasks: number; tags: number; owners: number };
+};
+
+export async function getStoreStatus(): Promise<StoreStatus> {
+  const tags = await listTagsWithCounts();
+  const owners = await listOwners();
+  return {
+    backend: "In-memory (Supabase-ready seam)",
+    seedVersion: state.version,
+    counts: { contacts: leads.length, events: events.length, notes: notes.length, tasks: tasks.length, tags: tags.length, owners: owners.length },
+  };
+}
+
+/** Wipe the store and re-seed the demo data in place (keeps captured array refs). */
+export async function resetStore(): Promise<void> {
+  const fresh = seedState();
+  leads.length = 0; leads.push(...fresh.leads);
+  events.length = 0; events.push(...fresh.events);
+  notes.length = 0; notes.push(...fresh.notes);
+  tasks.length = 0; tasks.push(...fresh.tasks);
+  state.settings = fresh.settings;
+  state.counter = fresh.counter;
+  state.version = fresh.version;
+}
+
+/** Everything in the store, for a full JSON export/backup. */
+export async function exportAllData(): Promise<{ leads: Lead[]; events: BehaviourEvent[]; notes: Note[]; tasks: Task[]; settings: CrmSettings }> {
+  return { leads, events, notes, tasks, settings: state.settings };
+}
+
+export type SettingsInsights = {
+  stages: Array<{ stage: Stage; count: number; probability: number }>;
+  lostReasons: Array<{ reason: string; count: number }>;
+  segments: Array<{ segment: Segment; count: number }>;
+};
+
+/** Live counts to make the read-only config cards on Settings informative. */
+export async function getSettingsInsights(): Promise<SettingsInsights> {
+  backfillContacts();
+  const evByEmail = new Map<string, string[]>();
+  for (const e of events) if (e.email) { const a = evByEmail.get(e.email) ?? []; a.push(e.event); evByEmail.set(e.email, a); }
+  const stageCount = new Map<Stage, number>();
+  const lostCount = new Map<string, number>();
+  const segCount = new Map<Segment, number>();
+  for (const l of leads) {
+    const names = evByEmail.get(l.email) ?? [];
+    const stage = l.stage ?? stageFromEvents(names);
+    stageCount.set(stage, (stageCount.get(stage) ?? 0) + 1);
+    if (l.lostReason) lostCount.set(l.lostReason, (lostCount.get(l.lostReason) ?? 0) + 1);
+    const seg = deriveSegment(names.map((event) => ({ event })));
+    segCount.set(seg, (segCount.get(seg) ?? 0) + 1);
+  }
+  return {
+    stages: STAGES_IN_ORDER.map((s) => ({ stage: s, count: stageCount.get(s) ?? 0, probability: STAGE_PROBABILITY[s] })),
+    lostReasons: LOST_REASONS.map((r) => ({ reason: r, count: lostCount.get(r) ?? 0 })),
+    segments: SEGMENTS_IN_ORDER.map((s) => ({ segment: s, count: segCount.get(s) ?? 0 })),
+  };
+}
+
+/** The activity feed: filterable, paginated, contact-resolved event log. */
+export async function listActivity(f: ActivityFilter = {}): Promise<ActivityPage> {
+  backfillContacts();
+  const byEmail = new Map(leads.map((l) => [l.email, l]));
+  let items: ActivityItem[] = events.map((e) => {
+    const l = e.email ? byEmail.get(e.email) : undefined;
+    return { ...e, contactName: l?.name, contactId: l?.id };
+  });
+  const s = f.search?.trim().toLowerCase();
+  if (s) items = items.filter((i) => i.contactName?.toLowerCase().includes(s) || i.email?.toLowerCase().includes(s) || displayEvent(i.event).label.toLowerCase().includes(s));
+  if (f.category) items = items.filter((i) => displayEvent(i.event).category === f.category);
+  if (f.important) items = items.filter((i) => displayEvent(i.event).important);
+  if (f.owner) items = items.filter((i) => { const l = i.email ? byEmail.get(i.email) : undefined; return f.owner === "__none__" ? !l?.owner : l?.owner === f.owner; });
+  if (f.from) items = items.filter((i) => i.createdAt.slice(0, 10) >= f.from!);
+  if (f.to) items = items.filter((i) => i.createdAt.slice(0, 10) <= f.to!);
+  items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const total = items.length;
+  const offset = Math.max(0, f.offset ?? 0);
+  const limit = f.limit ?? 40;
+  return { items: items.slice(offset, offset + limit), total };
+}
+
+export async function getActivitySummary(): Promise<ActivitySummary> {
+  const now = Date.now();
+  const t0 = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
+  const weekAgo = now - 7 * DAY;
+  const today = events.filter((e) => new Date(e.createdAt).getTime() >= t0).length;
+  const thisWeek = events.filter((e) => new Date(e.createdAt).getTime() >= weekAgo).length;
+  const cats = new Map<EventCategory, number>();
+  for (const c of EVENT_CATEGORIES) cats.set(c, 0);
+  for (const e of events) { const c = displayEvent(e.event).category; cats.set(c, (cats.get(c) ?? 0) + 1); }
+  return { today, thisWeek, byCategory: EVENT_CATEGORIES.map((category) => ({ category, label: CATEGORY_LABELS[category], count: cats.get(category) ?? 0 })) };
+}
+
+export type Booking = { id: string; contactId?: string; contactName?: string; email?: string; createdAt: string; preferredTime?: string };
+
+/** Booked calls, resolved to contacts (for the calendar + upcoming panel). */
+export async function listBookings(): Promise<Booking[]> {
+  backfillContacts();
+  const byEmail = new Map(leads.map((l) => [l.email, l]));
+  return events
+    .filter((e) => e.event === EVENTS.booked)
+    .map((e) => {
+      const l = e.email ? byEmail.get(e.email) : undefined;
+      return { id: e.id, contactId: l?.id, contactName: l?.name, email: e.email, createdAt: e.createdAt, preferredTime: typeof e.props?.preferredTime === "string" ? e.props.preferredTime : undefined };
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export type NavData = {
+  counts: { overdueTasks: number; needsAttention: number; openTasks: number };
+  notifications: ActionItem[];
+  contacts: ContactOption[];
+  owners: string[];
+  tags: string[];
+};
+
+/** Everything the global nav chrome needs: counts, notifications, search index. */
+export async function getNavData(): Promise<NavData> {
+  const ov = await getOverview(30);
+  const now = Date.now();
+  const t0 = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
+  const overdueTasks = tasks.filter((t) => !t.done && t.dueDate && new Date(t.dueDate).getTime() < t0).length;
+  const openTasks = tasks.filter((t) => !t.done).length;
+  return {
+    counts: { overdueTasks, needsAttention: ov.actions.length, openTasks },
+    notifications: ov.actions,
+    contacts: await listContactOptions(),
+    owners: ov.owners,
+    tags: await listTags(),
+  };
 }
 
 /** Pipeline health: active count, win rate, booked-this-week, forecast, per-stage aging. */

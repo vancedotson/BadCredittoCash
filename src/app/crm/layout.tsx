@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
-import { CrmSidebar } from "@/components/crm/CrmSidebar";
+import { getNavData } from "@/lib/store";
+import { CrmChrome } from "@/components/crm/CrmChrome";
 
 // Internal tool — keep out of search results.
 export const metadata: Metadata = {
   title: "CRM",
   robots: { index: false, follow: false },
 };
+export const dynamic = "force-dynamic";
 
-export default function CrmLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="crm-scope flex min-h-screen flex-col bg-cloud md:flex-row">
-      <CrmSidebar />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
-    </div>
-  );
+export default async function CrmLayout({ children }: { children: React.ReactNode }) {
+  const nav = await getNavData();
+  return <CrmChrome nav={nav}>{children}</CrmChrome>;
 }

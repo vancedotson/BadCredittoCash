@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listContacts, listContactIds, getContactsSummary, listOwners, listTags, getSourceStats, type ContactFilter, type ContactSort } from "@/lib/store";
+import { listContacts, listContactIds, getContactsSummary, listOwners, listTags, getSourceStats, getSettings, type ContactFilter, type ContactSort } from "@/lib/store";
 import { STAGE_LABELS } from "@/lib/stages";
 import { PageTitle } from "@/components/crm/ui";
 import { ContactsToolbar } from "@/components/crm/ContactsToolbar";
@@ -13,11 +13,13 @@ function str(v: string | string[] | undefined): string | undefined {
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams;
+  const { prefs } = await getSettings();
   const page = Number(str(sp.page)) || 1;
-  const pageSize = Number(str(sp.pageSize)) || 25;
+  const pageSize = Number(str(sp.pageSize)) || prefs.defaultContactsPageSize;
+  const defaultView = prefs.defaultContactsView !== "all" ? prefs.defaultContactsView : undefined;
   const filter: ContactFilter = {
     search: str(sp.q), stage: str(sp.stage), segment: str(sp.segment), source: str(sp.source),
-    owner: str(sp.owner), tag: str(sp.tag), view: str(sp.view),
+    owner: str(sp.owner), tag: str(sp.tag), view: str(sp.view) ?? defaultView,
     sort: (str(sp.sort) as ContactSort) ?? "recent", dir: (str(sp.dir) as "asc" | "desc") ?? "desc",
     page, pageSize,
   };
