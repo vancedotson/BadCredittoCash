@@ -199,7 +199,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
       <div className="md:hidden">
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
           {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => (
-            <button key={s} type="button" onClick={() => setMobileStage(s)} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${mobileStage === s ? "bg-navy text-white" : "border border-mist bg-card text-slate"}`}>
+            <button key={s} type="button" onClick={(e) => { setMobileStage(s); e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${mobileStage === s ? "bg-navy text-white" : "border border-mist bg-card text-slate"}`}>
               {STAGE_LABELS[s]}
               <span className={`rounded-full px-1.5 text-xs ${mobileStage === s ? "bg-white/20" : "bg-mist/70"}`}>{cardsIn(s).length}</span>
             </button>

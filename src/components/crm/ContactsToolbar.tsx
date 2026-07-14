@@ -29,6 +29,7 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
   const sp = useSearchParams();
   const [modal, setModal] = useState<"add" | "import" | null>(null);
   const [viewsOpen, setViewsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [saved, setSaved] = useState<SavedView[]>([]);
   const [newViewName, setNewViewName] = useState("");
 
@@ -92,8 +93,14 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
         })}
       </div>
 
+      {/* Mobile: collapse the filter dropdowns behind a toggle (active filters still show as chips below) */}
+      <button type="button" onClick={() => setFiltersOpen((o) => !o)} className={`${inputClass} flex w-full items-center justify-between sm:hidden`}>
+        <span>Filters{activeChips.length ? ` · ${activeChips.length}` : ""}</span>
+        <span className="text-slate">{filtersOpen ? "▲" : "▾"}</span>
+      </button>
+
       {/* Line C: filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className={`${filtersOpen ? "flex" : "hidden"} flex-wrap gap-2 sm:flex`}>
         <select value={sp.get("stage") ?? ""} onChange={(e) => push({ stage: e.target.value })} className={inputClass} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
         <select value={sp.get("segment") ?? ""} onChange={(e) => push({ segment: e.target.value })} className={inputClass} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((s) => <option key={s} value={s}>{SEGMENT_LABELS[s]}</option>)}</select>
         <select value={sp.get("source") ?? ""} onChange={(e) => push({ source: e.target.value })} className={inputClass} aria-label="Source"><option value="">All sources</option>{sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select>

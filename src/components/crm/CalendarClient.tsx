@@ -81,19 +81,22 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
     for (let i = 0; i < first.getDay(); i++) cells.push(null);
     for (let d = 1; d <= new Date(my, mm + 1, 0).getDate(); d++) cells.push({ key: `${my}-${pad(mm + 1)}-${pad(d)}`, day: d });
     return (
-      <div className="overflow-x-auto"><div className="min-w-[720px]">
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-wide text-slate">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="py-1">{d}</div>)}</div>
+      <div className="overflow-x-auto"><div className="sm:min-w-[720px]">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-wide text-slate">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="py-1"><span className="sm:hidden">{d[0]}</span><span className="hidden sm:inline">{d}</span></div>)}</div>
         <div className="grid grid-cols-7 gap-1">
           {cells.map((c, i) => {
-            if (!c) return <div key={i} className="min-h-[96px] rounded-lg bg-cloud/40" />;
+            if (!c) return <div key={i} className="min-h-[64px] rounded-lg bg-cloud/40 sm:min-h-[96px]" />;
             const dt = tasksByDay.get(c.key) ?? []; const bk = bookingsByDay.get(c.key) ?? []; const isToday = c.key === keyOf(new Date());
             return (
-              <div key={i} className={`group min-h-[96px] rounded-lg border p-1.5 ${isToday ? "border-trust bg-sky/40" : "border-mist bg-card"}`} {...dropProps(c.key)}>
+              <div key={i} className={`group min-h-[64px] rounded-lg border p-1 sm:min-h-[96px] sm:p-1.5 ${isToday ? "border-trust bg-sky/40" : "border-mist bg-card"}`} {...dropProps(c.key)}>
                 <div className="mb-1 flex items-center justify-between">
-                  <button type="button" onClick={() => setDayOpen(c.key)} className={`text-xs ${isToday ? "font-bold text-trust" : "text-slate hover:text-heading"}`}>{c.day}</button>
-                  <div className="flex items-center gap-1">{bk.length ? <button type="button" onClick={() => setDayOpen(c.key)} className="rounded-full bg-green/15 px-1.5 text-[10px] font-medium text-green">{bk.length} call</button> : null}<button type="button" onClick={() => setDayOpen(c.key)} className="hidden text-slate group-hover:inline">＋</button></div>
+                  <button type="button" onClick={() => setDayOpen(c.key)} className={`rounded px-0.5 text-xs ${isToday ? "font-bold text-trust" : "text-slate hover:text-heading"}`}>{c.day}</button>
+                  <div className="hidden items-center gap-1 sm:flex">{bk.length ? <button type="button" onClick={() => setDayOpen(c.key)} className="rounded-full bg-green/15 px-1.5 text-[10px] font-medium text-green">{bk.length} call</button> : null}<button type="button" onClick={() => setDayOpen(c.key)} className="hidden text-slate group-hover:inline">＋</button></div>
                 </div>
-                <div className="space-y-1">{dt.slice(0, 3).map(chip)}{dt.length > 3 ? <button type="button" onClick={() => setDayOpen(c.key)} className="px-1.5 text-[10px] text-slate hover:text-heading">+{dt.length - 3} more</button> : null}</div>
+                {/* mobile: compact dots, tap opens the day */}
+                <button type="button" onClick={() => setDayOpen(c.key)} className="flex w-full flex-wrap gap-0.5 sm:hidden">{dt.slice(0, 4).map((t, j) => <span key={j} className="h-1.5 w-1.5 rounded-full" style={{ background: PRIORITY_DOT[t.priority ?? "normal"] }} />)}{bk.length ? <span className="h-1.5 w-1.5 rounded-full bg-green" /> : null}</button>
+                {/* desktop: text chips */}
+                <div className="hidden space-y-1 sm:block">{dt.slice(0, 3).map(chip)}{dt.length > 3 ? <button type="button" onClick={() => setDayOpen(c.key)} className="px-1.5 text-[10px] text-slate hover:text-heading">+{dt.length - 3} more</button> : null}</div>
               </div>
             );
           })}
@@ -106,10 +109,10 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
     const s = startOfWeek(cursor);
     const days = Array.from({ length: 7 }, (_, i) => addDays(s, i));
     return (
-      <div className="overflow-x-auto"><div className="grid min-w-[840px] grid-cols-7 gap-1">
+      <div className="overflow-x-auto"><div className="grid grid-cols-1 gap-1 sm:min-w-[840px] sm:grid-cols-7">
         {days.map((d) => { const key = keyOf(d); const dt = tasksByDay.get(key) ?? []; const bk = bookingsByDay.get(key) ?? []; const isToday = key === keyOf(new Date());
           return (
-            <div key={key} className={`min-h-[220px] rounded-lg border p-2 ${isToday ? "border-trust bg-sky/30" : "border-mist bg-card"}`} {...dropProps(key)}>
+            <div key={key} className={`min-h-0 rounded-lg border p-2 sm:min-h-[220px] ${isToday ? "border-trust bg-sky/30" : "border-mist bg-card"}`} {...dropProps(key)}>
               <button type="button" onClick={() => setDayOpen(key)} className="mb-2 block text-left text-xs font-medium text-heading">{d.toLocaleDateString("en-US", { weekday: "short" })} <span className="text-slate">{d.getDate()}</span></button>
               <div className="space-y-1">
                 {bk.map((b) => <div key={b.id} className="truncate rounded bg-green/10 px-1.5 py-0.5 text-[11px] text-green">📞 {b.contactName}</div>)}
