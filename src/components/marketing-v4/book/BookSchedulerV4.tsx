@@ -10,10 +10,10 @@ import { BookingWizard } from "./BookingWizard";
 
 /**
  * /book — standalone strategy-call scheduler for NON-webinar sequences (nurture /
- * direct outreach). Same case-file shell + shared two-step BookingWizard as
- * /webinar/call (so the booking experience is identical), with self-contained
- * copy that doesn't assume they watched the training. Fires call_page_view on
- * load; the wizard books through /api/book so it lands in the CRM.
+ * direct outreach). Keeps its own left column (heading + what the call covers +
+ * quick facts) and 50/50 layout; the right container uses the shared two-step
+ * BookingWizard so the booking experience matches /webinar/call. Fires
+ * call_page_view on load; the wizard books through /api/book into the CRM.
  */
 
 const KICKER = "SCHEDULE // STRATEGY CALL";
@@ -25,9 +25,10 @@ const COVERS = [
   "We find out whether there's a violation to hold them to.",
   "You leave knowing exactly where you stand, either way.",
 ];
+const FACTS = ["By phone", "Directly with Vance", "Free, no obligation"];
 
 const labelStyle = {
-  fontSize: 11.5,
+  fontSize: 10,
   letterSpacing: "0.2em",
   textTransform: "uppercase" as const,
   color: "var(--v3-faint)",
@@ -43,9 +44,9 @@ export function BookSchedulerV4() {
   return (
     <section className="v3-section" style={{ paddingTop: "clamp(40px,6vw,84px)" }}>
       <SectionScan />
-      <div className="v3-wrap grid items-start gap-x-12 gap-y-8 lg:grid-cols-[2fr_3fr]" ref={ref}>
-        {/* Left column — heading + what the call covers, grouped at the top */}
-        <div className="min-w-0">
+      <div className="v3-wrap grid items-start gap-x-12 gap-y-8 lg:grid-cols-[1fr_1fr]" ref={ref}>
+        {/* Heading */}
+        <div className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
           <Kicker>{KICKER}</Kicker>
           <h1 className="v3-display mt-5" style={{ fontSize: "clamp(34px,5vw,64px)", lineHeight: 1.03 }}>
             {HEADING}
@@ -53,24 +54,32 @@ export function BookSchedulerV4() {
           <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
             {BODY}
           </p>
+        </div>
 
-          <div className="mt-8">
-            <span className="v3-mono" style={labelStyle}>On the call</span>
-            <ul className="mt-3 flex flex-col gap-2.5">
-              {COVERS.map((c) => (
-                <li key={c} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 16 }}>
-                  <span style={{ color: "var(--v3-accent)", marginTop: 2 }}>
-                    <CheckIcon className="h-4 w-4" />
-                  </span>
-                  {c}
-                </li>
-              ))}
-            </ul>
+        {/* Details — under the heading on desktop, below the card on mobile */}
+        <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
+          <span className="v3-mono" style={labelStyle}>On the call</span>
+          <ul className="mt-3 flex flex-col gap-2.5">
+            {COVERS.map((c) => (
+              <li key={c} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 15.5 }}>
+                <span style={{ color: "var(--v3-accent)", marginTop: 2 }}>
+                  <CheckIcon className="h-4 w-4" />
+                </span>
+                {c}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
+            {FACTS.map((f) => (
+              <span key={f} className="v3-mono" style={{ fontSize: 12, color: "var(--v3-faint)", letterSpacing: "0.03em" }}>
+                <span style={{ color: "var(--v3-accent)" }}>·</span> {f}
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* Booking card — shared two-step wizard (60%) */}
-        <Reveal delay={1} className="min-w-0">
+        {/* Booking card — shared two-step wizard */}
+        <Reveal delay={1} className="order-2 min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
           <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
             <BookingWizard />
           </div>
