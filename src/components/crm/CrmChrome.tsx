@@ -87,7 +87,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   return (
     <div className="crm-scope flex min-h-screen bg-cloud">
       {/* Desktop sidebar */}
-      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-navy text-white md:flex ${collapsed ? "w-16" : "w-60"}`}>
+      <aside className={`crm-sidebar sticky top-0 hidden h-screen shrink-0 flex-col text-white md:flex ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex h-16 items-center justify-between px-4">
           {!collapsed ? <span className="flex items-center gap-2"><span className="font-heading text-lg font-bold text-white">Vance</span><span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-gold">CRM</span></span> : <span className="font-heading text-lg font-bold text-gold">V</span>}
           <button type="button" onClick={toggleCollapse} aria-label="Collapse" className="text-white/50 hover:text-white">{collapsed ? "»" : "«"}</button>
@@ -144,7 +144,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-20 bg-navy text-white md:hidden">
+        <header className="crm-topbar sticky top-0 z-20 text-white md:hidden">
           <div className="flex h-14 items-center justify-between gap-2 px-4">
             <span className="flex items-center gap-2"><span className="font-heading font-bold text-white">Vance</span><span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-gold">CRM</span></span>
             <div className="flex items-center gap-1.5">

@@ -107,6 +107,21 @@
   text-transform: none;
 }
 
+/* Premium nav surfaces: deep-navy -> blue gradient with a soft trust-blue glow
+   at the top (a subtle light source behind the logo). Fixed dark colors — the
+   nav is always dark, so these don't flip with the theme. */
+.crm-sidebar {
+  background:
+    radial-gradient(130% 45% at 50% 0%, rgba(30, 95, 163, 0.3), transparent 62%),
+    linear-gradient(180deg, #0b2038 0%, #0f2c4c 48%, #123a63 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.05);
+}
+.crm-topbar {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(30, 95, 163, 0.28), transparent 60%),
+    linear-gradient(110deg, #0b2038 0%, #0f2c4c 55%, #123a63 100%);
+}
+
 /* Periodic "shine" sweep across a button — quick pass fully off both edges,
    then a long pause off-screen (so no sliver parks on the right). */
 @keyframes shine {
