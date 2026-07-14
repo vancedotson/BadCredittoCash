@@ -174,14 +174,20 @@ function NotifDropdown({ items, onClose }: { items: NavData["notifications"]; on
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute right-0 top-10 z-20 max-h-96 w-72 overflow-y-auto rounded-xl border border-mist bg-card p-2 text-left shadow-card">
-        <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate">Needs attention</div>
-        {items.length === 0 ? <p className="px-2 py-3 text-sm text-slate">All clear.</p> : items.map((a) => (
-          <Link key={a.id} href={a.href} onClick={onClose} className="flex items-start gap-2 rounded-lg px-2 py-2 hover:bg-cloud">
-            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: a.tone === "danger" ? "var(--color-red)" : a.tone === "warn" ? "var(--color-gold)" : "var(--color-slate)" }} />
-            <span className="min-w-0"><span className="block truncate text-sm text-body">{a.title}</span><span className="block truncate text-xs text-slate">{a.subtitle}</span></span>
-          </Link>
-        ))}
+      <div className="absolute left-0 top-11 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-mist bg-card text-left shadow-card">
+        <div className="flex items-center justify-between gap-2 border-b border-mist px-3 py-2.5">
+          <span className="text-sm font-semibold text-heading">Needs attention</span>
+          <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.length}</span>
+        </div>
+        <div className="max-h-80 overflow-y-auto p-2">
+          {items.length === 0 ? <p className="px-2 py-6 text-center text-sm text-slate">All clear. Nothing needs attention right now.</p> : items.map((a) => (
+            <Link key={a.id} href={a.href} onClick={onClose} className="flex items-start gap-2.5 rounded-lg px-2 py-2 hover:bg-cloud">
+              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: a.tone === "danger" ? "var(--color-red)" : a.tone === "warn" ? "var(--color-gold)" : "var(--color-slate)" }} />
+              <span className="min-w-0"><span className="block truncate text-sm text-body">{a.title}</span><span className="block truncate text-xs text-slate">{a.subtitle}</span></span>
+            </Link>
+          ))}
+        </div>
+        {items.length ? <Link href="/crm" onClick={onClose} className="block border-t border-mist px-3 py-2.5 text-center text-sm font-medium text-trust hover:bg-cloud">View all in Overview</Link> : null}
       </div>
     </>
   );
