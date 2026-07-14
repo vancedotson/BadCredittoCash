@@ -79,13 +79,6 @@ export type TaskInput = {
   recurrence?: Recurrence;
 };
 
-export type DashboardStats = {
-  totalLeads: number;
-  leadsToday: number;
-  leadsLast7Days: number;
-  totalEvents: number;
-};
-
 export type FunnelStage = { key: string; label: string; count: number };
 export type FunnelSegment = { key: Segment; label: string; count: number };
 export type FunnelStats = {
@@ -469,15 +462,6 @@ export async function getFunnelStats(): Promise<FunnelStats> {
     count: tally.get(key) ?? 0,
   }));
   return { stages, segments, knownLeads: byEmail.size };
-}
-
-export async function getDashboardStats(): Promise<DashboardStats> {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const sevenDaysAgo = now.getTime() - 7 * DAY;
-  const leadsToday = leads.filter((l) => new Date(l.createdAt).getTime() >= startOfToday).length;
-  const leadsLast7Days = leads.filter((l) => new Date(l.createdAt).getTime() >= sevenDaysAgo).length;
-  return { totalLeads: leads.length, leadsToday, leadsLast7Days, totalEvents: events.length };
 }
 
 // --------------------------------------------------------------------------
