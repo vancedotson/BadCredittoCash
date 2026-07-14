@@ -76,7 +76,7 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
         {data.actions.length === 0 ? (
           <p className="text-sm text-slate">All clear. No overdue tasks or cooling leads.</p>
         ) : (
-          <ul className="grid gap-2 sm:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {data.actions.map((a) => (
               <li key={a.id}>
                 <Link href={a.href} className="flex items-center gap-3 rounded-lg border border-mist px-3 py-2.5 transition-colors hover:bg-cloud">
@@ -94,10 +94,10 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
       </Card>
 
       {/* KPIs (drill-through + deltas) */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {data.kpis.map((k) => (
           <Link key={k.key} href={k.href} className="rounded-2xl border border-mist bg-card p-5 transition-colors hover:border-trust">
-            <div className="text-3xl font-bold tabular-nums text-heading">{k.value}</div>
+            <div className="text-2xl font-bold tabular-nums text-heading sm:text-3xl">{k.value}</div>
             <div className="mt-1 flex items-center gap-1.5 text-sm text-slate">{k.label}<Delta delta={k.delta} good={k.deltaGood} /></div>
           </Link>
         ))}
@@ -110,7 +110,7 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
             <h2 className="text-lg font-semibold text-heading">Pipeline</h2>
             <Link href="/crm/pipeline" className="text-sm text-trust hover:underline">Open board</Link>
           </div>
-          <div className="grid grid-cols-4 gap-3 text-center">
+          <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
             {[{ l: "Active", v: data.pipeline.active }, { l: "Win rate", v: `${data.pipeline.winRatePct}%` }, { l: "Forecast", v: data.pipeline.expectedClients }, { l: "Clients", v: data.pipeline.won }].map((s) => (
               <div key={s.l} className="rounded-xl border border-mist bg-cloud px-2 py-3">
                 <div className="text-xl font-bold tabular-nums text-heading">{s.v}</div>
@@ -139,9 +139,9 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
           <div className="space-y-1">
             {data.funnel.map((s, i) => (
               <div key={s.key}>
-                {i > 0 && s.convPct !== null ? <div className="ml-[152px] text-[11px] text-slate">↓ {s.convPct}%</div> : null}
+                {i > 0 && s.convPct !== null ? <div className="ml-[108px] text-[11px] text-slate sm:ml-[152px]">↓ {s.convPct}%</div> : null}
                 <div className="flex items-center gap-3">
-                  <div className="w-36 shrink-0 text-sm text-slate">{s.label}</div>
+                  <div className="w-24 shrink-0 text-sm text-slate sm:w-36">{s.label}</div>
                   <div className="relative h-5 flex-1 overflow-hidden rounded bg-mist/60">
                     <div className="h-full rounded bg-trust/80" style={{ width: `${Math.max((s.count / funnelTop) * 100, s.count > 0 ? 4 : 0)}%` }} />
                   </div>

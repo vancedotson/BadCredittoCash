@@ -60,7 +60,7 @@ export function SegmentBadge({ segment }: { segment: Segment }) {
 }
 
 export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-mist bg-card p-5 ${className}`}>{children}</div>;
+  return <div className={`rounded-2xl border border-mist bg-card p-4 sm:p-5 ${className}`}>{children}</div>;
 }
 
 export function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
