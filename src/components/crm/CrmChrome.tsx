@@ -87,7 +87,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   return (
     <div className="crm-scope flex min-h-screen bg-cloud">
       {/* Desktop sidebar */}
-      <aside className={`crm-sidebar sticky top-0 hidden h-screen shrink-0 flex-col text-white md:flex ${collapsed ? "w-16" : "w-60"}`}>
+      <aside className={`crm-sidebar sticky top-0 z-40 hidden h-screen shrink-0 flex-col text-white md:flex ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex h-16 items-center justify-between px-4">
           {!collapsed ? <span className="flex items-center gap-2"><span className="font-heading text-lg font-bold text-white">Vance</span><span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-gold">CRM</span></span> : <span className="font-heading text-lg font-bold text-gold">V</span>}
           <button type="button" onClick={toggleCollapse} aria-label="Collapse" className="text-white/50 hover:text-white">{collapsed ? "»" : "«"}</button>
