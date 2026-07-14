@@ -14,7 +14,11 @@ export async function GET(request: Request) {
     stage: get("stage"),
     segment: get("segment"),
     source: get("source"),
+    owner: get("owner"),
+    tag: get("tag"),
+    view: get("view"),
     sort: (get("sort") as ContactFilter["sort"]) ?? "recent",
+    dir: (get("dir") as "asc" | "desc") ?? "desc",
     page: 1,
     pageSize: 100000,
   });

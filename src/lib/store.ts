@@ -15,6 +15,7 @@ import {
   STAGES_IN_ORDER,
   STAGE_PROBABILITY,
   type Stage,
+  type Tone,
 } from "./stages";
 import { type TaskPriority, type TaskType, type Recurrence } from "./tasks";
 
@@ -115,12 +116,18 @@ export type ContactDetail = {
   sequences: string[]; // enrolled email sequences (from email_queued props)
 };
 
+export type ContactSort = "recent" | "created" | "name" | "stage" | "watch";
+export type ContactView = "hot" | "nofollow" | "booked" | "clients" | "week";
 export type ContactFilter = {
   search?: string;
   stage?: string;
   segment?: string;
   source?: string;
-  sort?: "recent" | "created" | "name";
+  owner?: string;
+  tag?: string;
+  view?: string;
+  sort?: ContactSort;
+  dir?: "asc" | "desc";
   page?: number;
   pageSize?: number;
 };
@@ -129,6 +136,12 @@ export type ContactPage = {
   total: number;
   page: number;
   pageSize: number;
+};
+export type ContactsSummary = {
+  total: number;
+  booked: number;
+  avgWatchPct: number;
+  byStage: Array<{ stage: Stage; count: number }>;
 };
 
 export type CrmStats = {
@@ -149,6 +162,27 @@ export type TaskStats = {
   thisWeek: number;
   completedThisWeek: number;
   completionRatePct: number;
+};
+
+// ---- Overview (home dashboard) view types ----
+export type OverviewKpi = { key: string; label: string; value: string | number; delta?: number; deltaGood?: boolean; href: string };
+export type ActionItem = { id: string; kind: "overdue" | "hot" | "nofollow"; title: string; subtitle: string; href: string; tone: Tone };
+export type OverviewFunnelStage = { key: string; label: string; count: number; convPct: number | null };
+export type TrendPoint = { label: string; registered: number; booked: number };
+export type OverviewData = {
+  kpis: OverviewKpi[];
+  actions: ActionItem[];
+  pipeline: { active: number; won: number; lost: number; winRatePct: number; expectedClients: number; stalest: Array<{ id: string; name: string; stage: Stage; stageAgeDays: number }> };
+  funnel: OverviewFunnelStage[];
+  segments: FunnelSegment[];
+  sources: SourceStat[];
+  bestSource: string | null;
+  trend: TrendPoint[];
+  engagement: { showUpPct: number; watchToBookPct: number; avgWatchPct: number };
+  thisWeek: { booked: number; tasksCompleted: number; newClients: number };
+  speed: { avgRegToBookedDays: number | null };
+  owners: string[];
+  generatedAt: string;
 };
 
 export type PipelineStageStat = { stage: Stage; count: number; avgAgeDays: number };
@@ -456,7 +490,8 @@ function enrichContact(lead: Lead, evs: BehaviourEvent[]): Contact {
   };
 }
 
-export async function listContacts(filter: ContactFilter = {}): Promise<ContactPage> {
+// All contacts, enriched — the base set every contacts query filters from.
+function allEnrichedContacts(): Contact[] {
   backfillContacts();
   const byEmail = new Map<string, BehaviourEvent[]>();
   for (const e of events) {
@@ -464,27 +499,106 @@ export async function listContacts(filter: ContactFilter = {}): Promise<ContactP
     (byEmail.get(e.email) ?? byEmail.set(e.email, []).get(e.email)!).push(e);
   }
   for (const list of byEmail.values()) list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return leads.map((l) => enrichContact(l, byEmail.get(l.email) ?? []));
+}
 
-  let rows: Contact[] = leads.map((l) => enrichContact(l, byEmail.get(l.email) ?? []));
+function matchView(c: Contact, view: string): boolean {
+  switch (view) {
+    case "hot":
+      return !c.booked && ["high_watch", "offer_click_no_book", "booking_abandon"].includes(c.segment);
+    case "nofollow":
+      return !c.booked && c.openTaskCount === 0 && ["registered_no_show", "low_watch", "mid_watch", "high_watch"].includes(c.segment);
+    case "booked":
+      return c.booked;
+    case "clients":
+      return c.stage === "won";
+    case "week":
+      return Date.now() - new Date(c.createdAt).getTime() < 7 * DAY;
+    default:
+      return true;
+  }
+}
 
+function filterAndSortContacts(filter: ContactFilter): Contact[] {
+  let rows = allEnrichedContacts();
   const q = filter.search?.trim().toLowerCase();
   if (q) rows = rows.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
   if (filter.stage) rows = rows.filter((c) => c.stage === filter.stage);
   if (filter.segment) rows = rows.filter((c) => c.segment === filter.segment);
   if (filter.source) rows = rows.filter((c) => contactSource(c) === filter.source);
+  if (filter.owner) rows = rows.filter((c) => (filter.owner === "__none__" ? !c.owner : c.owner === filter.owner));
+  if (filter.tag) rows = rows.filter((c) => (c.tags ?? []).includes(filter.tag!));
+  if (filter.view) rows = rows.filter((c) => matchView(c, filter.view!));
 
-  const sort = filter.sort ?? "recent";
-  rows.sort((a, b) => {
-    if (sort === "name") return a.name.localeCompare(b.name);
-    if (sort === "created") return b.createdAt.localeCompare(a.createdAt);
-    return b.lastActivityAt.localeCompare(a.lastActivityAt);
-  });
+  const sort: ContactSort = filter.sort ?? "recent";
+  const asc = filter.dir === "asc";
+  const cmp = (a: Contact, b: Contact) => {
+    switch (sort) {
+      case "name": return a.name.localeCompare(b.name);
+      case "created": return a.createdAt.localeCompare(b.createdAt);
+      case "stage": return STAGES_IN_ORDER.indexOf(a.stage) - STAGES_IN_ORDER.indexOf(b.stage);
+      case "watch": return a.watchPct - b.watchPct;
+      default: return a.lastActivityAt.localeCompare(b.lastActivityAt); // recent
+    }
+  };
+  rows.sort((a, b) => (asc ? cmp(a, b) : -cmp(a, b)));
+  return rows;
+}
 
+export async function listContacts(filter: ContactFilter = {}): Promise<ContactPage> {
+  const rows = filterAndSortContacts(filter);
   const total = rows.length;
   const pageSize = filter.pageSize ?? 25;
   const page = Math.max(1, filter.page ?? 1);
   const start = (page - 1) * pageSize;
   return { rows: rows.slice(start, start + pageSize), total, page, pageSize };
+}
+
+/** All contact ids matching a filter (for "select all N" bulk actions across pages). */
+export async function listContactIds(filter: ContactFilter = {}): Promise<string[]> {
+  return filterAndSortContacts(filter).map((c) => c.id);
+}
+
+/** Aggregate stats over the current filter (the mini-stat strip). */
+export async function getContactsSummary(filter: ContactFilter = {}): Promise<ContactsSummary> {
+  const rows = filterAndSortContacts(filter);
+  const watched = rows.filter((c) => c.watchPct > 0);
+  const byStageMap = new Map<Stage, number>();
+  for (const s of STAGES_IN_ORDER) byStageMap.set(s, 0);
+  for (const c of rows) byStageMap.set(c.stage, (byStageMap.get(c.stage) ?? 0) + 1);
+  return {
+    total: rows.length,
+    booked: rows.filter((c) => c.booked).length,
+    avgWatchPct: watched.length ? Math.round(watched.reduce((n, c) => n + c.watchPct, 0) / watched.length) : 0,
+    byStage: STAGES_IN_ORDER.map((stage) => ({ stage, count: byStageMap.get(stage) ?? 0 })),
+  };
+}
+
+/** Distinct tags across all contacts (for the tag filter). */
+export async function listTags(): Promise<string[]> {
+  const set = new Set<string>();
+  for (const l of leads) for (const t of l.tags ?? []) set.add(t);
+  return [...set].sort();
+}
+
+export async function addTagToContact(id: string, tag: string): Promise<Lead | null> {
+  const l = leads.find((x) => x.id === id);
+  if (!l) return null;
+  l.tags = [...new Set([...(l.tags ?? []), tag])];
+  l.updatedAt = new Date().toISOString();
+  return l;
+}
+
+/** Delete a contact and its notes/tasks/events (so backfill won't resurrect it). */
+export async function deleteContact(id: string): Promise<boolean> {
+  const i = leads.findIndex((l) => l.id === id);
+  if (i === -1) return false;
+  const email = leads[i].email;
+  leads.splice(i, 1);
+  for (let j = notes.length - 1; j >= 0; j--) if (notes[j].email === email) notes.splice(j, 1);
+  for (let j = tasks.length - 1; j >= 0; j--) if (tasks[j].email === email) tasks.splice(j, 1);
+  for (let j = events.length - 1; j >= 0; j--) if (events[j].email === email) events.splice(j, 1);
+  return true;
 }
 
 export async function getContact(idOrEmail: string): Promise<ContactDetail | null> {
@@ -744,6 +858,121 @@ export async function getPipelineStats(): Promise<PipelineStats> {
     expectedClients: Math.round(expected),
     byStage,
   };
+}
+
+/**
+ * The whole Overview home dashboard in one aggregate: KPIs (with week-over-week
+ * deltas), an action queue (overdue tasks + cooling hot leads + no-follow-up),
+ * a pipeline snapshot, funnel step conversions, a two-series trend, engagement,
+ * a this-week digest, source performance, and reg→booked speed. Respects an
+ * optional owner filter and a range in days.
+ */
+export async function getOverview(rangeDays = 30, owner?: string): Promise<OverviewData> {
+  backfillContacts();
+  const now = Date.now();
+  const range = rangeDays * DAY;
+  const t0 = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
+
+  const { rows: allContacts } = await listContacts({ pageSize: 100000 });
+  const contacts = owner ? allContacts.filter((c) => (owner === "__none__" ? !c.owner : c.owner === owner)) : allContacts;
+  const emailSet = new Set(contacts.map((c) => c.email));
+  const evs = owner ? events.filter((e) => e.email && emailSet.has(e.email)) : events;
+  const tks = owner ? tasks.filter((t) => emailSet.has(t.email)) : tasks;
+  const ms = (iso: string) => new Date(iso).getTime();
+  const inWin = (iso: string, from: number, to: number) => { const t = ms(iso); return t >= from && t < to; };
+
+  // KPIs + deltas
+  const newCur = contacts.filter((c) => inWin(c.createdAt, now - range, now)).length;
+  const newPrev = contacts.filter((c) => inWin(c.createdAt, now - 2 * range, now - range)).length;
+  const bookedEvents = evs.filter((e) => e.event === EVENTS.booked && e.email);
+  const bookedSetIn = (from: number, to: number) => new Set(bookedEvents.filter((e) => inWin(e.createdAt, from, to)).map((e) => e.email)).size;
+  const bookedCur = bookedSetIn(now - range, now);
+  const bookedPrev = bookedSetIn(now - 2 * range, now - range);
+  const regEmails = new Set(evs.filter((e) => e.event === EVENTS.registered && e.email).map((e) => e.email));
+  const allBooked = new Set(bookedEvents.map((e) => e.email));
+  const openTasksN = tks.filter((t) => !t.done).length;
+  const delta = (cur: number, prev: number) => (prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100));
+  const kpis: OverviewKpi[] = [
+    { key: "total", label: "Total contacts", value: contacts.length, href: "/crm/contacts" },
+    { key: "new", label: `New (${rangeDays}d)`, value: newCur, delta: delta(newCur, newPrev), deltaGood: true, href: "/crm/contacts?sort=created" },
+    { key: "booked", label: `Booked (${rangeDays}d)`, value: bookedCur, delta: delta(bookedCur, bookedPrev), deltaGood: true, href: "/crm/contacts?segment=booked" },
+    { key: "conv", label: "Reg → booked", value: `${regEmails.size ? Math.round((allBooked.size / regEmails.size) * 100) : 0}%`, href: "/crm/pipeline" },
+    { key: "tasks", label: "Open tasks", value: openTasksN, href: "/crm/tasks" },
+  ];
+
+  // Action queue (priority: overdue → cooling hot → no follow-up)
+  const actions: ActionItem[] = [];
+  const overdueTasks = tks.filter((t) => !t.done && t.dueDate && ms(t.dueDate) < t0).sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
+  for (const t of overdueTasks.slice(0, 5)) {
+    const c = contacts.find((x) => x.email === t.email);
+    actions.push({ id: `t_${t.id}`, kind: "overdue", title: t.title, subtitle: `${c?.name ?? t.email} · overdue`, href: `/crm/contacts/${c?.id ?? ""}`, tone: "danger" });
+  }
+  const hot = contacts.filter((c) => !c.booked && ["high_watch", "offer_click_no_book", "booking_abandon"].includes(c.segment) && c.daysSinceActivity >= 2).sort((a, b) => b.daysSinceActivity - a.daysSinceActivity);
+  for (const c of hot.slice(0, 5)) actions.push({ id: `h_${c.id}`, kind: "hot", title: `${c.name} is cooling off`, subtitle: `${SEGMENT_LABELS[c.segment]} · ${c.daysSinceActivity}d quiet`, href: `/crm/contacts/${c.id}`, tone: "warn" });
+  const noFollow = contacts.filter((c) => !c.booked && !c.nextTask && c.openTaskCount === 0 && ["registered_no_show", "low_watch", "mid_watch"].includes(c.segment) && c.daysSinceActivity >= 3).sort((a, b) => b.daysSinceActivity - a.daysSinceActivity);
+  for (const c of noFollow.slice(0, 4)) actions.push({ id: `n_${c.id}`, kind: "nofollow", title: `No follow-up set for ${c.name}`, subtitle: `${SEGMENT_LABELS[c.segment]} · ${c.daysSinceActivity}d quiet`, href: `/crm/contacts/${c.id}`, tone: "neutral" });
+
+  // Pipeline snapshot (owner-filtered)
+  const stageCount = (s: Stage) => contacts.filter((c) => c.stage === s).length;
+  const won = stageCount("won"), lost = stageCount("lost");
+  const stalest = contacts.filter((c) => ACTIVE_STAGES.includes(c.stage)).sort((a, b) => b.stageAgeDays - a.stageAgeDays).slice(0, 3).map((c) => ({ id: c.id, name: c.name, stage: c.stage, stageAgeDays: c.stageAgeDays }));
+  const pipeline = { active: ACTIVE_STAGES.reduce((n, s) => n + stageCount(s), 0), won, lost, winRatePct: won + lost > 0 ? Math.round((won / (won + lost)) * 100) : 0, expectedClients: Math.round(contacts.reduce((n, c) => n + STAGE_PROBABILITY[c.stage], 0)), stalest };
+
+  // Funnel + step conversions
+  const byEmail = new Map<string, Set<string>>();
+  for (const e of evs) { if (!e.email) continue; (byEmail.get(e.email) ?? byEmail.set(e.email, new Set()).get(e.email)!).add(e.event); }
+  const counts = FUNNEL_STAGES.map((s) => [...byEmail.values()].filter((set) => set.has(s.event)).length);
+  const funnel: OverviewFunnelStage[] = FUNNEL_STAGES.map((s, i) => ({ key: s.key, label: s.label, count: counts[i], convPct: i === 0 ? null : counts[i - 1] ? Math.round((counts[i] / counts[i - 1]) * 100) : 0 }));
+
+  // Segments
+  const segTally = new Map<Segment, number>();
+  for (const c of contacts) segTally.set(c.segment, (segTally.get(c.segment) ?? 0) + 1);
+  const segments: FunnelSegment[] = SEGMENTS_IN_ORDER.map((k) => ({ key: k, label: SEGMENT_LABELS[k], count: segTally.get(k) ?? 0 }));
+
+  // Sources + best
+  const srcMap = new Map<string, { contacts: number; booked: number }>();
+  for (const c of contacts) { const s = c.utm?.utm_source ?? c.source ?? "direct"; const r = srcMap.get(s) ?? { contacts: 0, booked: 0 }; r.contacts++; if (c.booked) r.booked++; srcMap.set(s, r); }
+  const sources: SourceStat[] = [...srcMap.entries()].map(([source, r]) => ({ source, contacts: r.contacts, booked: r.booked, convPct: r.contacts ? Math.round((r.booked / r.contacts) * 100) : 0 })).sort((a, b) => b.contacts - a.contacts);
+  const bestSource = [...sources].filter((s) => s.contacts >= 2).sort((a, b) => b.convPct - a.convPct)[0]?.source ?? null;
+
+  // Two-series trend
+  const trend: TrendPoint[] = [];
+  const days = Math.min(rangeDays, 30);
+  for (let i = days - 1; i >= 0; i--) {
+    const from = t0 - i * DAY, to = from + DAY;
+    trend.push({
+      label: new Date(from).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      registered: contacts.filter((c) => ms(c.createdAt) >= from && ms(c.createdAt) < to).length,
+      booked: bookedEvents.filter((e) => ms(e.createdAt) >= from && ms(e.createdAt) < to).length,
+    });
+  }
+
+  // Engagement
+  const roomEmails = new Set(evs.filter((e) => e.event === EVENTS.roomOpened && e.email).map((e) => e.email));
+  const watched = contacts.filter((c) => c.watchPct > 0);
+  const engagement = {
+    showUpPct: regEmails.size ? Math.round((roomEmails.size / regEmails.size) * 100) : 0,
+    watchToBookPct: roomEmails.size ? Math.round((allBooked.size / roomEmails.size) * 100) : 0,
+    avgWatchPct: watched.length ? Math.round(watched.reduce((n, c) => n + c.watchPct, 0) / watched.length) : 0,
+  };
+
+  // This week (7d)
+  const weekAgo = now - 7 * DAY;
+  const thisWeek = {
+    booked: new Set(bookedEvents.filter((e) => ms(e.createdAt) >= weekAgo).map((e) => e.email)).size,
+    tasksCompleted: tks.filter((t) => t.done && t.completedAt && ms(t.completedAt) >= weekAgo).length,
+    newClients: contacts.filter((c) => c.stage === "won" && c.stageChangedAt && ms(c.stageChangedAt) >= weekAgo).length,
+  };
+
+  // Speed: reg → booked
+  const regTimes = new Map<string, number>();
+  for (const e of evs) if (e.event === EVENTS.registered && e.email) { const t = ms(e.createdAt); const p = regTimes.get(e.email); if (p === undefined || t < p) regTimes.set(e.email, t); }
+  const diffs: number[] = [];
+  for (const e of bookedEvents) { const r = e.email ? regTimes.get(e.email) : undefined; if (r !== undefined) { const d = ms(e.createdAt) - r; if (d >= 0) diffs.push(d); } }
+  const speed = { avgRegToBookedDays: diffs.length ? Math.round((diffs.reduce((a, b) => a + b, 0) / diffs.length / DAY) * 10) / 10 : null };
+
+  const owners = await listOwners();
+  return { kpis, actions: actions.slice(0, 10), pipeline, funnel, segments, sources, bestSource, trend, engagement, thisWeek, speed, owners, generatedAt: new Date().toISOString() };
 }
 
 export async function getLeadsTimeSeries(days = 14): Promise<TimePoint[]> {
