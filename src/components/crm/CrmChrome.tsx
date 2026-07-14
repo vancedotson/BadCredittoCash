@@ -85,7 +85,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   };
 
   return (
-    <div className="flex min-h-screen bg-cloud">
+    <div className="crm-scope flex min-h-screen bg-cloud">
       {/* Desktop sidebar */}
       <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-navy text-white md:flex ${collapsed ? "w-16" : "w-60"}`}>
         <div className="flex h-16 items-center justify-between px-4">

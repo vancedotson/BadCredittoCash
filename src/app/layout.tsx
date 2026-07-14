@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins, Inter, Source_Serif_4, Staatliches } from "next/font/google";
+import { Poppins, Inter, Source_Serif_4, Staatliches, Open_Sans } from "next/font/google";
 import { site } from "@/config/site";
 import "./globals.css";
 
@@ -12,6 +12,12 @@ const poppins = Poppins({
 
 const inter = Inter({
   variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+// CRM headings — Open Sans (variable weight; used bold). Scoped via .crm-scope.
+const openSans = Open_Sans({
+  variable: "--font-open-sans",
   subsets: ["latin"],
 });
 
@@ -44,7 +50,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${poppins.variable} ${inter.variable} ${sourceSerif.variable} ${staatliches.variable} h-full antialiased`}
+      className={`${poppins.variable} ${inter.variable} ${openSans.variable} ${sourceSerif.variable} ${staatliches.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <script
