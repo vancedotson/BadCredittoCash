@@ -7,6 +7,8 @@ import { EVENTS } from "@/lib/events";
 import { Kicker, Reveal, SectionScan } from "../../marketing-v3/shared/primitives";
 import { useReveal } from "../../marketing-v3/shared/hooks";
 import { CheckIcon, ArrowRightIcon } from "@/components/marketing-v2/Icons";
+import { buildDays, slotLabelOf, type Day } from "./slots";
+import { SlotPicker } from "./SlotPicker";
 
 /**
  * /book — a standalone "pick a time" scheduler for the free strategy call,
@@ -29,32 +31,6 @@ const COVERS = [
   "You leave knowing exactly where you stand, either way.",
 ];
 const FACTS = ["By phone", "Directly with Vance", "Free, no obligation"];
-const TIMES = ["9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"];
-
-type Day = { key: string; weekday: string; dayNum: string; month: string; full: string };
-
-/** Next 10 weekdays starting tomorrow. Built client-side (uses the current date),
- *  so it runs in an effect, not in render (avoids the purity lint + hydration). */
-function buildDays(): Day[] {
-  const out: Day[] = [];
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 1);
-  while (out.length < 10) {
-    const dow = d.getDay();
-    if (dow !== 0 && dow !== 6) {
-      out.push({
-        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-        weekday: d.toLocaleDateString("en-US", { weekday: "short" }),
-        dayNum: String(d.getDate()),
-        month: d.toLocaleDateString("en-US", { month: "short" }),
-        full: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
-      });
-    }
-    d.setDate(d.getDate() + 1);
-  }
-  return out;
-}
 
 const labelStyle = {
   fontSize: 10,
@@ -104,8 +80,7 @@ export function BookSchedulerV4() {
     setValues((v) => ({ ...v, [key]: val }));
   }
 
-  const selectedDay = days.find((d) => d.key === dayKey);
-  const slotLabel = selectedDay && time ? `${selectedDay.full} at ${time}` : "";
+  const slotLabel = slotLabelOf(days, dayKey, time);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -187,65 +162,13 @@ export function BookSchedulerV4() {
             </p>
 
             <form onSubmit={submit} noValidate className="mt-6 flex flex-col gap-5" onFocus={markStarted}>
-              {/* Day picker */}
-              <div>
-                <span className="v3-mono mb-2 block" style={labelStyle}>Choose a day</span>
-                {days.length === 0 ? (
-                  <p className="v3-mono" style={{ fontSize: 13, color: "var(--v3-faint)" }}>Loading available days…</p>
-                ) : (
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {days.map((d) => {
-                      const sel = d.key === dayKey;
-                      return (
-                        <button
-                          key={d.key}
-                          type="button"
-                          onClick={() => { markStarted(); setDayKey(d.key); }}
-                          className="shrink-0 rounded-sm px-3 py-2 text-center transition-colors"
-                          style={{
-                            minWidth: 62,
-                            border: `1px solid ${sel ? "var(--v3-accent)" : "var(--v3-line)"}`,
-                            background: sel ? "color-mix(in srgb, var(--v3-accent) 14%, transparent)" : "transparent",
-                          }}
-                        >
-                          <span className="v3-mono block" style={{ fontSize: 10, letterSpacing: "0.12em", color: "var(--v3-faint)" }}>{d.weekday.toUpperCase()}</span>
-                          <span className="v3-display block" style={{ fontSize: 20, lineHeight: 1.1, color: "var(--v3-ink)" }}>{d.dayNum}</span>
-                          <span className="v3-mono block" style={{ fontSize: 9, color: "var(--v3-faint)" }}>{d.month.toUpperCase()}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Time picker */}
-              <div>
-                <span className="v3-mono mb-2 block" style={labelStyle}>Available times</span>
-                <div className="grid grid-cols-2 gap-2">
-                  {TIMES.map((t) => {
-                    const sel = t === time;
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => { markStarted(); setTime(t); }}
-                        className="v3-mono rounded-sm px-3 py-2.5 transition-colors"
-                        style={{
-                          fontSize: 14,
-                          border: `1px solid ${sel ? "var(--v3-accent)" : "var(--v3-line)"}`,
-                          background: sel ? "color-mix(in srgb, var(--v3-accent) 14%, transparent)" : "rgba(0,0,0,0.25)",
-                          color: sel ? "var(--v3-ink)" : "var(--v3-mut)",
-                        }}
-                      >
-                        {t}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="v3-mono mt-3" style={{ fontSize: 12.5, color: slotLabel ? "var(--v3-accent)" : "var(--v3-faint)" }}>
-                  {slotLabel ? `Selected: ${slotLabel}` : "Pick a day and a time above."}
-                </p>
-              </div>
+              <SlotPicker
+                days={days}
+                dayKey={dayKey}
+                onDay={(k) => { markStarted(); setDayKey(k); }}
+                time={time}
+                onTime={(t) => { markStarted(); setTime(t); }}
+              />
 
               <div className="border-t pt-5" style={{ borderColor: "var(--v3-line)" }}>
                 {[
@@ -269,9 +192,7 @@ export function BookSchedulerV4() {
                   </div>
                 ))}
 
-                {error ? (
-                  <p role="alert" style={{ fontSize: 13, color: "var(--v3-danger)" }}>{error}</p>
-                ) : null}
+                {error ? <p role="alert" style={{ fontSize: 13, color: "var(--v3-danger)" }}>{error}</p> : null}
 
                 <button
                   type="submit"

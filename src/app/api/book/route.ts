@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     email?: string;
     phone?: string;
     preferredTime?: string;
+    answers?: Record<string, string>;
     utm?: Record<string, string>;
   };
   try {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
         name,
         phone: body.phone?.trim() || undefined,
         preferredTime: body.preferredTime?.trim() || undefined,
+        intake: body.answers && typeof body.answers === "object" ? body.answers : undefined,
         utm: body.utm,
       },
     });
