@@ -104,7 +104,7 @@ function BookingWizard() {
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      const d = buildDays().slice(0, 6);
+      const d = buildDays();
       setDays(d);
       setDayKey(d[0]?.key ?? "");
       const lead = getRememberedLead();
@@ -219,7 +219,7 @@ function BookingWizard() {
             onDay={(k) => { markStarted(); setDayKey(k); }}
             time={time}
             onTime={(t) => { markStarted(); setTime(t); }}
-            dayLayout="stack"
+            dayLayout="calendar"
             labelSize={11.5}
           />
 

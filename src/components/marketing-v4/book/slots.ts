@@ -4,26 +4,41 @@
  * scheduler (Calendly/Cal.com) slots in behind this later. buildDays() uses the
  * current date, so it must be called from an effect (not render).
  */
-export type Day = { key: string; weekday: string; dayNum: string; month: string; full: string };
+export type Day = {
+  key: string;
+  weekday: string;
+  dayNum: string;
+  month: string;
+  full: string;
+  dow: number; // 0=Sun .. 6=Sat (for calendar-column placement)
+  week: number; // 0-based week index (for calendar-row grouping)
+};
 
 export const TIMES = ["9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"];
 
-/** Next 10 weekdays starting tomorrow. */
+/** Next 10 weekdays starting tomorrow, tagged with day-of-week + week index so a
+ *  calendar layout can place them in the right column/row. */
 export function buildDays(): Day[] {
   const out: Day[] = [];
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 1);
+  let week = 0;
+  let prevDow = -1;
   while (out.length < 10) {
     const dow = d.getDay();
     if (dow !== 0 && dow !== 6) {
+      if (prevDow !== -1 && dow <= prevDow) week++; // wrapped past the weekend
       out.push({
         key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
         weekday: d.toLocaleDateString("en-US", { weekday: "short" }),
         dayNum: String(d.getDate()),
         month: d.toLocaleDateString("en-US", { month: "short" }),
         full: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+        dow,
+        week,
       });
+      prevDow = dow;
     }
     d.setDate(d.getDate() + 1);
   }

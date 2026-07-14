@@ -28,39 +28,56 @@ export function SlotPicker({
   onDay: (k: string) => void;
   time: string;
   onTime: (t: string) => void;
-  /** "row" = horizontal scroll strip (default); "stack" = vertical list. */
-  dayLayout?: "row" | "stack";
+  /** "row" = horizontal scroll strip (default); "calendar" = week-grid calendar. */
+  dayLayout?: "row" | "calendar";
   labelSize?: number;
 }) {
   const slotLabel = slotLabelOf(days, dayKey, time);
   const lbl = { ...labelStyle, fontSize: labelSize };
+
+  // For the calendar layout: lay days out in weekday columns, stacked by week.
+  const weeks = days.length ? Math.max(...days.map((d) => d.week)) + 1 : 0;
+  const cells: (Day | null)[] = [];
+  for (let w = 0; w < weeks; w++) {
+    for (let col = 0; col < 7; col++) {
+      cells.push(days.find((d) => d.week === w && d.dow === col) ?? null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div>
         <span className="v3-mono mb-2 block" style={lbl}>Choose a day</span>
         {days.length === 0 ? (
           <p className="v3-mono" style={{ fontSize: 13, color: "var(--v3-faint)" }}>Loading available days…</p>
-        ) : dayLayout === "stack" ? (
-          <div className="flex flex-col gap-2">
-            {days.map((d) => {
-              const sel = d.key === dayKey;
-              return (
-                <button
-                  key={d.key}
-                  type="button"
-                  onClick={() => onDay(d.key)}
-                  className="v3-mono w-full rounded-sm px-4 py-3 text-left transition-colors"
-                  style={{
-                    fontSize: 14.5,
-                    border: `1px solid ${sel ? "var(--v3-accent)" : "var(--v3-line)"}`,
-                    background: sel ? "color-mix(in srgb, var(--v3-accent) 14%, transparent)" : "rgba(0,0,0,0.25)",
-                    color: sel ? "var(--v3-ink)" : "var(--v3-mut)",
-                  }}
-                >
-                  {d.full}
-                </button>
-              );
-            })}
+        ) : dayLayout === "calendar" ? (
+          <div>
+            <div className="mb-1.5 grid grid-cols-7 gap-1.5 text-center">
+              {["S", "M", "T", "W", "T", "F", "S"].map((L, i) => (
+                <span key={i} className="v3-mono" style={{ fontSize: 10, letterSpacing: "0.04em", color: "var(--v3-faint)" }}>{L}</span>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1.5">
+              {cells.map((c, i) =>
+                c === null ? (
+                  <div key={i} />
+                ) : (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => onDay(c.key)}
+                    className="rounded-sm px-1 py-2 text-center transition-colors"
+                    style={{
+                      border: `1px solid ${c.key === dayKey ? "var(--v3-accent)" : "var(--v3-line)"}`,
+                      background: c.key === dayKey ? "color-mix(in srgb, var(--v3-accent) 14%, transparent)" : "transparent",
+                    }}
+                  >
+                    <span className="v3-display block" style={{ fontSize: 18, lineHeight: 1.1, color: "var(--v3-ink)" }}>{c.dayNum}</span>
+                    <span className="v3-mono block" style={{ fontSize: 8.5, color: "var(--v3-faint)" }}>{c.month.toUpperCase()}</span>
+                  </button>
+                ),
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1">
