@@ -28,7 +28,7 @@ export function CollectorTacticsV4() {
   return (
     <section className="v3-section" id="playbook">
       <SectionScan />
-      <div className="v3-wrap grid items-start gap-x-14 gap-y-12 lg:grid-cols-[1.02fr_0.98fr]">
+      <div className="v3-wrap grid items-stretch gap-x-14 gap-y-12 lg:grid-cols-[1.02fr_0.98fr]">
         {/* Left — education */}
         <div className="min-w-0">
           <span className="v3-mono" style={{ fontSize: 12, letterSpacing: "0.22em", color: "var(--v3-accent)" }}>KNOW THE PLAYBOOK</span>
@@ -49,8 +49,8 @@ export function CollectorTacticsV4() {
         </div>
 
         {/* Right — bento of collector tiles + a feature CTA cell */}
-        <div className="min-w-0">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" style={{ gridAutoRows: "84px", gridAutoFlow: "dense" }}>
+        <div className="min-w-0 lg:h-full">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:h-full" style={{ gridAutoRows: "minmax(84px, 1fr)", gridAutoFlow: "dense" }}>
             {/* Feature CTA — spans 2x2 */}
             <Link href="/book" className="v4-bento-cta col-span-2 row-span-2 flex flex-col justify-between rounded-md p-5 no-underline">
               <span className="v3-mono" style={{ fontSize: 10.5, letterSpacing: "0.18em", color: "var(--v3-accent)" }}>THE USUAL SUSPECTS</span>
