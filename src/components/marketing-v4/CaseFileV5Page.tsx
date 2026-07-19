@@ -16,6 +16,7 @@ import { HowItWorksSectionV4 } from "./howitworks/HowItWorksSectionV4";
 import { TrustStripSection } from "./truststrip/TrustStripSection";
 import { PainMirrorV4 } from "./pain/PainMirrorV4";
 import { CollectorQuizV4 } from "./quiz/CollectorQuizV4";
+import { CollectorTacticsV4 } from "./collectors/CollectorTacticsV4";
 import { ReframeGatherV4, ReframeLawsV4 } from "./reframe/ReframeGatherV4";
 import { MeetVanceV4 } from "./meetvance/MeetVanceV4";
 import { RiskV3 } from "./risk/RiskV3";
@@ -55,6 +56,8 @@ export function CaseFileV5Page() {
       </div>
 
       <TestimonialsSectionV4 />
+
+      <CollectorTacticsV4 />
 
       <div className="v5-light">
         <HowItWorksSectionV4 />
