@@ -14,6 +14,7 @@ import { RiskStatement } from "@/components/marketing/riskreversal/RiskStatement
 import { FinalCta } from "@/components/marketing/FinalCta";
 import { Footer } from "@/components/marketing/Footer";
 import { StickyCta } from "@/components/marketing/StickyCta";
+import { CollectorQuiz } from "@/components/marketing/quiz/CollectorQuiz";
 
 /**
  * Narrative arc (sales-page-structure.md):
@@ -29,6 +30,7 @@ export default function Home() {
       <main className="flex-1">
         <HeroCinematic />
         <PainSplit />
+        <CollectorQuiz />
         <Reframe />
         <ReframeZigzag />
         <MeetDossier />
