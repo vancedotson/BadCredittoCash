@@ -3,53 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon } from "../Icons";
+import { QUIZ_QUESTIONS as QUESTIONS, QUIZ_TOTAL as TOTAL, quizReflections, type QuizAnswers } from "@/config/collector-quiz";
 
 /**
- * "The 60-second collector check" — an interactive lead-magnet quiz on the home
- * page. It resonates by recognition (naming the collectors people actually get
- * contacted by), asks about their situation through an FCRA/FDCPA lens, then
- * routes them to book a free call. Compliance-safe: every question is about the
- * visitor's OWN experience, and the result says they "may" have protections —
- * no guarantees, and no claim that any company broke the law.
+ * "The 60-second collector check" — light home-page skin of the lead-magnet quiz
+ * (content + logic live in src/config/collector-quiz). It resonates by naming the
+ * collectors people actually get contacted by, asks about their situation through
+ * an FCRA/FDCPA lens, then routes them to book a free call. Compliance-safe.
  */
-
-const COLLECTORS = [
-  "Midland Credit Management",
-  "Portfolio Recovery Associates",
-  "LVNV Funding / Resurgent",
-  "Jefferson Capital",
-  "National Credit Adjusters",
-  "Spring Oaks Capital",
-  "Plaza Services",
-  "CKS Prime Investments",
-  "NCB Management Services",
-  "Credit Corp Solutions",
-  "RD Case & Associates",
-  "Bounce AI",
-  "Absolute Resolutions",
-  "Zion Debt Holdings",
-  "Credit One",
-  "TrueAccord",
-];
-
-type Question = { id: string; title: string; type: "single" | "multi"; options: string[] };
-
-const QUESTIONS: Question[] = [
-  { id: "who", title: "Recognize any of these? Select whoever has been contacting you.", type: "multi", options: [...COLLECTORS, "Someone else", "I'm not sure of the name"] },
-  { id: "how", title: "How are they reaching you?", type: "multi", options: ["Phone calls", "Voicemails", "Letters in the mail", "Text messages", "Emails", "Showing on my credit report"] },
-  { id: "frequency", title: "How often do the calls come?", type: "single", options: ["Multiple times a day", "A few times a week", "Now and then", "It feels constant"] },
-  { id: "timing", title: "When do they usually call?", type: "single", options: ["Early morning or late at night", "While I'm at work", "At all hours", "Normal hours"] },
-  { id: "thirdparty", title: "Have they contacted anyone else about your debt?", type: "single", options: ["Yes, family or coworkers", "Not that I know of", "I'm not sure"] },
-  { id: "recognize", title: "Do you recognize this debt as yours?", type: "single", options: ["Yes, it's mine", "No, it isn't", "It's old, or I thought it was gone", "I'm not sure"] },
-  { id: "report", title: "Is it showing up on your credit report?", type: "single", options: ["Yes", "Yes, more than once", "Haven't checked", "No"] },
-  { id: "disputed", title: "Have you disputed it?", type: "single", options: ["Yes, and it came back", "Yes, still waiting", "No", "I didn't know I could"] },
-  { id: "afterstop", title: "Have they kept contacting you after you asked them to stop?", type: "single", options: ["Yes", "No", "I haven't asked them to stop"] },
-  { id: "threats", title: "Have they threatened you in any way?", type: "single", options: ["Yes, legal action or arrest", "Aggressive or rude", "No", "Not sure if it counts"] },
-  { id: "impact", title: "How is this affecting you?", type: "multi", options: ["Stress or lost sleep", "I avoid answering my phone", "It's hurting my credit", "It's affecting my family", "It's affecting my job"] },
-  { id: "urgency", title: "How soon would you want this handled?", type: "single", options: ["As soon as possible", "Within a month", "Just exploring my options"] },
-];
-
-const TOTAL = QUESTIONS.length;
 
 const pillBtn =
   "inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-gold px-7 font-heading text-base font-semibold text-ink transition-colors hover:bg-gold-deep disabled:cursor-not-allowed disabled:opacity-50";
@@ -148,16 +109,8 @@ export function CollectorQuiz() {
   );
 }
 
-function Results({ answers, onRestart, onBack }: { answers: Record<string, string | string[]>; onRestart: () => void; onBack: () => void }) {
-  const who = Array.isArray(answers.who) ? answers.who : [];
-  const namedCount = who.filter((w) => w !== "Someone else" && w !== "I'm not sure of the name").length;
-
-  // Compliance-safe observations (what they told us) — never a legal conclusion.
-  const reflections: string[] = [];
-  if (namedCount > 0) reflections.push(`You named ${namedCount} collector${namedCount === 1 ? "" : "s"} that ${namedCount === 1 ? "has" : "have"} been contacting you.`);
-  if (answers.afterstop === "Yes") reflections.push("They have kept reaching out even after being asked to stop.");
-  if (answers.recognize === "No, it isn't" || answers.recognize === "It's old, or I thought it was gone") reflections.push("You are not even sure this debt is really yours.");
-  if (answers.timing === "Early morning or late at night" || answers.timing === "At all hours") reflections.push("The calls are coming at hours that may cross a line.");
+function Results({ answers, onRestart, onBack }: { answers: QuizAnswers; onRestart: () => void; onBack: () => void }) {
+  const reflections = quizReflections(answers);
 
   return (
     <div className="text-center">

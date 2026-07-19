@@ -15,6 +15,7 @@ import { TestimonialsSectionV4 } from "./testimonials/TestimonialsSectionV4";
 import { HowItWorksSectionV4 } from "./howitworks/HowItWorksSectionV4";
 import { TrustStripSection } from "./truststrip/TrustStripSection";
 import { PainMirrorV4 } from "./pain/PainMirrorV4";
+import { CollectorQuizV4 } from "./quiz/CollectorQuizV4";
 import { ReframeGatherV4, ReframeLawsV4 } from "./reframe/ReframeGatherV4";
 import { MeetVanceV4 } from "./meetvance/MeetVanceV4";
 import { RiskSectionV4 } from "./risk/RiskSectionV4";
@@ -32,6 +33,7 @@ export function CaseFileV4Page() {
       <HeroV4 />
       <TrustStripSection />
       <PainMirrorV4 />
+      <CollectorQuizV4 />
       <ReframeGatherV4 />
       <MeetVanceV4 />
       <ReframeLawsV4 />
