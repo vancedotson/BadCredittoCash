@@ -183,6 +183,15 @@
     animation: none;
   }
 }
+/* Bento feature/CTA cell in the "Know the playbook" section. */
+.v4-bento-cta {
+  border: 1px solid var(--v3-accent);
+  background: color-mix(in srgb, var(--v3-accent) 12%, transparent);
+  transition: background 0.2s ease;
+}
+.v4-bento-cta:hover {
+  background: color-mix(in srgb, var(--v3-accent) 20%, transparent);
+}
 
 /* Periodic "shine" sweep across a button — quick pass fully off both edges,
    then a long pause off-screen (so no sliver parks on the right). */
