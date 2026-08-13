@@ -56,7 +56,9 @@ export function ConfirmedSectionV4() {
 
   function submit() {
     setSubmitting(true);
-    track(EVENTS.quizCompleted, { ...answers }, getRememberedLead()?.email);
+    const email = getRememberedLead()?.email;
+    track(EVENTS.quizCompleted, { ...answers }, email);
+    if (answers.concern) track(EVENTS.goalReplied, { goal: answers.concern }, email);
     router.push("/webinar/room");
   }
 

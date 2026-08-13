@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getOverview, listEvents, listContactOptions } from "@/lib/store";
+import { hydrateStore, getOverview, listEvents, listContactOptions } from "@/lib/store";
 import { displayEvent } from "@/lib/event-display";
 import { STAGE_LABELS } from "@/lib/stages";
 import { Card, SegmentBadge, EventGlyph, toneClass } from "@/components/crm/ui";
@@ -45,6 +45,7 @@ function Delta({ delta, good = true }: { delta?: number; good?: boolean }) {
 }
 
 export default async function CrmOverview({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await hydrateStore();
   const sp = await searchParams;
   const rangeDays = Number(str(sp.range)) || 30;
   const owner = str(sp.owner);

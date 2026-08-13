@@ -458,7 +458,7 @@ export function Faq() {
           <Link
             href={site.cta.primary.href}
             className="v3-btn v3-btn-primary v3-clip"
-            onClick={() => track("cta_click", { where: "faq", variant: "v3" })}
+            onClick={() => track("cta_clicked", { where: "faq", variant: "v3" })}
           >
             Get my questions answered, free
           </Link>

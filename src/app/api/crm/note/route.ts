@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { addNote } from "@/lib/store";
+import { requireCrmApiUser } from "@/lib/auth";
 
 /** POST /api/crm/note — add a note to a contact (keyed by email). */
 export async function POST(request: Request) {
+  const auth = await requireCrmApiUser(request, "write");
+  if (auth.response) return auth.response;
   let body: { email?: string; body?: string; author?: string };
   try {
     body = await request.json();

@@ -19,6 +19,7 @@
 
 # production
 /build
+/.open-next
 
 # misc
 .DS_Store
@@ -35,6 +36,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# cloudflare
+/.wrangler
 
 # typescript
 *.tsbuildinfo

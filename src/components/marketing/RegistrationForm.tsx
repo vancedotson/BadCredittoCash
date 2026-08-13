@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { track, getUtmParams } from "@/lib/tracking";
+import { getUtmParams, getVisitorId, rememberLead } from "@/lib/tracking";
 import { ButtonShine } from "./ButtonShine";
 
 /**
@@ -26,6 +26,7 @@ export function RegistrationForm() {
       phone: String(formData.get("phone") ?? ""),
       source: "vance-webinar",
       utm: getUtmParams(),
+      visitorId: getVisitorId(),
     };
 
     try {
@@ -40,7 +41,7 @@ export function RegistrationForm() {
         throw new Error(data.error ?? "Registration failed.");
       }
 
-      track("webinar_registered", { source: payload.source });
+      rememberLead({ email: payload.email.trim(), name: payload.name.trim() });
       router.push("/webinar/confirmed");
     } catch (err) {
       setStatus("error");

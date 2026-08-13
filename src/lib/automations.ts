@@ -45,7 +45,15 @@ export async function routeBySegment(
  * today; the onboarding enrolment is what matters and is recorded for the
  * dashboard. When a real ESP is wired, cancel the lead's pending pitch sends here.
  */
-export async function onBooked(email: string): Promise<void> {
-  // TODO(real ESP): cancel pending pitch sequences for `email`.
-  await enqueueSequence(email, "onboarding");
+export async function onBooked(
+  email: string,
+  appointmentStart: Date,
+  timezone: string,
+  bookingId: string,
+): Promise<void> {
+  await enqueueSequence(email, "onboarding", appointmentStart, {
+    bookingId,
+    startsAt: appointmentStart.toISOString(),
+    timezone,
+  });
 }

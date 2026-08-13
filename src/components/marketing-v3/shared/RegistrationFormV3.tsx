@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { track, getUtmParams, rememberLead } from "@/lib/tracking";
+import { getAttribution, getVisitorId, rememberLead, track } from "@/lib/tracking";
 import { EVENTS } from "@/lib/events";
 import { CheckIcon, ArrowRightIcon } from "@/components/marketing-v2/Icons";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 /**
  * v3 "terminal" registration form. Posts to /api/lead, tracks, then routes on.
@@ -41,6 +42,8 @@ export function RegistrationFormV3({
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
   const [fields, setFields] = useState<
     Record<FieldKey, { status: FieldStatus; message: string | null }>
   >({
@@ -83,7 +86,14 @@ export function RegistrationFormV3({
       setFields((prev) => ({ ...prev, [k]: next }));
     });
     if (firstInvalid) {
+      track(EVENTS.funnelError, { action: "registration", reason: `invalid_${firstInvalid}` });
       form.querySelector<HTMLInputElement>(`#v3-${firstInvalid}`)?.focus();
+      return;
+    }
+    if (!turnstileToken) {
+      track(EVENTS.funnelError, { action: "registration", reason: "turnstile_missing" });
+      setStatus("error");
+      setError("Please complete the security check.");
       return;
     }
 
@@ -96,19 +106,47 @@ export function RegistrationFormV3({
         body: JSON.stringify({
           ...values,
           source,
-          utm: getUtmParams(),
+          attribution: getAttribution(),
+          marketingConsent: data.get("marketingConsent") === "yes",
+          visitorId: getVisitorId(),
+          turnstileToken,
         }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
+        const body = await res.json().catch(() => ({})) as {
+          error?: string;
+          fieldErrors?: Partial<Record<FieldKey, string>>;
+        };
+        const serverFieldErrors = body.fieldErrors;
+        if (serverFieldErrors && Object.keys(serverFieldErrors).length > 0) {
+          let firstServerInvalid: FieldKey | null = null;
+          setFields((previous) => {
+            const next = { ...previous };
+            for (const key of Object.keys(serverFieldErrors) as FieldKey[]) {
+              const message = serverFieldErrors[key];
+              if (!message) continue;
+              if (!firstServerInvalid) firstServerInvalid = key;
+              next[key] = { status: "invalid", message };
+            }
+            return next;
+          });
+          const invalidField = firstServerInvalid;
+          if (invalidField) {
+            requestAnimationFrame(() => {
+              form.querySelector<HTMLInputElement>(`#v3-${invalidField}`)?.focus();
+            });
+          }
+        }
         throw new Error(body.error ?? "Registration failed.");
       }
       rememberLead({ email: values.email.trim(), name: values.name.trim() });
-      track(EVENTS.registered, { source, variant: "v3" }, values.email.trim());
       router.push(redirectTo);
     } catch (err) {
+      track(EVENTS.funnelError, { action: "registration", reason: "request_failed" });
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");
+      setTurnstileToken(null);
+      setTurnstileReset((value) => value + 1);
     }
   }
 
@@ -229,6 +267,21 @@ export function RegistrationFormV3({
           </div>
         );
       })}
+
+      <label
+        className="flex items-start gap-2.5"
+        style={{ fontSize: 12, color: "var(--v3-faint)" }}
+      >
+        <input
+          name="marketingConsent"
+          type="checkbox"
+          value="yes"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--v3-accent)]"
+        />
+        <span>Send me occasional follow-up tips and updates by email. Optional; unsubscribe anytime.</span>
+      </label>
+
+      <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileReset} />
 
       {error ? (
         <p role="alert" style={{ fontSize: 13, color: "var(--v3-danger)" }}>

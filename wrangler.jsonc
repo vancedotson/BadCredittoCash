@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "vance-dotson",
+  "main": "custom-worker.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "secrets": {
+    "required": [
+      "RESEND_API_KEY",
+      "SUPABASE_SECRET_KEY",
+      "TURNSTILE_SECRET",
+      "CRON_SECRET",
+      "EMAIL_SIGNING_SECRET",
+      "RESEND_WEBHOOK_SECRET",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "GOOGLE_TOKEN_ENCRYPTION_KEY"
+    ]
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://gulidnxltrgomjyctjlp.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_kUngQFloolk0SWmgkBRUYw_l44atY4F",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEJgbygCL0OAMxvi",
+    "EMAIL_MODE": "test",
+    "EMAIL_TEST_RECIPIENT": "p.burmesterm@gmail.com",
+    "EMAIL_FROM": "Vance Dotson <onboarding@resend.dev>",
+    "APP_BASE_URL": "https://vance-dotson.anadias-dev.workers.dev"
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

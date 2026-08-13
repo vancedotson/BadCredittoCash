@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { addTask, updateTask, toggleTask, deleteTask } from "@/lib/store";
 import { isTaskPriority, isTaskType, isRecurrence } from "@/lib/tasks";
+import { requireCrmApiUser } from "@/lib/auth";
+import { recordAdminAudit } from "@/lib/audit";
 
 /** POST /api/crm/task — add a task (keyed by contact email). */
 export async function POST(request: Request) {
+  const auth = await requireCrmApiUser(request, "write");
+  if (auth.response) return auth.response;
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -23,6 +27,13 @@ export async function POST(request: Request) {
     notes: typeof body.notes === "string" ? body.notes.trim() || undefined : undefined,
     recurrence: isRecurrence(body.recurrence) ? body.recurrence : undefined,
   });
+  await recordAdminAudit({
+    actorId: String(auth.user.sub),
+    action: "task.create",
+    entityType: "task",
+    entityId: task.id,
+    afterState: { email: task.email, title: task.title, dueDate: task.dueDate, owner: task.owner, recurrence: task.recurrence },
+  });
   return NextResponse.json({ ok: true, task });
 }
 
@@ -31,6 +42,8 @@ export async function POST(request: Request) {
  * ({ id, ...fields }: title, dueDate, priority, type, owner, notes, recurrence, done).
  */
 export async function PATCH(request: Request) {
+  const auth = await requireCrmApiUser(request, "write");
+  if (auth.response) return auth.response;
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -55,19 +68,37 @@ export async function PATCH(request: Request) {
       ? await toggleTask(id)
       : await updateTask(id, patch as Parameters<typeof updateTask>[1]);
   if (!task) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  await recordAdminAudit({
+    actorId: String(auth.user.sub),
+    action: "task.update",
+    entityType: "task",
+    entityId: task.id,
+    afterState: { title: task.title, dueDate: task.dueDate, owner: task.owner, done: task.done, recurrence: task.recurrence },
+  });
   return NextResponse.json({ ok: true, task });
 }
 
 /** DELETE /api/crm/task — remove a task ({ id }). */
 export async function DELETE(request: Request) {
-  let body: { id?: string };
+  const auth = await requireCrmApiUser(request, "write");
+  if (auth.response) return auth.response;
+  let body: { id?: string; confirm?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
   if (!body.id) return NextResponse.json({ error: "id is required." }, { status: 400 });
+  if (body.confirm !== "DELETE") {
+    return NextResponse.json({ error: "Explicit deletion confirmation is required." }, { status: 400 });
+  }
   const ok = await deleteTask(body.id);
   if (!ok) return NextResponse.json({ error: "Task not found." }, { status: 404 });
+  await recordAdminAudit({
+    actorId: String(auth.user.sub),
+    action: "task.delete",
+    entityType: "task",
+    entityId: body.id,
+  });
   return NextResponse.json({ ok: true });
 }

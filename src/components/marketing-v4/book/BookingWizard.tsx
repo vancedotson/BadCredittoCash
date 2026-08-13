@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { track, getRememberedLead, getUtmParams } from "@/lib/tracking";
+import { track, getRememberedLead, getUtmParams, getVisitorId } from "@/lib/tracking";
 import { EVENTS } from "@/lib/events";
 import { ArrowRightIcon } from "@/components/marketing-v2/Icons";
-import { buildDays, slotLabelOf, type Day } from "./slots";
+import { buildDays, slotLabelOf, slotStart, type Day } from "./slots";
 import { SlotPicker } from "./SlotPicker";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 
 /**
  * Two-step strategy-call booking card, shared by /webinar/call and /book so both
@@ -51,8 +52,13 @@ export function BookingWizard() {
   const [dayKey, setDayKey] = useState("");
   const [time, setTime] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>(DEFAULT_ANSWERS);
+  const [unavailableStarts, setUnavailableStarts] = useState<Set<string>>(new Set());
+  const [busyIntervals, setBusyIntervals] = useState<Array<{ start: string; end: string }>>([]);
+  const [availability, setAvailability] = useState<"loading" | "ready" | "error">("loading");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileReset, setTurnstileReset] = useState(0);
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -60,6 +66,17 @@ export function BookingWizard() {
       const d = buildDays();
       setDays(d);
       setDayKey(d[0]?.key ?? "");
+      fetch("/api/book")
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((payload: { startsAt?: string[]; busy?: Array<{ start: string; end: string }> }) => {
+          setUnavailableStarts(new Set((payload.startsAt ?? []).map((value) => new Date(value).toISOString())));
+          setBusyIntervals(payload.busy ?? []);
+          setAvailability("ready");
+        })
+        .catch(() => {
+          setAvailability("error");
+          setError("Live availability could not be loaded. Please refresh and try again.");
+        });
       const lead = getRememberedLead();
       if (lead) setValues((v) => ({ ...v, email: lead.email, name: lead.name ?? "" }));
     });
@@ -87,6 +104,7 @@ export function BookingWizard() {
     const name = values.name.trim();
     const email = values.email.trim();
     if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      track(EVENTS.funnelError, { action: "booking", reason: "invalid_contact_details" }, email || undefined);
       setStatus("error");
       setError("Please enter your name and a valid email.");
       return;
@@ -98,30 +116,76 @@ export function BookingWizard() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (availability !== "ready") {
+      track(EVENTS.funnelError, { action: "booking", reason: `availability_${availability}` }, values.email || undefined);
+      setStatus("error");
+      setError(availability === "loading"
+        ? "Please wait while live availability loads."
+        : "Live availability could not be loaded. Please refresh and try again.");
+      return;
+    }
     if (!slotLabel) {
+      track(EVENTS.funnelError, { action: "booking", reason: "slot_missing" }, values.email || undefined);
       setStatus("error");
       setError("Please pick a day and time for your call.");
+      return;
+    }
+    if (!turnstileToken) {
+      track(EVENTS.funnelError, { action: "booking", reason: "turnstile_missing" }, values.email || undefined);
+      setStatus("error");
+      setError("Please complete the security check.");
       return;
     }
     setStatus("loading");
     setError(null);
     const name = values.name.trim();
     const email = values.email.trim();
+    const starts = slotStart(dayKey, time);
+    if (!starts) {
+      track(EVENTS.funnelError, { action: "booking", reason: "slot_invalid" }, email);
+      setStatus("error");
+      setError("Please choose a valid appointment time.");
+      return;
+    }
+    const ends = new Date(starts.getTime() + 30 * 60 * 1000);
     try {
       const res = await fetch("/api/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, name, email, preferredTime: slotLabel, answers, utm: getUtmParams() }),
+        body: JSON.stringify({
+          ...values,
+          name,
+          email,
+          preferredTime: slotLabel,
+          startsAt: starts.toISOString(),
+          endsAt: ends.toISOString(),
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          visitorId: getVisitorId(),
+          answers,
+          utm: getUtmParams(),
+          turnstileToken,
+        }),
       });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         throw new Error(b.error ?? "Booking failed.");
       }
-      track(EVENTS.booked, { preferredTime: slotLabel, ...answers }, email);
+      const result = await res.json() as {
+        booking?: { id: string; startsAt: string; endsAt: string; timezone: string };
+      };
+      if (result.booking) {
+        sessionStorage.setItem("vance:last-booking", JSON.stringify({
+          ...result.booking,
+          name,
+        }));
+      }
       router.push("/webinar/booked");
     } catch (err) {
+      track(EVENTS.funnelError, { action: "booking", reason: "request_failed" }, email);
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");
+      setTurnstileToken(null);
+      setTurnstileReset((value) => value + 1);
     }
   }
 
@@ -174,7 +238,12 @@ export function BookingWizard() {
             onTime={(t) => { markStarted(); setTime(t); }}
             dayLayout="calendar"
             labelSize={11.5}
+            unavailableStarts={unavailableStarts}
+            busyIntervals={busyIntervals}
           />
+          {availability === "loading" ? (
+            <p role="status" style={{ fontSize: 14, color: "var(--v3-faint)" }}>Checking live availabilityâ€¦</p>
+          ) : null}
 
           {/* Short intake */}
           <div className="flex flex-col gap-4 border-t pt-5" style={{ borderColor: "var(--v3-line)" }}>
@@ -213,6 +282,7 @@ export function BookingWizard() {
             ))}
           </div>
 
+          <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileReset} />
           {error ? <p role="alert" style={{ fontSize: 14, color: "var(--v3-danger)" }}>{error}</p> : null}
           <div className="flex items-center gap-3">
             <button

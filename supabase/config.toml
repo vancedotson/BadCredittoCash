@@ -1,0 +1,20 @@
+project_id = "vance-dotson"
+
+[auth]
+site_url = "https://vance-dotson.anadias-dev.workers.dev"
+additional_redirect_urls = [
+  "http://localhost:3000/auth/update-password",
+  "https://vance-dotson.anadias-dev.workers.dev/auth/update-password"
+]
+enable_signup = false
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+max_frequency = "1m"
+otp_length = 8
+otp_expiry = 3600
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true

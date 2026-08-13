@@ -34,17 +34,73 @@ export const EVENTS = {
   callPageView: "call_page_view",
   bookingStarted: "call_booking_started",
   booked: "call_booked",
+  bookingRescheduled: "call_rescheduled",
+  bookingCancelled: "call_cancelled",
   bookingAbandoned: "call_booking_abandoned",
 
   // Generic UI
+  pageViewed: "page_viewed",
+  funnelError: "funnel_error",
   ctaClicked: "cta_clicked",
 
   // Email seam (fired by src/lib/email.ts so the dashboard can see the machine)
   emailQueued: "email_queued",
   emailSent: "email_sent",
+  emailUnsubscribed: "email_unsubscribed",
+  emailDelivered: "email_delivered",
+  emailBounced: "email_bounced",
+  emailComplained: "email_complained",
+  emailRetryScheduled: "email_retry_scheduled",
+  emailDeadLettered: "email_dead_lettered",
 } as const;
 
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS];
+
+export const EVENT_SCHEMA_VERSION = 1 as const;
+
+/** Events that an untrusted browser is allowed to submit to `/api/track`. */
+export const PUBLIC_TRACKING_EVENTS = [
+  EVENTS.pageViewed,
+  EVENTS.funnelError,
+  EVENTS.confirmedView,
+  EVENTS.goalReplied,
+  EVENTS.quizStarted,
+  EVENTS.quizCompleted,
+  EVENTS.roomOpened,
+  EVENTS.watch25,
+  EVENTS.watch50,
+  EVENTS.watch75,
+  EVENTS.watch90,
+  EVENTS.completed,
+  EVENTS.offerCtaClicked,
+  EVENTS.callPageView,
+  EVENTS.bookingStarted,
+  EVENTS.bookingAbandoned,
+  EVENTS.ctaClicked,
+] as const;
+
+export type PublicTrackingEvent = (typeof PUBLIC_TRACKING_EVENTS)[number];
+
+const PUBLIC_TRACKING_EVENT_SET = new Set<string>(PUBLIC_TRACKING_EVENTS);
+
+export function isPublicTrackingEvent(value: unknown): value is PublicTrackingEvent {
+  return typeof value === "string" && PUBLIC_TRACKING_EVENT_SET.has(value);
+}
+
+export const EVENT_REQUIRED_PROPERTIES: Partial<Record<PublicTrackingEvent, readonly string[]>> = {
+  [EVENTS.funnelError]: ["action", "reason"],
+  [EVENTS.watch25]: ["pct"],
+  [EVENTS.watch50]: ["pct"],
+  [EVENTS.watch75]: ["pct"],
+  [EVENTS.watch90]: ["pct"],
+};
+
+export const WATCH_EVENT_PERCENT: Partial<Record<PublicTrackingEvent, number>> = {
+  [EVENTS.watch25]: 25,
+  [EVENTS.watch50]: 50,
+  [EVENTS.watch75]: 75,
+  [EVENTS.watch90]: 90,
+};
 
 /**
  * Watch-time milestones in ascending order. The room player fires each event

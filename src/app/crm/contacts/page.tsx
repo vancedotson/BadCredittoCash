@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listContacts, listContactIds, getContactsSummary, listOwners, listTags, getSourceStats, getSettings, type ContactFilter, type ContactSort } from "@/lib/store";
+import { getContactsPageData, listOwners, listTags, getSettings, type ContactFilter, type ContactSort } from "@/lib/store";
 import { STAGE_LABELS } from "@/lib/stages";
 import { PageTitle } from "@/components/crm/ui";
 import { ContactsToolbar } from "@/components/crm/ContactsToolbar";
@@ -24,10 +24,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     page, pageSize,
   };
 
-  const [{ rows, total }, summary, allIds, owners, tags, srcStats] = await Promise.all([
-    listContacts(filter), getContactsSummary(filter), listContactIds(filter), listOwners(), listTags(), getSourceStats(),
+  const [contactData, owners, tags] = await Promise.all([
+    getContactsPageData(filter), listOwners(), listTags(),
   ]);
-  const sources = srcStats.map((s) => s.source);
+  const { rows, total, summary, matchingIds: allIds, sources } = contactData;
 
   const filterParams = () => {
     const p = new URLSearchParams();
@@ -60,7 +60,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         <span className="flex flex-wrap gap-x-3 text-xs text-slate">{topStages.map((s) => <span key={s.stage}>{STAGE_LABELS[s.stage]}: <span className="tabular-nums text-body">{s.count}</span></span>)}</span>
       </div>
 
-      <ContactsTable rows={rows} allIds={allIds} owners={owners} total={total} />
+      <ContactsTable rows={rows} allIds={allIds} owners={owners} tags={tags} total={total} />
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-slate">

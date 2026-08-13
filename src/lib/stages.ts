@@ -52,6 +52,11 @@ export const STAGE_PROBABILITY: Record<Stage, number> = {
   lost: 0,
 };
 
+/** Treat blank or legacy database values as unset instead of crashing CRM views. */
+export function isStage(value: unknown): value is Stage {
+  return typeof value === "string" && STAGES_IN_ORDER.includes(value as Stage);
+}
+
 /** Preset reasons captured when a contact is moved to Lost. */
 export const LOST_REASONS = [
   "No-show",

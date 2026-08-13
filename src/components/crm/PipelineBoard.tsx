@@ -19,7 +19,10 @@ const inputClass =
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Request failed");
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null) as { error?: string } | null;
+    throw new Error(payload?.error ?? "Request failed");
+  }
   return res.json();
 }
 
@@ -46,6 +49,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   const [lostIds, setLostIds] = useState<string[] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [mobileStage, setMobileStage] = useState<Stage>("new");
+  const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function scrollByCol(dir: number) {
@@ -75,13 +79,15 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   const cardsIn = (stage: Stage) => sortCards(filtered.filter((c) => stageOf(c) === stage));
 
   async function move(ids: string[], toStage: Stage, lostReason?: string) {
+    setActionError(null);
     setOv((p) => { const n = { ...p }; ids.forEach((id) => (n[id] = toStage)); return n; });
     setPending((p) => { const n = new Set(p); ids.forEach((id) => n.add(id)); return n; });
     try {
-      await Promise.all(ids.map((id) => api(`/api/crm/contact/${id}`, "PATCH", { stage: toStage, ...(lostReason ? { lostReason } : {}) })));
+      await Promise.all(ids.map((id) => api(`/api/crm/contact/${id}`, "PATCH", { stage: toStage, ...(lostReason ? { lostReason } : {}), expectedUpdatedAt: contacts.find((contact) => contact.id === id)?.updatedAt })));
       router.refresh();
-    } catch {
+    } catch (error) {
       setOv((p) => { const n = { ...p }; ids.forEach((id) => delete n[id]); return n; });
+      setActionError({ message: error instanceof Error ? error.message : "Could not move the contact.", retry: () => { void move(ids, toStage, lostReason); } });
     } finally {
       setPending((p) => { const n = new Set(p); ids.forEach((id) => n.delete(id)); return n; });
       setSelected(new Set());
@@ -95,18 +101,27 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   }
 
   async function assign(id: string, owner: string) {
+    setActionError(null);
     setPending((p) => new Set(p).add(id));
     try {
-      await api(`/api/crm/contact/${id}`, "PATCH", { owner });
+      await api(`/api/crm/contact/${id}`, "PATCH", { owner, expectedUpdatedAt: contacts.find((contact) => contact.id === id)?.updatedAt });
       router.refresh();
+    } catch (error) {
+      setActionError({ message: error instanceof Error ? error.message : "Could not assign the owner.", retry: () => { void assign(id, owner); } });
     } finally {
       setPending((p) => { const n = new Set(p); n.delete(id); return n; });
     }
   }
 
   async function quickTask(email: string, title: string) {
-    await api("/api/crm/task", "POST", { email, title });
-    router.refresh();
+    setActionError(null);
+    try {
+      await api("/api/crm/task", "POST", { email, title });
+      router.refresh();
+    } catch (error) {
+      setActionError({ message: error instanceof Error ? error.message : "Could not add the task.", retry: () => { void quickTask(email, title); } });
+      throw error;
+    }
   }
 
   function toggleSelect(id: string) {
@@ -132,6 +147,12 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
 
   return (
     <div className="space-y-4">
+      {actionError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
+          <span>{actionError.message} The board was kept safe.</span>
+          <span className="flex gap-3"><button type="button" onClick={actionError.retry} className="font-semibold underline">Try again</button><button type="button" onClick={() => setActionError(null)} aria-label="Dismiss error">×</button></span>
+        </div>
+      ) : null}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" className={`${inputClass} min-w-[180px] flex-1`} />
@@ -229,8 +250,8 @@ type CardProps = {
   stageOf: (c: Contact) => Stage;
   onToggleSelect: (id: string) => void;
   onMoveStage: (id: string, s: Stage) => void;
-  onAssign: (id: string, owner: string) => void;
-  onQuickTask: (email: string, title: string) => void;
+  onAssign: (id: string, owner: string) => Promise<void>;
+  onQuickTask: (email: string, title: string) => Promise<void>;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
 };
@@ -277,6 +298,7 @@ type PipelineBoardDrop = (stage: Stage) => {
 function PipelineCard({ c, owners, selected, pending, stageOf, onToggleSelect, onMoveStage, onAssign, onQuickTask, onDragStart, onDragEnd }: { c: Contact } & CardProps) {
   const [menu, setMenu] = useState(false);
   const [task, setTask] = useState("");
+  const [taskPending, setTaskPending] = useState(false);
   const stage = stageOf(c);
   const isPending = pending.has(c.id);
   const source = c.utm?.utm_source ?? c.source ?? "direct";
@@ -335,7 +357,7 @@ function PipelineCard({ c, owners, selected, pending, stageOf, onToggleSelect, o
             <label className="mb-1 block text-[11px] uppercase tracking-wide text-slate">Quick task</label>
             <div className="flex gap-1.5">
               <input value={task} onChange={(e) => setTask(e.target.value)} placeholder="Task…" className="min-w-0 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust" />
-              <button type="button" onClick={() => { if (task.trim()) { onQuickTask(c.email, task.trim()); setTask(""); setMenu(false); } }} className="rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep">Add</button>
+              <button disabled={taskPending} type="button" onClick={async () => { if (!task.trim()) return; setTaskPending(true); try { await onQuickTask(c.email, task.trim()); setTask(""); setMenu(false); } catch { /* the board-level retry keeps the draft available */ } finally { setTaskPending(false); } }} className="rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep disabled:opacity-60">{taskPending ? "…" : "Add"}</button>
             </div>
             <Link href={`/crm/contacts/${c.id}`} className="mt-3 block text-sm text-trust hover:underline">Open contact &#8594;</Link>
           </div>

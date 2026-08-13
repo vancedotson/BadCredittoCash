@@ -16,7 +16,10 @@ const DAY = 86400000;
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Request failed");
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null) as { error?: string } | null;
+    throw new Error(payload?.error ?? "The server could not complete this task action.");
+  }
   return res.json();
 }
 
@@ -57,6 +60,14 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showDone, setShowDone] = useState(false);
   const [modal, setModal] = useState<{ mode: "add" | "edit"; task?: TaskWithContact } | null>(null);
+  const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+
+  function reportActionError(caught: unknown, retry: () => void) {
+    setActionError({
+      message: caught instanceof Error ? caught.message : "The task could not be updated.",
+      retry,
+    });
+  }
 
   const filtered = useMemo(() => {
     let list = tasks;
@@ -80,16 +91,58 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   const upcoming = open.filter((t) => bucketOf(t) === "upcoming").sort(sortSmart);
 
   // mutations
-  async function toggle(id: string) { await api("/api/crm/task", "PATCH", { id }); router.refresh(); }
-  async function del(id: string) { await api("/api/crm/task", "DELETE", { id }); router.refresh(); }
-  async function snooze(ids: string[], days: number) {
-    const base = new Date(todayStart() + days * DAY);
-    const iso = base.toISOString();
-    await Promise.all(ids.map((id) => api("/api/crm/task", "PATCH", { id, dueDate: iso })));
-    setSelected(new Set()); router.refresh();
+  async function toggle(id: string) {
+    setActionError(null);
+    try {
+      await api("/api/crm/task", "PATCH", { id });
+      router.refresh();
+    } catch (caught) {
+      reportActionError(caught, () => void toggle(id));
+    }
   }
-  async function complete(ids: string[]) { await Promise.all(ids.map((id) => api("/api/crm/task", "PATCH", { id, done: true }))); setSelected(new Set()); router.refresh(); }
-  async function delMany(ids: string[]) { await Promise.all(ids.map((id) => api("/api/crm/task", "DELETE", { id }))); setSelected(new Set()); router.refresh(); }
+  async function del(id: string) {
+    if (!window.confirm("Permanently delete this task? This cannot be undone.")) return;
+    setActionError(null);
+    try {
+      await api("/api/crm/task", "DELETE", { id, confirm: "DELETE" });
+      router.refresh();
+    } catch (caught) {
+      reportActionError(caught, () => void del(id));
+    }
+  }
+  async function snooze(ids: string[], days: number) {
+    setActionError(null);
+    try {
+      const base = new Date(todayStart() + days * DAY);
+      const iso = base.toISOString();
+      await Promise.all(ids.map((id) => api("/api/crm/task", "PATCH", { id, dueDate: iso })));
+      setSelected(new Set()); router.refresh();
+    } catch (caught) {
+      reportActionError(caught, () => void snooze(ids, days));
+    }
+  }
+  async function complete(ids: string[]) {
+    setActionError(null);
+    try {
+      await Promise.all(ids.map((id) => api("/api/crm/task", "PATCH", { id, done: true })));
+      setSelected(new Set()); router.refresh();
+    } catch (caught) {
+      reportActionError(caught, () => void complete(ids));
+    }
+  }
+  async function delMany(ids: string[]) {
+    if (!ids.length || !window.confirm(
+      `Permanently delete ${ids.length} task${ids.length === 1 ? "" : "s"}? This cannot be undone.`,
+    )) return;
+    setActionError(null);
+    try {
+      await Promise.all(ids.map((id) => api("/api/crm/task", "DELETE", { id, confirm: "DELETE" })));
+      setSelected(new Set());
+      router.refresh();
+    } catch (caught) {
+      reportActionError(caught, () => void delMany(ids));
+    }
+  }
 
   function toggleSel(id: string) { setSelected((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
 
@@ -117,6 +170,13 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
 
   return (
     <div className="space-y-4">
+      {actionError ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
+          <span className="flex-1">{actionError.message} No task changes were hidden.</span>
+          <button type="button" onClick={actionError.retry} className="rounded-lg border border-red/30 bg-card px-3 py-1.5 font-semibold hover:bg-cloud">Try again</button>
+          <button type="button" onClick={() => setActionError(null)} className="px-1" aria-label="Dismiss task error">×</button>
+        </div>
+      ) : null}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks or contacts…" className={`${inputClass} min-w-[180px] flex-1`} />
@@ -268,7 +328,10 @@ function TaskModal({ mode, task, contacts, owners, onClose, onSaved }: { mode: "
       if (mode === "add") await api("/api/crm/task", "POST", { email, title: title.trim(), type, priority, owner, dueDate, recurrence, notes });
       else await api("/api/crm/task", "PATCH", { id: task!.id, title: title.trim(), type, priority, owner, dueDate, recurrence, notes });
       onSaved();
-    } catch { setErr("Could not save the task."); setPending(false); }
+    } catch (caught) {
+      setErr(caught instanceof Error ? caught.message : "Could not save the task. Try again.");
+      setPending(false);
+    }
   }
 
   return (

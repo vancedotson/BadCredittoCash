@@ -19,11 +19,15 @@ function startOfWeek(d: Date) { const x = new Date(d.getFullYear(), d.getMonth()
 function startOfDayMs(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
 function timeOf(iso?: string) { if (!iso) return ""; const d = new Date(iso); if (d.getHours() === 0 && d.getMinutes() === 0) return ""; return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); }
 function timeInput(iso?: string) { if (!iso) return ""; const d = new Date(iso); if (d.getHours() === 0 && d.getMinutes() === 0) return ""; return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function dateTimeInput(iso: string) { const d = new Date(iso); return `${keyOf(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
 function dayHeading(key: string) { const [y, m, dd] = key.split("-").map(Number); const d = new Date(y, m - 1, dd); const diff = Math.round((startOfDayMs(d) - startOfDayMs(new Date())) / DAY); if (diff === 0) return "Today"; if (diff === 1) return "Tomorrow"; if (diff === -1) return "Yesterday"; return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }); }
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("failed");
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(payload.error ?? "Request failed.");
+  }
   return res.json();
 }
 
@@ -37,6 +41,10 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   const [hideDone, setHideDone] = useState(false);
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [bookingPending, setBookingPending] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState("");
+  const [taskPending, setTaskPending] = useState<string | null>(null);
+  const [taskError, setTaskError] = useState("");
 
   const ft = tasks.filter((t) => {
     if (ownerF) { if (ownerF === "__none__" ? t.owner : t.owner !== ownerF) return false; }
@@ -52,9 +60,72 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   for (const bk of bookings) (bookingsByDay.get(keyFromIso(bk.createdAt)) ?? bookingsByDay.set(keyFromIso(bk.createdAt), []).get(keyFromIso(bk.createdAt))!).push(bk);
 
   // mutations
-  async function complete(id: string) { await api("/api/crm/task", "PATCH", { id }); router.refresh(); }
-  async function reschedule(id: string, dayKey: string) { const t = tasks.find((x) => x.id === id); const time = timeInput(t?.dueDate) || "09:00"; await api("/api/crm/task", "PATCH", { id, dueDate: new Date(`${dayKey}T${time}`).toISOString() }); router.refresh(); }
-  async function addTask(dayKey: string, email: string, title: string) { await api("/api/crm/task", "POST", { email, title, dueDate: new Date(`${dayKey}T09:00`).toISOString() }); router.refresh(); }
+  async function complete(id: string) {
+    setTaskPending(id);
+    setTaskError("");
+    try {
+      await api("/api/crm/task", "PATCH", { id });
+      router.refresh();
+    } catch (error) {
+      setTaskError(error instanceof Error ? error.message : "Could not update the task.");
+    } finally {
+      setTaskPending(null);
+    }
+  }
+  async function reschedule(id: string, dayKey: string) {
+    setTaskPending(id);
+    setTaskError("");
+    try {
+      const t = tasks.find((x) => x.id === id);
+      const time = timeInput(t?.dueDate) || "09:00";
+      await api("/api/crm/task", "PATCH", { id, dueDate: new Date(`${dayKey}T${time}`).toISOString() });
+      router.refresh();
+    } catch (error) {
+      setTaskError(error instanceof Error ? error.message : "Could not reschedule the task.");
+    } finally {
+      setTaskPending(null);
+    }
+  }
+  async function addTask(dayKey: string, email: string, title: string) {
+    setTaskPending("new");
+    setTaskError("");
+    try {
+      await api("/api/crm/task", "POST", { email, title, dueDate: new Date(`${dayKey}T09:00`).toISOString() });
+      router.refresh();
+    } catch (error) {
+      setTaskError(error instanceof Error ? error.message : "Could not add the task.");
+      throw error;
+    } finally {
+      setTaskPending(null);
+    }
+  }
+  async function rescheduleCall(id: string, localDateTime: string) {
+    setBookingPending(id);
+    setBookingError("");
+    try {
+      await api("/api/crm/booking", "PATCH", { id, startsAt: new Date(localDateTime).toISOString() });
+      setDayOpen(null);
+      router.refresh();
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : "Could not reschedule appointment.");
+    } finally {
+      setBookingPending(null);
+    }
+  }
+  async function cancelCall(id: string) {
+    if (!window.confirm("Cancel this appointment? The slot will become available again.")) return;
+    setBookingPending(id);
+    setBookingError("");
+    try {
+      await api("/api/crm/booking", "DELETE", { id });
+      setDayOpen(null);
+      router.refresh();
+    } catch (error) {
+      setBookingError(error instanceof Error ? error.message : "Could not cancel appointment.");
+    } finally {
+      setBookingPending(null);
+    }
+  }
 
   // summary for the cursor month
   const my = cursor.getFullYear(), mm = cursor.getMonth();
@@ -115,7 +186,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
             <div key={key} className={`min-h-0 rounded-lg border p-2 sm:min-h-[220px] ${isToday ? "border-trust bg-sky/30" : "border-mist bg-card"}`} {...dropProps(key)}>
               <button type="button" onClick={() => setDayOpen(key)} className="mb-2 block text-left text-xs font-medium text-heading">{d.toLocaleDateString("en-US", { weekday: "short" })} <span className="text-slate">{d.getDate()}</span></button>
               <div className="space-y-1">
-                {bk.map((b) => <div key={b.id} className="truncate rounded bg-green/10 px-1.5 py-0.5 text-[11px] text-green">📞 {b.contactName}</div>)}
+              {bk.map((b) => <div key={b.id} className="truncate rounded bg-green/10 px-1.5 py-0.5 text-[11px] text-green">📞 {timeOf(b.createdAt)} {b.contactName}</div>)}
                 {dt.map(chip)}
                 {dt.length === 0 && bk.length === 0 ? <p className="text-[11px] text-slate/60">—</p> : null}
               </div>
@@ -136,7 +207,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
           <div key={key}>
             <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate">{dayHeading(key)}</div>
             <ul className="space-y-1.5">
-              {bk.map((b) => <li key={b.id} className="flex items-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm"><span className="rounded bg-green/15 px-1.5 py-0.5 text-xs text-green">Call</span><span className="text-body">{b.contactName}</span>{b.preferredTime ? <span className="text-xs text-slate">· prefers {b.preferredTime}</span> : null}</li>)}
+              {bk.map((b) => <li key={b.id} className="flex items-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm"><span className="rounded bg-green/15 px-1.5 py-0.5 text-xs text-green">Call</span><span className="text-body">{b.contactName}</span><span className="text-xs text-slate">· {timeOf(b.createdAt)}</span></li>)}
               {dt.map((t) => <li key={t.id} className="flex items-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm" style={{ borderLeft: `3px solid ${PRIORITY_DOT[t.priority ?? "normal"]}` }}><button type="button" onClick={() => complete(t.id)} className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button><span className={`min-w-0 flex-1 truncate ${t.done ? "text-slate line-through" : "text-body"}`}>{timeOf(t.dueDate) ? <span className="text-slate">{timeOf(t.dueDate)} · </span> : null}{t.title}</span><Link href={`/crm/contacts/${t.contactId}`} className="shrink-0 text-xs text-trust hover:underline">{t.contactName}</Link></li>)}
             </ul>
           </div>
@@ -154,6 +225,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
 
   return (
     <div className="space-y-4">
+      {taskError && !dayOpen ? <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-red/30 bg-red/10 px-4 py-3 text-sm text-red"><div><p className="font-medium">The task was not changed.</p><p className="mt-0.5">{taskError} Try again when the connection is available.</p></div><button type="button" onClick={() => setTaskError("")} className="shrink-0 underline">Dismiss</button></div> : null}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">{(["month", "week", "agenda"] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} className={`rounded-md px-2.5 py-1.5 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>{v}</button>)}</div>
@@ -189,38 +261,40 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
           )}
           <div className="mt-4 border-t border-mist pt-3">
             <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate">Recent bookings</h3>
-            {bookings.slice(0, 4).length === 0 ? <p className="text-sm text-slate">None yet.</p> : <ul className="space-y-1.5">{bookings.slice(0, 4).map((b) => <li key={b.id} className="text-xs"><Link href={`/crm/contacts/${b.contactId}`} className="text-body hover:text-trust">{b.contactName}</Link>{b.preferredTime ? <span className="text-slate"> · {b.preferredTime}</span> : null}</li>)}</ul>}
+            {bookings.slice(0, 4).length === 0 ? <p className="text-sm text-slate">None yet.</p> : <ul className="space-y-1.5">{bookings.slice(0, 4).map((b) => <li key={b.id} className="text-xs"><Link href={`/crm/contacts/${b.contactId}`} className="text-body hover:text-trust">{b.contactName}</Link><span className="text-slate"> · {new Date(b.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></li>)}</ul>}
           </div>
         </aside>
       </div>
 
-      {dayOpen ? <DayDetail dayKey={dayOpen} tasks={tasksByDay.get(dayOpen) ?? []} bookings={bookingsByDay.get(dayOpen) ?? []} contacts={contacts} onClose={() => setDayOpen(null)} onComplete={complete} onReschedule={reschedule} onAdd={addTask} /> : null}
+      {dayOpen ? <DayDetail dayKey={dayOpen} tasks={tasksByDay.get(dayOpen) ?? []} bookings={bookingsByDay.get(dayOpen) ?? []} contacts={contacts} bookingError={bookingError} bookingPending={bookingPending} taskError={taskError} taskPending={taskPending} onClose={() => { setDayOpen(null); setBookingError(""); setTaskError(""); }} onComplete={complete} onReschedule={reschedule} onRescheduleCall={rescheduleCall} onCancelCall={cancelCall} onAdd={addTask} /> : null}
     </div>
   );
 }
 
-function DayDetail({ dayKey, tasks, bookings, contacts, onClose, onComplete, onReschedule, onAdd }: { dayKey: string; tasks: TaskWithContact[]; bookings: Booking[]; contacts: ContactOption[]; onClose: () => void; onComplete: (id: string) => void; onReschedule: (id: string, day: string) => void; onAdd: (day: string, email: string, title: string) => void }) {
+function DayDetail({ dayKey, tasks, bookings, contacts, bookingError, bookingPending, taskError, taskPending, onClose, onComplete, onReschedule, onRescheduleCall, onCancelCall, onAdd }: { dayKey: string; tasks: TaskWithContact[]; bookings: Booking[]; contacts: ContactOption[]; bookingError: string; bookingPending: string | null; taskError: string; taskPending: string | null; onClose: () => void; onComplete: (id: string) => void; onReschedule: (id: string, day: string) => void; onRescheduleCall: (id: string, startsAt: string) => void; onCancelCall: (id: string) => void; onAdd: (day: string, email: string, title: string) => Promise<void> }) {
   const [email, setEmail] = useState(contacts[0]?.email ?? "");
   const [title, setTitle] = useState("");
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="mb-3 text-lg font-semibold text-heading">{dayHeading(dayKey)}</h3>
-        {bookings.length ? <div className="mb-3 space-y-1">{bookings.map((b) => <div key={b.id} className="flex items-center gap-2 rounded-lg bg-green/10 px-3 py-2 text-sm"><span className="text-green">Call</span><Link href={`/crm/contacts/${b.contactId}`} className="text-body hover:text-trust">{b.contactName}</Link>{b.preferredTime ? <span className="text-xs text-slate">· prefers {b.preferredTime}</span> : null}</div>)}</div> : null}
+        {bookings.length ? <div className="mb-3 space-y-2">{bookings.map((b) => <div key={b.id} className="rounded-lg bg-green/10 px-3 py-2 text-sm"><div className="flex items-center gap-2"><span className="text-green">Call</span><Link href={`/crm/contacts/${b.contactId}`} className="text-body hover:text-trust">{b.contactName}</Link></div><div className="mt-2 flex flex-wrap items-center gap-2"><input type="datetime-local" defaultValue={dateTimeInput(b.createdAt)} min={dateTimeInput(new Date().toISOString())} disabled={bookingPending === b.id} onChange={(e) => e.target.value && onRescheduleCall(b.id, e.target.value)} className="rounded border border-mist bg-card px-2 py-1 text-xs disabled:opacity-60" aria-label="Reschedule appointment" /><button type="button" disabled={bookingPending === b.id} onClick={() => onCancelCall(b.id)} className="text-xs text-red hover:underline disabled:opacity-60">{bookingPending === b.id ? "Saving…" : "Cancel"}</button></div></div>)}</div> : null}
+        {bookingError ? <div role="alert" className="mb-3 rounded-lg border border-red/30 bg-red/10 px-3 py-2 text-sm text-red"><p>{bookingError}</p><p className="mt-1 text-xs">The appointment was not changed. Check the time and try again.</p></div> : null}
+        {taskError ? <div role="alert" className="mb-3 rounded-lg border border-red/30 bg-red/10 px-3 py-2 text-sm text-red"><p>{taskError}</p><p className="mt-1 text-xs">The task was not changed. You can try again without reopening this day.</p></div> : null}
         <ul className="mb-4 space-y-2">
           {tasks.length === 0 ? <li className="text-sm text-slate">No tasks.</li> : tasks.map((t) => (
             <li key={t.id} className="flex items-center gap-2 rounded-lg border border-mist px-3 py-2 text-sm" style={{ borderLeft: `3px solid ${PRIORITY_DOT[t.priority ?? "normal"]}` }}>
-              <button type="button" onClick={() => onComplete(t.id)} className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button>
+              <button type="button" disabled={taskPending === t.id} onClick={() => onComplete(t.id)} className={`grid h-4 w-4 shrink-0 place-items-center rounded border disabled:opacity-50 ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button>
               <span className={`min-w-0 flex-1 truncate ${t.done ? "text-slate line-through" : "text-body"}`}>{t.title}</span>
               <Link href={`/crm/contacts/${t.contactId}`} className="shrink-0 text-xs text-trust hover:underline">{t.contactName}</Link>
-              <input type="date" defaultValue={dayKey} onChange={(e) => e.target.value && onReschedule(t.id, e.target.value)} className="shrink-0 rounded border border-mist px-1 py-0.5 text-xs" aria-label="Reschedule" />
+              <input type="date" defaultValue={dayKey} disabled={taskPending === t.id} onChange={(e) => e.target.value && onReschedule(t.id, e.target.value)} className="shrink-0 rounded border border-mist px-1 py-0.5 text-xs disabled:opacity-50" aria-label="Reschedule" />
             </li>
           ))}
         </ul>
-        <form onSubmit={(e) => { e.preventDefault(); if (title.trim() && email) { onAdd(dayKey, email, title.trim()); setTitle(""); } }} className="flex flex-wrap gap-2 border-t border-mist pt-3">
+        <form onSubmit={async (e) => { e.preventDefault(); if (title.trim() && email) { try { await onAdd(dayKey, email, title.trim()); setTitle(""); } catch { /* The parent renders the recoverable error and preserves this draft. */ } } }} className="flex flex-wrap gap-2 border-t border-mist pt-3">
           <select value={email} onChange={(e) => setEmail(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm outline-none focus:border-trust">{contacts.map((c) => <option key={c.id} value={c.email}>{c.name}</option>)}</select>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a task…" className="min-w-0 flex-[2] rounded-lg border border-mist bg-card px-2 py-1.5 text-sm outline-none focus:border-trust" />
-          <button type="submit" className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-ink hover:bg-gold-deep">Add</button>
+          <button type="submit" disabled={taskPending === "new"} className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-ink hover:bg-gold-deep disabled:cursor-wait disabled:opacity-60">{taskPending === "new" ? "Adding…" : "Add"}</button>
         </form>
         <div className="mt-4 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Close</button></div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { track, getUtmParams } from "@/lib/tracking";
+import { getUtmParams, getVisitorId, rememberLead } from "@/lib/tracking";
 import { ButtonShine } from "./ButtonShine";
 import { CheckIcon } from "./Icons";
 
@@ -94,13 +94,14 @@ export function RegistrationForm() {
           ...values,
           source: "vance-webinar",
           utm: getUtmParams(),
+          visitorId: getVisitorId(),
         }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Registration failed.");
       }
-      track("webinar_registered", { source: "vance-webinar" });
+      rememberLead({ email: values.email.trim(), name: values.name.trim() });
       router.push("/webinar/confirmed");
     } catch (err) {
       setStatus("error");
