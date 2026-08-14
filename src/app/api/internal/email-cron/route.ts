@@ -6,6 +6,7 @@ import { processDueEmails } from "@/lib/email";
 import { reconcileGoogleCalendarBookings } from "@/lib/google-calendar";
 import { syncCrmNotifications } from "@/lib/store";
 import { cleanupAnonymousAnalytics } from "@/lib/analytics-retention";
+import { sendDailyOverdueDigest } from "@/lib/overdue-digest";
 
 function authorized(request: Request): boolean {
   const expected = process.env.CRON_SECRET;
@@ -23,11 +24,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [emailResult, calendarResult, notificationResult, retentionResult] = await Promise.allSettled([
+    const [emailResult, calendarResult, notificationResult, retentionResult, digestResult] = await Promise.allSettled([
       processDueEmails(10),
       reconcileGoogleCalendarBookings(25),
       syncCrmNotifications(),
       cleanupAnonymousAnalytics(500),
+      sendDailyOverdueDigest(),
     ]);
     const email = emailResult.status === "fulfilled"
       ? emailResult.value
@@ -41,12 +43,16 @@ export async function POST(request: Request) {
     const retention = retentionResult.status === "fulfilled"
       ? retentionResult.value
       : { error: retentionResult.reason instanceof Error ? retentionResult.reason.message : "unknown_error" };
+    const digest = digestResult.status === "fulfilled"
+      ? digestResult.value
+      : { error: digestResult.reason instanceof Error ? digestResult.reason.message : "unknown_error" };
     const ok = emailResult.status === "fulfilled"
       && calendarResult.status === "fulfilled"
       && notificationResult.status === "fulfilled"
-      && retentionResult.status === "fulfilled";
-    console.log("[maintenance-cron] completed", { ok, email, calendar, notifications, retention });
-    return NextResponse.json({ ok, email, calendar, notifications, retention });
+      && retentionResult.status === "fulfilled"
+      && digestResult.status === "fulfilled";
+    console.log("[maintenance-cron] completed", { ok, email, calendar, notifications, retention, digest });
+    return NextResponse.json({ ok, email, calendar, notifications, retention, digest });
   } catch (error) {
     console.error("[maintenance-cron] failed", {
       error: error instanceof Error ? error.message : "unknown_error",

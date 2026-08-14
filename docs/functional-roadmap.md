@@ -255,13 +255,13 @@ Acceptance criteria:
 Status: `[ ] Not started`
 
 - [x] Durable new-lead and new-booking bell alerts. Database triggers create deduplicated alerts for every CRM user when future contacts or bookings are inserted; existing contacts are not backfilled, avoiding a noisy rollout.
-- [ ] Daily overdue-task digest.
-- [ ] Cooling-lead/no-follow-up alerts based on actual rules.
+- [x] Daily overdue-task digest. The existing maintenance cron atomically claims one Lisbon-calendar-day digest, sends a bounded list of current overdue open tasks through the configured Resend test inbox, and uses a provider idempotency key to prevent duplicate delivery across Worker instances.
+- [x] Cooling-lead/no-follow-up alerts based on actual rules. Durable, deduplicated notifications are derived from contact activity, watch/intent progression, booking state, quiet-time thresholds, and open-task state; the existing five-minute maintenance job refreshes and resolves them.
 - [x] Failed email and failed booking alerts. Permanent email failures and privacy-safe booking errors now create deduplicated, durable CRM bell alerts with contact links when an identity is available. Notification refresh runs in the existing five-minute maintenance cron instead of blocking every CRM page load.
-- [ ] Scheduled cleanup/reconciliation jobs.
-- [ ] Worker logs, error tracking, uptime checks, and alerting.
+- [x] Scheduled cleanup/reconciliation jobs. One authenticated Cloudflare Cron Trigger runs every five minutes and isolates email queue processing, Google Calendar reconciliation, notification syncing, and bounded 90-day anonymous analytics cleanup with `Promise.allSettled`.
+- [x] Worker logs, error tracking, uptime checks, and alerting. Cloudflare Worker observability captures structured application and cron errors. A privacy-safe `/api/health` route checks the Worker-to-database path, while a free GitHub Actions monitor checks it externally every 15 minutes with retries and alerts repository maintainers when the workflow fails.
 - [x] Authenticated, read-only system health page for database, email configuration, durable email queue counts, and a live Google Calendar dependency check. The checks run only when opened, use no paid monitoring service, fail independently, and expose no credentials.
-- [ ] Document rollback, backup, restore, and incident procedures.
+- [x] Document rollback, backup, restore, and incident procedures. The operational runbook covers pre-deployment backups, Worker version rollback, transactional CRM restore, forward-only migration recovery, incident triage, verification, and safe incident records.
 
 ### 9. Content, compliance, and launch assets — P0 before client launch
 
@@ -288,13 +288,13 @@ Acceptance criteria:
 
 Status: `[ ] Not started`
 
-- [ ] Unit tests for validation, segmentation, stage derivation, scheduling, and sequence conditions.
-- [ ] Integration tests for database repositories and provider webhooks.
-- [ ] End-to-end tests for registration, webinar, booking, and authenticated CRM workflows.
-- [ ] Accessibility audit and keyboard/screen-reader testing.
+- [x] Unit tests for validation, segmentation, stage derivation, scheduling, and sequence conditions. Vitest coverage added on 2026-08-13 for segmentation, automatic stages, public-event allowlisting, task fields, booking slots, email timing, and segment-to-sequence routing.
+- [x] Integration tests for database repositories and provider webhooks. Resend webhook request verification/filtering/database handoff and CRM backup repository export/error/validation coverage added on 2026-08-13.
+- [x] End-to-end tests for registration, webinar, booking, and authenticated CRM workflows. Playwright live smoke coverage added on 2026-08-13 for homepage/registration, confirmation/training/player, booking-wizard interaction, and anonymous CRM access control; real registration, booking, and signed-in CRM workflows were also manually verified end to end.
+- [ ] Accessibility audit and keyboard/screen-reader testing. Automated WCAG A/AA homepage scan added on 2026-08-13; keyboard and screen-reader checks remain.
 - [ ] Responsive/browser testing.
 - [ ] Performance/Core Web Vitals budget.
-- [ ] Dependency and secret scanning.
+- [x] Dependency and secret scanning. Production and development dependency audits were reduced to zero known vulnerabilities on 2026-08-14. A pinned GitHub Actions workflow audits the locked dependency tree and scans full Git history for secrets on pull requests, `master`, weekly, and on demand; local generated and machine-specific paths are ignored.
 - [ ] Staging and production environments with separate data and provider credentials.
 - [ ] Preview/dry-run deployment checks in CI.
 - [ ] Database migration checks and rollback procedure.

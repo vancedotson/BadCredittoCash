@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { SEQUENCES, SEGMENT_SEQUENCES, type SequenceEmail } from "@/config/sequences";
 import { EVENTS } from "./events";
 import { createUnsubscribeToken } from "./email-token";
+import { scheduledFor } from "./email-scheduling";
 import { createAdminClient } from "./supabase/admin";
 import { recordEvent } from "./store";
 
@@ -62,23 +63,6 @@ function resolveTemplate(templateKey: string): SequenceEmail | null {
   const sequence = resolveSequence(match[1]);
   const index = Number(match[2]) - 1;
   return sequence?.emails[index] ?? null;
-}
-
-function scheduledFor(delay: string, index: number, anchor?: Date): Date {
-  const now = new Date();
-  if (delay === "immediately") return now;
-  if ((process.env.EMAIL_MODE ?? "test") !== "production") {
-    return new Date(now.getTime() + Math.max(1, index) * 5 * 60 * 1000);
-  }
-  if (delay === "1 day before" && anchor) {
-    return new Date(Math.max(now.getTime(), anchor.getTime() - 24 * 60 * 60 * 1000));
-  }
-  if (delay === "weekly") return new Date(now.getTime() + (index + 1) * 7 * 24 * 60 * 60 * 1000);
-  const match = delay.match(/^\+(\d+)\s+(hour|day)s?/);
-  if (!match) throw new Error(`Unsupported sequence delay: ${delay}`);
-  const amount = Number(match[1]);
-  const unitMs = match[2] === "hour" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-  return new Date(now.getTime() + amount * unitMs);
 }
 
 function appBaseUrl(): string {

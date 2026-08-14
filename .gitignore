@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.playwright-output/
 
 # next.js
 /.next/
@@ -39,6 +40,12 @@ yarn-error.log*
 
 # cloudflare
 /.wrangler
+/.wrangler-tmp/
+/worker-configuration.d.ts
+
+# local tooling and service state
+/.claude/
+/supabase/.temp/
 
 # typescript
 *.tsbuildinfo
