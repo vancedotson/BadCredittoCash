@@ -12,18 +12,9 @@
 
 import { enqueueSequence } from "./email";
 import { type Segment } from "./segments";
+import { SEQUENCE_FOR_SEGMENT } from "./sequence-routing";
 
-/** Which sequence a lead in each segment should receive. */
-export const SEQUENCE_FOR_SEGMENT: Record<Segment, string | null> = {
-  booked: null, // converted — no pitch sequences
-  booking_abandon: "booking_abandon",
-  offer_click_no_book: "offer_click_no_book",
-  high_watch: "high_watch",
-  mid_watch: "mid_watch",
-  low_watch: "low_watch",
-  registered_no_show: "registered_no_show",
-  lead: null,
-};
+export { SEQUENCE_FOR_SEGMENT } from "./sequence-routing";
 
 /** On registration: begin the pre-webinar (get-them-to-watch) sequence. */
 export async function enrollNewRegistration(email: string): Promise<void> {

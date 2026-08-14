@@ -101,21 +101,28 @@ export function TurnstileWidget({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onToken);
-  callbackRef.current = onToken;
   const sitekey =
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || productionSitekey;
   const [retryCount, setRetryCount] = useState(0);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
+    callbackRef.current = onToken;
+  }, [onToken]);
+
+  useEffect(() => {
     let cancelled = false;
     let widgetId: string | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     callbackRef.current(null);
-    setStatus("loading");
+    queueMicrotask(() => {
+      if (!cancelled) setStatus("loading");
+    });
 
     if (!sitekey || !containerRef.current) {
-      setStatus("error");
+      queueMicrotask(() => {
+        if (!cancelled) setStatus("error");
+      });
       return;
     }
 
@@ -164,6 +171,7 @@ export function TurnstileWidget({
         className="cf-turnstile"
         data-sitekey={sitekey}
         data-action="turnstile-spin-v2"
+        role="group"
         aria-label="Security verification"
       />
       {status === "loading" ? (
