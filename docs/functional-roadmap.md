@@ -297,7 +297,7 @@ Status: `[ ] Not started`
 - [x] Dependency and secret scanning. Production and development dependency audits were reduced to zero known vulnerabilities on 2026-08-14. A pinned GitHub Actions workflow audits the locked dependency tree and scans full Git history for secrets on pull requests, `master`, weekly, and on demand; local generated and machine-specific paths are ignored.
 - [ ] Staging and production environments with separate data and provider credentials.
 - [x] Preview/dry-run deployment checks in CI. A pinned GitHub Actions workflow installs the locked dependency tree, runs unit/integration tests, TypeScript, lint, and an OpenNext Cloudflare build followed by `wrangler deploy --dry-run` on pull requests, `master`, and on demand. It never deploys or reads production secrets.
-- [ ] Database migration checks and rollback procedure.
+- [x] Database migration checks and rollback procedure. A pinned GitHub Actions workflow rebuilds a disposable local Postgres database from every migration in order and fails on SQL function errors; it never connects to production. Forward-only recovery and Worker/database rollback boundaries are documented in the operations runbook.
 
 ## Proposed delivery milestones
 
