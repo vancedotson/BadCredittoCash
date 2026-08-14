@@ -38,7 +38,9 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
     });
     return () => cancelAnimationFrame(raf);
   }, [pathname]);
-  useEffect(() => setNotificationItems(nav.notifications), [nav.notifications]);
+  useEffect(() => {
+    queueMicrotask(() => setNotificationItems(nav.notifications));
+  }, [nav.notifications]);
 
   async function updateNotification(id: string, action: "read" | "dismiss") {
     const readAt = new Date().toISOString();
