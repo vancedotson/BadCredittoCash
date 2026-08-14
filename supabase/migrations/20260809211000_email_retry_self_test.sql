@@ -1,19 +1,26 @@
 do $$
 declare
   enrollment public.sequence_enrollments;
+  test_contact_id uuid;
   retry_message_id uuid;
   failed_message_id uuid;
   retry_result record;
   failed_result record;
 begin
-  select * into enrollment
-  from public.sequence_enrollments
-  order by enrolled_at
-  limit 1;
+  insert into public.contacts (
+    email, name, source, marketing_consent, consent_version, consent_at
+  ) values (
+    '__email_retry_self_test__@example.invalid',
+    'Email retry self-test',
+    'self_test',
+    true,
+    'self-test',
+    now()
+  ) returning id into test_contact_id;
 
-  if enrollment.id is null then
-    raise exception 'retry_self_test_requires_enrollment';
-  end if;
+  insert into public.sequence_enrollments (contact_id, sequence_key)
+  values (test_contact_id, 'pre_webinar')
+  returning * into enrollment;
 
   insert into public.scheduled_messages (
     enrollment_id, contact_id, template_key, scheduled_for, status, attempts
@@ -61,5 +68,6 @@ begin
   );
   delete from public.scheduled_messages
   where id in (retry_message_id, failed_message_id);
+  delete from public.contacts where id = test_contact_id;
 end;
 $$;
