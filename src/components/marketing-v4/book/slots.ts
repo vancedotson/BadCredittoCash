@@ -16,6 +16,16 @@ export type Day = {
 
 export const TIMES = ["9:00 AM", "11:00 AM", "1:00 PM", "3:00 PM"];
 
+export function slotStart(dayKey: string, time: string): Date | null {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  const match = time.match(/^(\d+):(\d+)\s+(AM|PM)$/);
+  if (!year || !month || !day || !match) return null;
+  let hour = Number(match[1]) % 12;
+  if (match[3] === "PM") hour += 12;
+  const value = new Date(year, month - 1, day, hour, Number(match[2]));
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
 /** Next 10 weekdays starting tomorrow, tagged with day-of-week + week index so a
  *  calendar layout can place them in the right column/row. */
 export function buildDays(): Day[] {

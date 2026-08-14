@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getContact } from "@/lib/store";
+import { hydrateStore, getContact } from "@/lib/store";
 import { Card, SegmentBadge, Badge } from "@/components/crm/ui";
 import { Timeline } from "@/components/crm/Timeline";
 import { StageSelect, AddNoteForm, AddTaskForm, TaskItem } from "@/components/crm/mutations";
 import { RecentPin } from "@/components/crm/RecentPin";
+import { ContactPrivacyControls } from "@/components/crm/ContactPrivacyControls";
+import { requireCrmUser } from "@/lib/auth";
+import { getContactPrivacyState } from "@/lib/contact-privacy";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +20,14 @@ function isOverdue(dueDate: string | undefined, done: boolean): boolean {
 }
 
 export default async function ContactDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireCrmUser();
+  await hydrateStore();
   const { id } = await params;
   const detail = await getContact(id);
   if (!detail) notFound();
   const { contact, events, notes, tasks, sequences } = detail;
   const source = contact.utm?.utm_source ?? contact.source ?? "direct";
+  const privacy = user.crmRole === "admin" ? await getContactPrivacyState(contact.id) : null;
 
   return (
     <div className="space-y-6">
@@ -53,7 +59,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               <RecentPin id={contact.id} name={contact.name} />
               <div className="flex flex-col items-end gap-1">
                 <span className="text-xs uppercase tracking-wide text-slate">Stage</span>
-                <StageSelect id={contact.id} stage={contact.stage} />
+                <StageSelect id={contact.id} stage={contact.stage} updatedAt={contact.updatedAt} />
               </div>
             </div>
           </div>
@@ -111,6 +117,13 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
               )}
             </ul>
           </Card>
+
+          {privacy ? (
+            <Card>
+              <h2 className="mb-3 text-lg font-semibold text-heading">Privacy &amp; data</h2>
+              <ContactPrivacyControls contactId={contact.id} suppressed={privacy.suppressed} />
+            </Card>
+          ) : null}
         </div>
       </div>
     </div>

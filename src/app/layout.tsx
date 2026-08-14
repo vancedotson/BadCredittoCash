@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins, Inter, Source_Serif_4, Staatliches, Open_Sans } from "next/font/google";
 import { site } from "@/config/site";
+import { PublicPageViewTracker } from "@/components/PublicPageViewTracker";
 import "./globals.css";
 
 // Headlines — Poppins (SemiBold/Bold). Body — Inter. Quotes — Source Serif 4.
@@ -59,6 +60,7 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
           }}
         />
+        <PublicPageViewTracker />
         {children}
       </body>
     </html>

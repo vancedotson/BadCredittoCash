@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { listActivity, getActivitySummary } from "@/lib/store";
+import { listActivity, getActivitySummary, hydrateStore } from "@/lib/store";
+import { requireCrmApiUser } from "@/lib/auth";
 
 /**
  * GET /api/crm/activity — filterable, paginated activity feed (+ summary).
  * query: search, category, important=1, owner, from, to, limit, offset
  */
 export async function GET(request: Request) {
+  const auth = await requireCrmApiUser();
+  if (auth.response) return auth.response;
+  await hydrateStore();
   const sp = new URL(request.url).searchParams;
   const get = (k: string) => sp.get(k) || undefined;
   const num = (k: string, d: number) => Number(sp.get(k)) || d;

@@ -18,6 +18,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   const [palette, setPalette] = useState(false);
   const [quick, setQuick] = useState<"contact" | "task" | null>(null);
   const [notif, setNotif] = useState(false);
+  const [notificationItems, setNotificationItems] = useState(nav.notifications);
   const [account, setAccount] = useState(false);
   const [help, setHelp] = useState(false);
   const [recent, setRecent] = useState<Pin[]>([]);
@@ -37,6 +38,22 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
     });
     return () => cancelAnimationFrame(raf);
   }, [pathname]);
+  useEffect(() => {
+    queueMicrotask(() => setNotificationItems(nav.notifications));
+  }, [nav.notifications]);
+
+  async function updateNotification(id: string, action: "read" | "dismiss") {
+    const readAt = new Date().toISOString();
+    setNotificationItems((items) => action === "dismiss"
+      ? items.filter((item) => item.id !== id)
+      : items.map((item) => item.id === id ? { ...item, readAt } : item));
+    const response = await fetch("/api/crm/notifications", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id, action }),
+    });
+    if (!response.ok) router.refresh();
+  }
 
   useEffect(() => {
     let g = false; let gt: ReturnType<typeof setTimeout>;
@@ -68,9 +85,11 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
     { href: "/crm/activity", label: "Activity", Icon: RefreshIcon },
     { href: "/crm/calendar", label: "Calendar", Icon: ImageIcon },
     { href: "/crm/sequences", label: "Sequences", Icon: DocumentIcon },
+    { href: "/crm/health", label: "System health", Icon: ShieldIcon },
     { href: "/crm/settings", label: "Settings", Icon: ShieldIcon },
   ];
   const owner = nav.owners[0] ?? "You";
+  const unreadNotifications = notificationItems.filter((item) => !item.readAt).length;
 
   const navItem = (it: { href: string; label: string; Icon: (p: { className?: string }) => React.ReactElement; exact?: boolean; badge?: number; tone?: "red" | "info" }) => {
     const active = isActive(it.href, it.exact);
@@ -103,8 +122,8 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
               <button type="button" onClick={() => setQuick("contact")} className="flex-1 rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep">+ Contact</button>
               <button type="button" onClick={() => setQuick("task")} className="flex-1 rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold text-white hover:bg-white/20">+ Task</button>
               <div className="relative">
-                <button type="button" onClick={() => setNotif((o) => !o)} aria-label="Notifications" className="relative grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-white hover:bg-white/20"><BellIcon className="h-4 w-4" />{nav.counts.needsAttention ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red px-1 text-[10px] font-semibold text-white">{nav.counts.needsAttention}</span> : null}</button>
-                {notif ? <NotifDropdown items={nav.notifications} onClose={() => setNotif(false)} /> : null}
+                <button type="button" onClick={() => setNotif((o) => !o)} aria-label="Notifications" className="relative grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-white hover:bg-white/20"><BellIcon className="h-4 w-4" />{unreadNotifications ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red px-1 text-[10px] font-semibold text-white">{unreadNotifications}</span> : null}</button>
+                {notif ? <NotifDropdown items={notificationItems} onClose={() => setNotif(false)} onRead={async (id, href) => { await updateNotification(id, "read"); setNotif(false); router.push(href); }} onDismiss={(id) => updateNotification(id, "dismiss")} onReadAll={() => Promise.all(notificationItems.filter((item) => !item.readAt).map((item) => updateNotification(item.id, "read"))).then(() => undefined)} /> : null}
               </div>
             </div>
           ) : (
@@ -150,6 +169,10 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
             <div className="flex items-center gap-1.5">
               <button type="button" onClick={() => setPalette(true)} aria-label="Search" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10">⌕</button>
               <button type="button" onClick={() => setQuick("contact")} aria-label="New" className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-ink">+</button>
+              <div className="relative">
+                <button type="button" onClick={() => setNotif((open) => !open)} aria-label="Notifications" className="relative grid h-8 w-8 place-items-center rounded-lg bg-white/10"><BellIcon className="h-4 w-4" />{unreadNotifications ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red px-1 text-[10px] font-semibold text-white">{unreadNotifications}</span> : null}</button>
+                {notif ? <NotifDropdown items={notificationItems} onClose={() => setNotif(false)} onRead={async (id, href) => { await updateNotification(id, "read"); setNotif(false); router.push(href); }} onDismiss={(id) => updateNotification(id, "dismiss")} onReadAll={() => Promise.all(notificationItems.filter((item) => !item.readAt).map((item) => updateNotification(item.id, "read"))).then(() => undefined)} /> : null}
+              </div>
               <button type="button" onClick={toggleDark} aria-label="Theme" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10">{dark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}</button>
             </div>
           </div>
@@ -170,21 +193,24 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   );
 }
 
-function NotifDropdown({ items, onClose }: { items: NavData["notifications"]; onClose: () => void }) {
+function NotifDropdown({ items, onClose, onRead, onDismiss, onReadAll }: { items: NavData["notifications"]; onClose: () => void; onRead: (id: string, href: string) => void; onDismiss: (id: string) => void; onReadAll: () => void }) {
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} />
       <div className="absolute left-0 top-11 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-mist bg-card text-left shadow-card">
         <div className="flex items-center justify-between gap-2 border-b border-mist px-3 py-2.5">
-          <span className="text-sm font-semibold text-heading">Needs attention</span>
-          <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.length}</span>
+          <span className="text-sm font-semibold text-heading">Notifications</span>
+          <span className="flex items-center gap-2"><button type="button" onClick={onReadAll} className="text-xs text-trust hover:underline">Mark all read</button><span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.filter((item) => !item.readAt).length}</span></span>
         </div>
         <div className="crm-scroll max-h-80 overflow-y-auto p-2">
           {items.length === 0 ? <p className="px-2 py-6 text-center text-sm text-slate">All clear. Nothing needs attention right now.</p> : items.map((a) => (
-            <Link key={a.id} href={a.href} onClick={onClose} className="flex items-start gap-2.5 rounded-lg px-2 py-2 hover:bg-cloud">
-              <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: a.tone === "danger" ? "var(--color-red)" : a.tone === "warn" ? "var(--color-gold)" : "var(--color-slate)" }} />
-              <span className="min-w-0"><span className="block truncate text-sm text-body">{a.title}</span><span className="block truncate text-xs text-slate">{a.subtitle}</span></span>
-            </Link>
+            <div key={a.id} className={`flex items-start gap-2 rounded-lg px-2 py-2 hover:bg-cloud ${a.readAt ? "opacity-60" : ""}`}>
+              <button type="button" onClick={() => onRead(a.id, a.href)} className="flex min-w-0 flex-1 items-start gap-2.5 text-left">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: a.tone === "danger" ? "var(--color-red)" : a.tone === "warn" ? "var(--color-gold)" : a.tone === "success" ? "var(--color-green)" : "var(--color-slate)" }} />
+                <span className="min-w-0"><span className="block truncate text-sm text-body">{a.title}</span><span className="block truncate text-xs text-slate">{a.subtitle}</span></span>
+              </button>
+              <button type="button" onClick={() => onDismiss(a.id)} aria-label={`Dismiss ${a.title}`} className="shrink-0 px-1 text-sm text-slate hover:text-red">×</button>
+            </div>
           ))}
         </div>
         {items.length ? <Link href="/crm" onClick={onClose} className="block border-t border-mist px-3 py-2.5 text-center text-sm font-medium text-trust hover:bg-cloud">View all in Overview</Link> : null}

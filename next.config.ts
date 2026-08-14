@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  /* config options here */
-};
+// OpenNext/Cloudflare applies response security policy in middleware.ts.
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

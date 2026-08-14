@@ -1,7 +1,7 @@
 import { SEQUENCES, SEGMENT_SEQUENCES, type Sequence } from "@/config/sequences";
 import { SEQUENCE_FOR_SEGMENT } from "@/lib/automations";
 import { SEGMENTS_IN_ORDER, type Segment } from "@/lib/segments";
-import { getSettings } from "@/lib/store";
+import { hydrateStore, getRecentSequenceFailures, getSettings, getSequenceQueueStats } from "@/lib/store";
 import { PageTitle, Card, SegmentBadge } from "@/components/crm/ui";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +62,12 @@ function SequenceCard({ seq }: { seq: Sequence }) {
 }
 
 export default async function SequencesPage() {
-  const { profile } = await getSettings();
+  await hydrateStore();
+  const [{ profile }, queue, failures] = await Promise.all([
+    getSettings(),
+    getSequenceQueueStats(),
+    getRecentSequenceFailures(),
+  ]);
   const mergeFields = [
     { token: "{{watch_link}}", meaning: "The contact's link to the on-demand training.", value: profile.trainingUrl },
     { token: "{{call_link}}", meaning: "The link to book a free strategy call.", value: profile.bookingUrl },
@@ -71,7 +76,22 @@ export default async function SequencesPage() {
 
   return (
     <div className="space-y-8">
-      <PageTitle title="Sequences" subtitle="The automated email engine, explained. Delivery is stubbed behind a seam, so nothing actually sends yet." />
+      <PageTitle title="Sequences" subtitle="Emails are queued durably, retried safely when providers are unavailable, and tracked through delivery." />
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {[
+          ["Active enrollments", queue.activeEnrollments],
+          ["Scheduled", queue.scheduledMessages],
+          ["Retrying", queue.retryingMessages],
+          ["Sent", queue.sentMessages],
+          ["Failed", queue.failedMessages],
+        ].map(([label, value]) => (
+          <Card key={label}>
+            <div className="font-heading text-2xl font-semibold text-heading">{value}</div>
+            <div className="mt-1 text-xs text-slate">{label}</div>
+          </Card>
+        ))}
+      </div>
 
       {/* How it works */}
       <Card>
@@ -82,10 +102,10 @@ export default async function SequencesPage() {
             { n: 2, t: "Segment", d: "Their events place them in a segment (or a lifecycle moment)." },
             { n: 3, t: "Enroll", d: "The automation map enrolls them in the matching sequence." },
             { n: 4, t: "Schedule", d: "Its emails queue by their delays (immediately, +1h, +1d…)." },
-            { n: 5, t: "Send", d: "Delivery is stubbed. Flip on an ESP later, no UI changes.", stub: true },
+            { n: 5, t: "Send", d: "Resend delivers it; transient API failures retry up to three attempts." },
           ].map((s, i, arr) => (
             <div key={s.n} className="flex items-stretch gap-2">
-              <div className={`w-40 rounded-xl border p-3 ${s.stub ? "border-dashed border-mist bg-cloud/50" : "border-mist bg-cloud"}`}>
+              <div className="w-40 rounded-xl border border-mist bg-cloud p-3">
                 <div className="flex items-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-full bg-navy text-[11px] font-semibold text-white">{s.n}</span><span className="font-medium text-heading">{s.t}</span></div>
                 <p className="mt-1.5 text-xs text-slate">{s.d}</p>
               </div>
@@ -94,6 +114,33 @@ export default async function SequencesPage() {
           ))}
         </div>
       </Card>
+
+      {failures.length > 0 ? (
+        <Card>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-heading">Permanent failures</h2>
+              <p className="mt-1 text-xs text-slate">Messages appear here after a permanent provider error or after all safe retries are exhausted.</p>
+            </div>
+            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Needs attention</span>
+          </div>
+          <div className="divide-y divide-mist overflow-hidden rounded-xl border border-mist">
+            {failures.map((failure) => (
+              <div key={failure.id} className="grid gap-1 bg-white px-4 py-3 text-sm md:grid-cols-[1.2fr_1fr_auto] md:items-center md:gap-4">
+                <div>
+                  <div className="font-medium text-heading">{failure.contactName}</div>
+                  <div className="text-xs text-slate">{failure.email}</div>
+                </div>
+                <div>
+                  <div className="text-body">{failure.templateKey} · {failure.attempts} attempt{failure.attempts === 1 ? "" : "s"}</div>
+                  <div className="mt-0.5 line-clamp-2 text-xs text-red-700">{failure.error}</div>
+                </div>
+                <time className="text-xs text-slate" dateTime={failure.failedAt}>{new Date(failure.failedAt).toLocaleString()}</time>
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : null}
 
       {/* Behavior → sequence map */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

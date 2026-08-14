@@ -91,12 +91,12 @@ export const SEQUENCES: Record<string, Sequence> = {
       {
         delay: "immediately",
         subject: "Your call is booked. Do these 3 things first.",
-        body: "Good move. Before we talk: pull your reports from all three bureaus (free at annualcreditreport.com), gather any collection letters or voicemails, and note the items you think are wrong. That's it.",
+        body: "You're booked for {{appointment_time}} ({{timezone}}). Before we talk: pull your reports from all three bureaus (free at annualcreditreport.com), gather any collection letters or voicemails, and note the items you think are wrong. That's it.",
       },
       {
         delay: "1 day before",
         subject: "Talk tomorrow. Quick reminder.",
-        body: "Looking forward to it. Have your reports and any collector messages handy and we'll get a lot further. If you need to move the time, just reply.",
+        body: "A reminder that we're scheduled for {{appointment_time}} ({{timezone}}). Have your reports and any collector messages handy and we'll get a lot further. If you need to move the time, just reply.",
       },
     ],
   },

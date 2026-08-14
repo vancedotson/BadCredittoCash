@@ -18,8 +18,9 @@ const VIEWS: Array<{ key: string; label: string }> = [
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("Request failed");
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Request failed");
+  return data;
 }
 
 type SavedView = { name: string; query: string };
@@ -155,9 +156,9 @@ function AddContactModal({ owners, onClose, onDone }: { owners: string[]; onClos
   );
 }
 
-function parseCsv(text: string): Array<Record<string, string>> {
+function parseCsv(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (!lines.length) return [];
+  if (!lines.length) return { headers: [], rows: [] };
   const parseLine = (line: string): string[] => {
     const out: string[] = []; let cur = ""; let q = false;
     for (let i = 0; i < line.length; i++) {
@@ -167,33 +168,95 @@ function parseCsv(text: string): Array<Record<string, string>> {
     }
     out.push(cur); return out;
   };
-  const headers = parseLine(lines[0]).map((h) => h.trim().toLowerCase());
-  return lines.slice(1).map((l) => { const cells = parseLine(l); const o: Record<string, string> = {}; headers.forEach((h, i) => (o[h] = (cells[i] ?? "").trim())); return o; });
+  return {
+    headers: parseLine(lines[0]).map((header) => header.trim()),
+    rows: lines.slice(1).map((line) => parseLine(line).map((cell) => cell.trim())),
+  };
 }
 
+type ImportField = "name" | "email" | "phone" | "source" | "owner" | "stage";
+type ImportPreview = {
+  summary: { total: number; valid: number; invalid: number; newContacts: number; updates: number };
+  issues: Array<{ row: number; email?: string; reason: string }>;
+};
+const IMPORT_FIELDS: Array<{ key: ImportField; label: string; aliases: string[] }> = [
+  { key: "email", label: "Email (required)", aliases: ["email", "email address", "e-mail"] },
+  { key: "name", label: "Name", aliases: ["name", "full name", "contact name"] },
+  { key: "phone", label: "Phone", aliases: ["phone", "phone number", "mobile"] },
+  { key: "source", label: "Source", aliases: ["source", "lead source"] },
+  { key: "owner", label: "Owner", aliases: ["owner", "assigned to"] },
+  { key: "stage", label: "Stage", aliases: ["stage", "pipeline stage"] },
+];
+
 function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [rows, setRows] = useState<Array<Record<string, string>>>([]);
+  const [file, setFile] = useState<{ headers: string[]; rows: string[][] }>({ headers: [], rows: [] });
+  const [mapping, setMapping] = useState<Record<ImportField, string>>({ name: "", email: "", phone: "", source: "", owner: "", stage: "" });
+  const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
-    f.text().then((text) => setRows(parseCsv(text)));
+    if (f.size > 2_000_000) { setResult("CSV files are limited to 2 MB."); return; }
+    f.text().then((text) => {
+      const parsed = parseCsv(text);
+      const headers = parsed.headers.map((header) => header.toLowerCase());
+      const next = { name: "", email: "", phone: "", source: "", owner: "", stage: "" } as Record<ImportField, string>;
+      for (const field of IMPORT_FIELDS) {
+        const index = headers.findIndex((header) => field.aliases.includes(header));
+        if (index >= 0) next[field.key] = String(index);
+      }
+      setFile(parsed); setMapping(next); setPreview(null); setResult(null);
+    });
   }
-  async function submit() {
-    if (!rows.length) return;
+  function contacts() {
+    return file.rows.map((cells) => Object.fromEntries(IMPORT_FIELDS.map((field) => [field.key, mapping[field.key] === "" ? "" : cells[Number(mapping[field.key])] ?? ""])));
+  }
+  async function analyze() {
+    if (!file.rows.length || mapping.email === "") return;
     setPending(true);
-    const contacts = rows.map((r) => ({ name: r.name, email: r.email, phone: r.phone, source: r.source, owner: r.owner }));
-    try { const res = await api("/api/crm/import", "POST", { contacts }); setResult(`Imported ${res.imported}, skipped ${res.skipped}.`); setTimeout(onDone, 900); } catch { setResult("Import failed."); setPending(false); }
+    try { setPreview(await api("/api/crm/import", "POST", { mode: "preview", contacts: contacts() })); setResult(null); }
+    catch (error) { setResult(error instanceof Error ? error.message : "Preview failed."); }
+    finally { setPending(false); }
+  }
+  async function commit() {
+    if (!preview) return;
+    setPending(true);
+    try {
+      const res = await api("/api/crm/import", "POST", { mode: "commit", confirm: "IMPORT", contacts: contacts() });
+      setResult(`Imported ${res.imported}; skipped ${res.skipped}.`); setTimeout(onDone, 900);
+    } catch (error) { setResult(error instanceof Error ? error.message : "Import failed."); setPending(false); }
+  }
+  const rows = file.rows;
+  async function submit() {
+    if (preview) await commit();
+    else await analyze();
   }
   return (
     <Modal title="Import contacts (CSV)" onClose={onClose}>
-      <p className="mb-3 text-sm text-slate">CSV with columns: name, email, phone, source, owner. Existing emails are updated.</p>
+      <p className="mb-3 text-sm text-slate">Preview and validate up to 500 rows before importing. Existing emails will be updated, not duplicated.</p>
       <input type="file" accept=".csv,text/csv" onChange={onFile} className="w-full text-sm" />
-      {rows.length ? <p className="mt-3 text-sm text-body">{rows.length} rows detected.</p> : null}
-      {result ? <p className="mt-3 text-sm text-green">{result}</p> : null}
+      {file.rows.length ? <div className="mt-4 space-y-2">
+        <p className="text-sm font-medium text-heading">Map CSV columns ({file.rows.length} rows)</p>
+        <div className="grid grid-cols-2 gap-2">
+          {IMPORT_FIELDS.map((field) => <label key={field.key} className="text-xs text-slate">{field.label}
+            <select value={mapping[field.key]} onChange={(event) => { setMapping({ ...mapping, [field.key]: event.target.value }); setPreview(null); }} className="mt-1 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body">
+              <option value="">Not imported</option>
+              {file.headers.map((header, index) => <option key={`${header}-${index}`} value={index}>{header || `Column ${index + 1}`}</option>)}
+            </select>
+          </label>)}
+        </div>
+      </div> : null}
+      {preview ? <div className="mt-4 rounded-lg border border-mist bg-cloud p-3 text-sm">
+        <div className="grid grid-cols-2 gap-1 text-body">
+          <span>{preview.summary.valid} valid</span><span>{preview.summary.invalid} invalid</span>
+          <span>{preview.summary.newContacts} new</span><span>{preview.summary.updates} updates</span>
+        </div>
+        {preview.issues.length ? <div className="mt-2 max-h-28 overflow-auto border-t border-mist pt-2 text-xs text-red">{preview.issues.map((issue) => <div key={`${issue.row}-${issue.email ?? ""}`}>Row {issue.row}: {issue.reason}</div>)}</div> : null}
+      </div> : null}
+      {result ? <p className={`mt-3 text-sm ${result.startsWith("Imported") ? "text-green" : "text-red"}`}>{result}</p> : null}
       <div className="mt-5 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Cancel</button>
-        <button type="button" disabled={pending || !rows.length} onClick={submit} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">{pending ? "Importing…" : "Import"}</button>
+        <button type="button" disabled={pending || !rows.length || mapping.email === "" || Boolean(preview && preview.summary.valid === 0)} onClick={submit} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">{pending ? (preview ? "Importing…" : "Analyzing…") : preview ? `Import ${preview.summary.valid} valid` : "Preview import"}</button>
       </div>
     </Modal>
   );

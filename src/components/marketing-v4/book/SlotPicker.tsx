@@ -1,6 +1,6 @@
 "use client";
 
-import { TIMES, slotLabelOf, type Day } from "./slots";
+import { TIMES, slotLabelOf, slotStart, type Day } from "./slots";
 
 const labelStyle = {
   fontSize: 10,
@@ -22,6 +22,8 @@ export function SlotPicker({
   onTime,
   dayLayout = "row",
   labelSize = 10,
+  unavailableStarts = new Set<string>(),
+  busyIntervals = [],
 }: {
   days: Day[];
   dayKey: string;
@@ -31,6 +33,8 @@ export function SlotPicker({
   /** "row" = horizontal scroll strip (default); "calendar" = week-grid calendar. */
   dayLayout?: "row" | "calendar";
   labelSize?: number;
+  unavailableStarts?: Set<string>;
+  busyIntervals?: Array<{ start: string; end: string }>;
 }) {
   const slotLabel = slotLabelOf(days, dayKey, time);
   const lbl = { ...labelStyle, fontSize: labelSize };
@@ -110,20 +114,32 @@ export function SlotPicker({
         <div className="grid grid-cols-2 gap-2">
           {TIMES.map((t) => {
             const sel = t === time;
+            const starts = slotStart(dayKey, t);
+            const ends = starts ? new Date(starts.getTime() + 30 * 60 * 1000) : null;
+            const unavailable = !!starts && (
+              unavailableStarts.has(starts.toISOString())
+              || busyIntervals.some((interval) =>
+                new Date(interval.start).getTime() < (ends?.getTime() ?? 0)
+                && new Date(interval.end).getTime() > starts.getTime()
+              )
+            );
             return (
               <button
                 key={t}
                 type="button"
-                onClick={() => onTime(t)}
+                onClick={() => !unavailable && onTime(t)}
+                disabled={unavailable}
                 className="v3-mono rounded-sm px-3 py-3 transition-colors"
                 style={{
                   fontSize: 15,
                   border: `1px solid ${sel ? "var(--v3-accent)" : "var(--v3-line)"}`,
                   background: sel ? "color-mix(in srgb, var(--v3-accent) 14%, transparent)" : "rgba(0,0,0,0.25)",
-                  color: sel ? "var(--v3-ink)" : "var(--v3-mut)",
+                  color: unavailable ? "var(--v3-faint)" : sel ? "var(--v3-ink)" : "var(--v3-mut)",
+                  opacity: unavailable ? 0.45 : 1,
+                  cursor: unavailable ? "not-allowed" : "pointer",
                 }}
               >
-                {t}
+                {t}{unavailable ? " — Booked" : ""}
               </button>
             );
           })}

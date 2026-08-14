@@ -1,10 +1,11 @@
-import { listOwners } from "@/lib/store";
+import { hydrateStore, listOwners } from "@/lib/store";
 import { PageTitle } from "@/components/crm/ui";
 import { ActivityFeed } from "@/components/crm/ActivityFeed";
 
 export const dynamic = "force-dynamic";
 
 export default async function ActivityPage() {
+  await hydrateStore();
   const owners = await listOwners();
   return (
     <div className="space-y-6">

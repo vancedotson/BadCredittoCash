@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
-import { createLead, getSettings } from "@/lib/store";
+import { createCrmContact, getSettings } from "@/lib/store";
 import { STAGES_IN_ORDER, type Stage } from "@/lib/stages";
+import { requireCrmApiUser } from "@/lib/auth";
+import { recordAdminAudit } from "@/lib/audit";
 
 /**
  * POST /api/crm/contact — manually create a contact (walk-ins, phone leads,
  * referrals). Used by the pipeline "Add contact" form.
  */
 export async function POST(request: Request) {
+  const auth = await requireCrmApiUser(request, "write");
+  if (auth.response) return auth.response;
   let body: {
     name?: string;
     email?: string;
@@ -29,7 +33,7 @@ export async function POST(request: Request) {
   const stage = STAGES_IN_ORDER.includes(body.stage as Stage) ? (body.stage as Stage) : "new";
   const owner = body.owner?.trim() || (await getSettings()).defaultOwner;
 
-  const lead = await createLead({
+  const lead = await createCrmContact({
     name,
     email,
     phone: body.phone?.trim() || undefined,
@@ -37,6 +41,13 @@ export async function POST(request: Request) {
     stage,
     owner,
     stageChangedAt: new Date().toISOString(),
+  });
+  await recordAdminAudit({
+    actorId: String(auth.user.sub),
+    action: "contact.create",
+    entityType: "contact",
+    entityId: lead.id,
+    afterState: { name: lead.name, email: lead.email, stage: lead.stage, owner: lead.owner, source: lead.source },
   });
   return NextResponse.json({ ok: true, lead });
 }

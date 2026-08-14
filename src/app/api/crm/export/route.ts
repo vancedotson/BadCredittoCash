@@ -1,11 +1,15 @@
 import { listContacts, type ContactFilter } from "@/lib/store";
 import { contactsToCsv } from "@/lib/csv";
+import { requireCrmApiUser } from "@/lib/auth";
+import { recordAdminAudit } from "@/lib/audit";
 
 /**
  * GET /api/crm/export — download every contact matching the current filters as a
  * CSV (ignores pagination). The contacts page links here for "Export all".
  */
 export async function GET(request: Request) {
+  const auth = await requireCrmApiUser(undefined, "admin");
+  if (auth.response) return auth.response;
   const sp = new URL(request.url).searchParams;
   const get = (k: string) => sp.get(k) || undefined;
 
@@ -24,6 +28,12 @@ export async function GET(request: Request) {
   });
 
   const csv = contactsToCsv(rows);
+  await recordAdminAudit({
+    actorId: String(auth.user.sub),
+    action: "contacts.export",
+    entityType: "contacts",
+    afterState: { count: rows.length },
+  });
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

@@ -1,4 +1,4 @@
-import { listAllTasks, getTaskStats, listContactOptions, listOwners } from "@/lib/store";
+import { hydrateStore, listAllTasks, getTaskStats, listContactOptions, listOwners } from "@/lib/store";
 import { PageTitle } from "@/components/crm/ui";
 import { TasksSummary } from "@/components/crm/TasksSummary";
 import { TasksClient } from "@/components/crm/TasksClient";
@@ -6,6 +6,7 @@ import { TasksClient } from "@/components/crm/TasksClient";
 export const dynamic = "force-dynamic";
 
 export default async function TasksPage() {
+  await hydrateStore();
   const [tasks, stats, contacts, owners] = await Promise.all([
     listAllTasks(),
     getTaskStats(),

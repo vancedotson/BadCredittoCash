@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { site } from "@/config/site-v3";
 import { Kicker, SectionScan } from "../../marketing-v3/shared/primitives";
@@ -13,8 +14,90 @@ import { CheckIcon, PhoneIcon } from "@/components/marketing-v2/Icons";
  */
 const wb = site.webinar;
 
+type BookingConfirmation = {
+  id: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+};
+
+function calendarStamp(value: string): string {
+  return new Date(value).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+}
+
+function escapeIcs(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+}
+
 export function BookedSectionV4() {
   const ref = useReveal<HTMLDivElement>();
+  const [booking, setBooking] = useState<BookingConfirmation | null>(null);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try {
+        const stored = sessionStorage.getItem("vance:last-booking");
+        if (!stored) return;
+        const parsed = JSON.parse(stored) as BookingConfirmation;
+        if (parsed.id && parsed.startsAt && parsed.endsAt && parsed.timezone) setBooking(parsed);
+      } catch {
+        // The generic confirmation remains useful if browser storage is unavailable.
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const formattedTime = useMemo(() => {
+    if (!booking) return null;
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "full",
+        timeStyle: "short",
+        timeZone: booking.timezone,
+      }).format(new Date(booking.startsAt));
+    } catch {
+      return new Date(booking.startsAt).toLocaleString();
+    }
+  }, [booking]);
+
+  const googleCalendarUrl = useMemo(() => {
+    if (!booking) return null;
+    const query = new URLSearchParams({
+      action: "TEMPLATE",
+      text: "Strategy call with Vance Dotson",
+      dates: `${calendarStamp(booking.startsAt)}/${calendarStamp(booking.endsAt)}`,
+      details: "Strategy call booked through the Vance Dotson website.",
+    });
+    return `https://calendar.google.com/calendar/render?${query.toString()}`;
+  }, [booking]);
+
+  function downloadCalendarFile() {
+    if (!booking) return;
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Vance Dotson//Strategy Call//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:${escapeIcs(booking.id)}@vancedotson.com`,
+      `DTSTAMP:${calendarStamp(new Date().toISOString())}`,
+      `DTSTART:${calendarStamp(booking.startsAt)}`,
+      `DTEND:${calendarStamp(booking.endsAt)}`,
+      "SUMMARY:Strategy call with Vance Dotson",
+      "DESCRIPTION:Strategy call booked through the Vance Dotson website.",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "vance-dotson-strategy-call.ics";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <section className="v3-section" style={{ paddingTop: "clamp(56px,8vw,120px)" }}>
       <SectionScan />
@@ -30,6 +113,29 @@ export function BookedSectionV4() {
           <p className="mx-auto mt-5" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
             {wb.booked.body}
           </p>
+          {booking && formattedTime ? (
+            <div className="v3-panel mx-auto mt-6 p-5" style={{ maxWidth: 560, borderRadius: 4 }}>
+              <span className="v3-mono block" style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--v3-accent)" }}>
+                Your appointment
+              </span>
+              <strong className="mt-2 block" style={{ fontSize: 18, color: "var(--v3-ink)" }}>{formattedTime}</strong>
+              <span className="v3-mono mt-1 block" style={{ fontSize: 12, color: "var(--v3-faint)" }}>{booking.timezone}</span>
+              <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
+                <a
+                  href={googleCalendarUrl ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="v3-btn v3-btn-primary"
+                  style={{ minHeight: 44 }}
+                >
+                  Add to Google Calendar
+                </a>
+                <button type="button" onClick={downloadCalendarFile} className="v3-btn v3-btn-ghost" style={{ minHeight: 44 }}>
+                  Download calendar file
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="v3-panel v3-corner mt-9 p-7 sm:p-9" style={{ borderRadius: 4 }}>

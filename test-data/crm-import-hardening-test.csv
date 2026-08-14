@@ -1,0 +1,4 @@
+Full Name,Email Address,Phone Number,Lead Source,Assigned To
+CRM Import Test,p.burmesterm+crmimporttest@gmail.com,+351 910 000 001,hardening-test,
+Duplicate CRM Import Test,p.burmesterm+crmimporttest@gmail.com,+351 910 000 002,hardening-test,
+Missing Email Test,,+351 910 000 003,hardening-test,

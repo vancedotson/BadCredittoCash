@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CrmProfile, CrmPrefs, NotifyPrefs } from "@/lib/store";
+import type { CrmProfile, CrmPrefs, NotifyPrefs, TrashedContact } from "@/lib/store";
 
 const INPUT = "min-w-0 flex-1 rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust";
 const BTN = "rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50";
@@ -316,6 +316,7 @@ const NOTIFY_ITEMS: Array<{ key: keyof NotifyPrefs; label: string; hint: string 
   { key: "coolingLeads", label: "Cooling hot leads", hint: "Warm leads going stale without a touch." },
   { key: "noFollowUp", label: "No next step", hint: "Contacts with no scheduled follow-up." },
   { key: "newBookings", label: "New bookings", hint: "Someone booked a call." },
+  { key: "highIntentRegistrations", label: "High-intent registrations", hint: "Someone watches most of the training or starts booking." },
 ];
 
 export function NotificationForm({ notify }: { notify: NotifyPrefs }) {
@@ -352,14 +353,35 @@ type Status = { backend: string; seedVersion: number; counts: Record<string, num
 
 export function DataManagement({ status }: { status: Status }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [backup, setBackup] = useState<unknown>(null);
+  const [preview, setPreview] = useState<{ exportedAt: string; counts: Record<string, number> } | null>(null);
+  const [confirmation, setConfirmation] = useState("");
+  const [working, setWorking] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  async function reset() {
-    if (!window.confirm("Reset all demo data? This wipes contacts, events, notes, tasks, and settings, then re-seeds the sample data. This cannot be undone.")) return;
-    setBusy(true);
-    await post({ action: "reset-data" });
-    setBusy(false);
-    router.refresh();
+  async function previewRestore() {
+    if (!file) return;
+    setWorking(true); setError(""); setMessage(""); setPreview(null);
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown;
+      const response = await fetch("/api/crm/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backup: parsed, preview: true }) });
+      const payload = await response.json() as { error?: string; exportedAt?: string; counts?: Record<string, number> };
+      if (!response.ok || !payload.exportedAt || !payload.counts) throw new Error(payload.error ?? "Could not validate this backup.");
+      setBackup(parsed); setPreview({ exportedAt: payload.exportedAt, counts: payload.counts });
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not read this backup."); }
+    setWorking(false);
+  }
+
+  async function restoreBackup() {
+    if (!backup || confirmation !== "RESTORE VANCE CRM") return;
+    setWorking(true); setError(""); setMessage("");
+    const response = await fetch("/api/crm/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backup, confirmation }) });
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    if (!response.ok) setError(payload?.error ?? "Restore failed safely; current data was not partially replaced.");
+    else { setMessage("Backup restored. Pending emails from the snapshot were cancelled for safety."); setConfirmation(""); router.refresh(); }
+    setWorking(false);
   }
 
   return (
@@ -372,14 +394,66 @@ export function DataManagement({ status }: { status: Status }) {
         ))}
       </dl>
       <div className="flex flex-wrap gap-2">
-        <a href="/api/crm/settings" className={BTN_GHOST}>Export all data (JSON)</a>
+        <a href="/api/crm/backup" className={BTN_GHOST}>Download full backup (JSON)</a>
         <a href="/api/crm/export" className={BTN_GHOST}>Export contacts (CSV)</a>
       </div>
-      <div className="rounded-lg border border-red/40 bg-red/5 p-4">
-        <div className="text-sm font-semibold text-heading">Danger zone</div>
-        <p className="mt-1 mb-3 text-xs text-slate">Resetting restores the original sample data. Use it to get a clean demo state.</p>
-        <button type="button" onClick={reset} disabled={busy} className="rounded-lg bg-red px-3 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">{busy ? "Resetting…" : "Reset demo data"}</button>
+      <p className="rounded-lg border border-mist bg-cloud/50 p-3 text-xs text-slate">
+        The full backup contains CRM records and settings, but never passwords, API keys, or Google credentials. Download one before planned migrations or cleanup.
+      </p>
+      <div className="space-y-3 rounded-xl border border-mist p-4">
+        <div><h3 className="text-sm font-semibold text-heading">Restore a full backup</h3><p className="text-xs text-slate">Validation is read-only. The final restore replaces current CRM records in one database transaction.</p></div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="file" accept="application/json,.json" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setBackup(null); setConfirmation(""); setError(""); }} className="max-w-full text-sm text-body" />
+          <button type="button" disabled={!file || working} onClick={previewRestore} className={BTN_GHOST}>{working && !preview ? "Validating…" : "Validate backup"}</button>
+        </div>
+        {preview ? <div className="space-y-3 rounded-lg border border-gold/40 bg-gold/5 p-3 text-sm">
+          <p><span className="font-semibold">Valid backup</span> from {new Date(preview.exportedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</p>
+          <p className="text-xs text-slate">{Object.entries(preview.counts).map(([key, count]) => `${key}: ${count}`).join(" · ")}</p>
+          <label className="block"><span className="mb-1 block text-xs text-slate">Type <strong>RESTORE VANCE CRM</strong> to replace current CRM data.</span><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className={INPUT} /></label>
+          <button type="button" disabled={working || confirmation !== "RESTORE VANCE CRM"} onClick={restoreBackup} className="rounded-lg bg-red px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{working ? "Restoring…" : "Restore this backup"}</button>
+        </div> : null}
+        {error ? <p className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
+        {message ? <p className="rounded-lg bg-green/10 px-3 py-2 text-sm text-green">{message}</p> : null}
       </div>
+    </div>
+  );
+}
+
+export function ContactTrash({ contacts }: { contacts: TrashedContact[] }) {
+  const router = useRouter();
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  async function restore(contact: TrashedContact) {
+    setRestoring(contact.id);
+    setError("");
+    const response = await fetch("/api/crm/trash", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: contact.id }),
+    });
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    if (!response.ok) setError(payload?.error ?? "Could not restore this contact.");
+    else router.refresh();
+    setRestoring(null);
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-slate">Deleted contacts and their related CRM history remain here until restored.</p>
+      {error ? <p className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
+      {contacts.length ? <ul className="divide-y divide-mist rounded-xl border border-mist">
+        {contacts.map((contact) => <li key={contact.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="min-w-0">
+            <div className="font-medium text-body">{contact.name}</div>
+            <div className="truncate text-xs text-slate">{contact.email}</div>
+            <div className="mt-1 text-[11px] text-slate">Deleted {new Date(contact.deletedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}{contact.deletedBy ? ` by ${contact.deletedBy}` : ""}</div>
+          </div>
+          <button type="button" disabled={restoring === contact.id} onClick={() => restore(contact)} className={BTN}>
+            {restoring === contact.id ? "Restoringâ€¦" : "Restore"}
+          </button>
+        </li>)}
+      </ul> : <p className="rounded-xl border border-mist bg-cloud p-4 text-sm text-slate">Trash is empty.</p>}
     </div>
   );
 }

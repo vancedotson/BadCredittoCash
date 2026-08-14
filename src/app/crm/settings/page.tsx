@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { getSettings, getOwnerWorkloads, listOwners, listTagsWithCounts, getStoreStatus, getSettingsInsights } from "@/lib/store";
+import { hydrateStore, getSettings, getOwnerWorkloads, listOwners, listTagsWithCounts, getStoreStatus, getSettingsInsights, listTrashedContacts } from "@/lib/store";
 import { SEGMENT_LABELS } from "@/lib/segments";
 import { SEQUENCES, SEGMENT_SEQUENCES } from "@/config/sequences";
 import { PageTitle, Card, StageBadge, SegmentBadge } from "@/components/crm/ui";
-import { ProfileForm, OwnerManager, TagManager, AppearanceForm, NotificationForm, DataManagement } from "@/components/crm/SettingsClient";
+import { ProfileForm, OwnerManager, TagManager, AppearanceForm, NotificationForm, DataManagement, ContactTrash } from "@/components/crm/SettingsClient";
+import { getGoogleCalendarStatus } from "@/lib/google-calendar";
+import { requireCrmUser } from "@/lib/auth";
+import { listAdminAuditEvents } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +30,21 @@ const NAV = [
   { id: "sequences", label: "Sequences" },
   { id: "appearance", label: "Appearance" },
   { id: "notifications", label: "Notifications" },
+  { id: "calendar", label: "Calendar" },
+  { id: "audit", label: "Audit history" },
+  { id: "trash", label: "Trash" },
   { id: "data", label: "Data" },
 ];
 
 export default async function SettingsPage() {
-  const [settings, workloads, owners, tags, status, insights] = await Promise.all([
-    getSettings(), getOwnerWorkloads(), listOwners(), listTagsWithCounts(), getStoreStatus(), getSettingsInsights(),
+  const user = await requireCrmUser();
+  await hydrateStore();
+  const [settings, workloads, owners, tags, status, insights, calendar, auditEvents, trashedContacts] = await Promise.all([
+    getSettings(), getOwnerWorkloads(), listOwners(), listTagsWithCounts(), getStoreStatus(), getSettingsInsights(), getGoogleCalendarStatus(),
+    user.crmRole === "admin" ? listAdminAuditEvents(50) : Promise.resolve([]),
+    user.crmRole === "admin" ? listTrashedContacts() : Promise.resolve([]),
   ]);
+  const settingsNav = user.crmRole === "admin" ? NAV : NAV.filter((item) => item.id !== "audit");
   const allSeq = [...Object.values(SEQUENCES), ...Object.values(SEGMENT_SEQUENCES)];
   const maxStage = Math.max(1, ...insights.stages.map((s) => s.count));
 
@@ -42,7 +53,7 @@ export default async function SettingsPage() {
       <PageTitle title="Settings" subtitle="Configure the business profile, team, tags, and preferences. Stages, segments, and sequences are code-defined and shown here for reference." />
 
       <nav className="sticky top-2 z-10 -mx-1 flex flex-wrap gap-1.5 rounded-xl border border-mist bg-card/90 p-1.5 backdrop-blur">
-        {NAV.map((n) => (
+        {settingsNav.map((n) => (
           <a key={n.id} href={`#${n.id}`} className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate hover:bg-cloud hover:text-body">{n.label}</a>
         ))}
       </nav>
@@ -159,6 +170,57 @@ export default async function SettingsPage() {
           </Card>
         </section>
       </div>
+
+      <section id="calendar" className="scroll-mt-16">
+        <Card>
+          <h2 className="mb-1 text-lg font-semibold text-heading">Google Calendar</h2>
+          <p className="mb-4 text-sm text-slate">
+            Checks real availability and keeps strategy-call appointments synchronized.
+          </p>
+          {calendar.connected ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-mist bg-cloud p-4">
+              <div>
+                <div className="font-medium text-body">Connected</div>
+                <div className="text-sm text-slate">{calendar.accountEmail} · {calendar.timezone}</div>
+              </div>
+              <a href="/api/integrations/google-calendar/connect" className="rounded-lg border border-mist bg-card px-4 py-2 text-sm font-medium text-body hover:bg-white">
+                Reconnect
+              </a>
+            </div>
+          ) : (
+            <a href="/api/integrations/google-calendar/connect" className="inline-flex rounded-lg bg-trust px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+              Connect Google Calendar
+            </a>
+          )}
+        </Card>
+      </section>
+
+      {user.crmRole === "admin" ? <section id="audit" className="scroll-mt-16">
+        <Card>
+          <h2 className="mb-1 text-lg font-semibold text-heading">Audit history</h2>
+          <p className="mb-4 text-sm text-slate">The 50 most recent administrative CRM changes. Entries are append-only and timestamped by the server.</p>
+          {auditEvents.length ? <ul className="divide-y divide-mist rounded-xl border border-mist">
+            {auditEvents.map((event) => <li key={event.id} className="px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div><span className="font-medium text-body">{event.action.replaceAll("_", " ").replaceAll(".", " · ")}</span><span className="text-slate"> by {event.actorName}</span></div>
+                <time className="text-xs text-slate" dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}</time>
+              </div>
+              <div className="mt-1 text-xs text-slate">{event.entityType}{event.entityId ? ` · ${event.entityId}` : ""}</div>
+              {event.beforeState || event.afterState ? <details className="mt-2 text-xs">
+                <summary className="cursor-pointer text-trust">View recorded changes</summary>
+                <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-cloud p-3 text-[11px] text-body">{JSON.stringify({ before: event.beforeState, after: event.afterState }, null, 2)}</pre>
+              </details> : null}
+            </li>)}
+          </ul> : <p className="rounded-xl border border-mist bg-cloud p-4 text-sm text-slate">No administrative changes recorded yet.</p>}
+        </Card>
+      </section> : null}
+
+      {user.crmRole === "admin" ? <section id="trash" className="scroll-mt-16">
+        <Card>
+          <h2 className="mb-1 text-lg font-semibold text-heading">Contact trash</h2>
+          <ContactTrash contacts={trashedContacts} />
+        </Card>
+      </section> : null}
 
       {/* Data */}
       <section id="data" className="scroll-mt-16">
