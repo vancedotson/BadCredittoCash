@@ -1,7 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { FunnelShell } from "@/components/marketing-v4/FunnelShell";
-import { ConfirmedSectionV4 } from "@/components/marketing-v4/webinar/ConfirmedSectionV4";
+import {
+  ConfirmedSectionV4,
+  ReviewableConfirmedSectionV4,
+} from "@/components/marketing-v4/webinar/ConfirmedSectionV4";
 
 /**
  * /webinar/confirmed — funnel step 2. Reached from the /v4 registration form
@@ -10,7 +14,9 @@ import { ConfirmedSectionV4 } from "@/components/marketing-v4/webinar/ConfirmedS
 export default function WebinarConfirmedPage() {
   return (
     <FunnelShell>
-      <ConfirmedSectionV4 />
+      <Suspense fallback={<ConfirmedSectionV4 trackView={false} />}>
+        <ReviewableConfirmedSectionV4 />
+      </Suspense>
     </FunnelShell>
   );
 }

@@ -11,7 +11,7 @@ import {
 } from "@/lib/tasks";
 import { PhoneIcon, BellIcon, RefreshIcon, DocumentIcon, CheckIcon } from "@/components/marketing-v2/Icons";
 
-const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate/60 focus:border-trust";
+const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
 const DAY = 86400000;
 
 async function api(url: string, method: string, body: unknown) {
@@ -156,7 +156,7 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
           <h2 className={`text-lg font-semibold ${tone}`}>{title}</h2>
           <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.length}</span>
           {collapsible ? (
-            <button type="button" onClick={() => setShowDone((v) => !v)} className="ml-auto text-sm text-trust hover:underline">{hidden ? "Show" : "Hide"}</button>
+            <button type="button" onClick={() => setShowDone((v) => !v)} aria-expanded={!hidden} className="ml-auto text-sm text-trust hover:underline">{hidden ? "Show" : "Hide"}</button>
           ) : null}
         </div>
         {hidden ? null : (
@@ -179,7 +179,7 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
       ) : null}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks or contacts…" className={`${inputClass} min-w-[180px] flex-1`} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks or contacts…" aria-label="Search tasks" className={`${inputClass} min-w-[180px] flex-1`} />
         <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={inputClass} aria-label="Owner">
           <option value="">All owners</option><option value="__none__">Unassigned</option>
           {owners.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -194,7 +194,7 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
         </select>
         <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">
           {(["due", "today", "contact"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setView(v)} className={`rounded-md px-2.5 py-1.5 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>
+            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} className={`rounded-md px-2.5 py-1.5 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>
               {v === "due" ? "By due" : v === "today" ? "Today" : "By contact"}
             </button>
           ))}
@@ -285,7 +285,7 @@ function TaskRow({ task, selected, onSelect, onToggle, onEdit, onDelete, onSnooz
           {task.recurrence && task.recurrence !== "none" ? <span className="inline-flex items-center gap-0.5">· <RefreshIcon className="h-3 w-3" />{RECURRENCE_LABELS[task.recurrence]}</span> : null}
         </div>
       </div>
-      <button type="button" onClick={() => setMenu((m) => !m)} aria-label="Actions" className="shrink-0 px-1 text-slate hover:text-heading">&#8942;</button>
+      <button type="button" onClick={() => setMenu((m) => !m)} aria-label={`Actions for ${task.title}`} className="shrink-0 px-1 text-slate hover:text-heading">&#8942;</button>
       {menu ? (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
@@ -336,8 +336,8 @@ function TaskModal({ mode, task, contacts, owners, onClose, onSaved }: { mode: "
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-heading">{mode === "add" ? "Add task" : "Edit task"}</h3>
+      <form role="dialog" aria-modal="true" aria-labelledby="task-modal-title" onSubmit={submit} className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 id="task-modal-title" className="text-lg font-semibold text-heading">{mode === "add" ? "Add task" : "Edit task"}</h3>
         <div className="mt-4 space-y-3">
           {mode === "add" ? (
             <select value={email} onChange={(e) => setEmail(e.target.value)} className={field} aria-label="Contact">
@@ -346,10 +346,10 @@ function TaskModal({ mode, task, contacts, owners, onClose, onSaved }: { mode: "
           ) : (
             <div className="text-sm text-slate">Contact: <span className="text-body">{task?.contactName}</span></div>
           )}
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" className={field} />
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" aria-label="Task title" className={field} />
           <div className="flex gap-3">
-            <select value={type} onChange={(e) => setType(e.target.value as TaskType)} className={field}>{TASK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}</select>
-            <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} className={field}>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}</select>
+            <select value={type} onChange={(e) => setType(e.target.value as TaskType)} aria-label="Task type" className={field}>{TASK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}</select>
+            <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)} aria-label="Priority" className={field}>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}</select>
           </div>
           <div className="flex gap-3">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={field} aria-label="Due date" />
@@ -357,9 +357,9 @@ function TaskModal({ mode, task, contacts, owners, onClose, onSaved }: { mode: "
           </div>
           <div className="flex gap-3">
             <select value={owner} onChange={(e) => setOwner(e.target.value)} className={field} aria-label="Owner"><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-            <select value={recurrence} onChange={(e) => setRecurrence(e.target.value as Recurrence)} className={field}>{RECURRENCES.map((r) => <option key={r} value={r}>{RECURRENCE_LABELS[r]}</option>)}</select>
+            <select value={recurrence} onChange={(e) => setRecurrence(e.target.value as Recurrence)} aria-label="Recurrence" className={field}>{RECURRENCES.map((r) => <option key={r} value={r}>{RECURRENCE_LABELS[r]}</option>)}</select>
           </div>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className={`${field} resize-none`} />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" aria-label="Notes" rows={2} className={`${field} resize-none`} />
           {err ? <p className="text-sm text-red">{err}</p> : null}
         </div>
         <div className="mt-5 flex justify-end gap-2">

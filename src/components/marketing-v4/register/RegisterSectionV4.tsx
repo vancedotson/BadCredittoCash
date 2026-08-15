@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { site } from "@/config/site-v3";
 import { Kicker, SectionScan } from "../../marketing-v3/shared/primitives";
 import { useReveal } from "../../marketing-v3/shared/hooks";
@@ -13,6 +15,34 @@ import { RegistrationFormV3 } from "../../marketing-v3/shared/RegistrationFormV3
 const HEADING = site.finalCta.heading; // "You've been carrying this alone. You don't have to anymore."
 const PHRASE = "carrying this alone";
 const idx = HEADING.indexOf(PHRASE);
+
+const registrationFormProps = {
+  redirectTo: "/webinar/confirmed",
+  showPhone: false,
+  submitLabel: "Send me the free training",
+  loadingLabel: "Sending your link...",
+  reassurance: "Free training. No payment. No obligation. Your link arrives by email.",
+} as const;
+
+function ReviewableRegistrationForm() {
+  const reviewState = useSearchParams().get("state");
+  const previewState =
+    reviewState === "registration-invalid"
+      ? "invalid"
+      : reviewState === "registration-error"
+        ? "server-error"
+        : reviewState === "registration-loading"
+          ? "submitting"
+        : undefined;
+
+  return (
+    <RegistrationFormV3
+      key={previewState ?? "normal"}
+      {...registrationFormProps}
+      previewState={previewState}
+    />
+  );
+}
 
 export function RegisterSectionV4() {
   const ref = useReveal<HTMLDivElement>();
@@ -34,10 +64,10 @@ export function RegisterSectionV4() {
             )}
           </h2>
           <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 520 }}>
-            {site.register.body}
+            Watch the free training to understand what may be wrong, what the law says, and what you can do next. No payment. No obligation.
           </p>
           <div
-            className="v3-mono mt-8 flex flex-col gap-2"
+            className="v3-mono mt-8 hidden flex-col gap-2 sm:flex"
             style={{ fontSize: 12.5, color: "var(--v3-faint)", letterSpacing: "0.06em" }}
           >
             {site.ev.terminal.map((t) => (
@@ -46,12 +76,17 @@ export function RegisterSectionV4() {
           </div>
         </div>
         <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
-          <div className="mb-6 flex items-center justify-between">
-            <span className="v3-display" style={{ fontSize: 24 }}>
-              {site.register.heading}
-            </span>
+          <div className="mb-6">
+            <h3 className="v3-display" style={{ fontSize: 28 }}>
+              Get the free training.
+            </h3>
+            <p className="mt-3" style={{ color: "var(--v3-mut)", fontSize: 14.5, lineHeight: 1.5 }}>
+              Tell me where to send your private watch link.
+            </p>
           </div>
-          <RegistrationFormV3 redirectTo="/webinar/confirmed" />
+          <Suspense fallback={<RegistrationFormV3 {...registrationFormProps} />}>
+            <ReviewableRegistrationForm />
+          </Suspense>
         </div>
       </div>
     </section>

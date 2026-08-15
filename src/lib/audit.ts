@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "./supabase/server";
+import { isCrmDemoMode } from "./demo";
 
 export async function recordAdminAudit(input: {
   actorId: string;
@@ -34,6 +35,7 @@ export type AdminAuditEvent = {
 };
 
 export async function listAdminAuditEvents(limit = 50): Promise<AdminAuditEvent[]> {
+  if (isCrmDemoMode()) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("audit_log")

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { site } from "@/config/site-v3";
 import { track, getRememberedLead } from "@/lib/tracking";
 import { EVENTS, WATCH_MILESTONES } from "@/lib/events";
@@ -19,24 +20,66 @@ import { WebinarPlayer } from "./WebinarPlayer";
  */
 const wb = site.webinar;
 
-export function WebinarRoomV4() {
-  const [pitched, setPitched] = useState(false);
+export function ReviewableWebinarRoomV4() {
+  const reviewState = useSearchParams().get("state");
+  const isPlaying = reviewState === "player-playing";
+  const isComplete = reviewState === "player-complete";
+  const isOfferVisible = reviewState === "offer-visible";
+  const reviewProgress =
+    reviewState === "player-25"
+      ? 0.25
+      : reviewState === "player-50"
+        ? 0.5
+        : reviewState === "player-75"
+          ? 0.75
+          : reviewState === "player-90"
+            ? 0.9
+            : null;
+  const isReviewMode = reviewState?.startsWith("player-") || reviewState === "offer-visible";
+
+  return (
+    <WebinarRoomV4
+      key={reviewState ?? "player-default"}
+      initialPlaying={isPlaying || reviewProgress !== null}
+      initialTimeSec={isComplete ? 35 * 60 : isOfferVisible ? 35 * 60 * 0.7 : reviewProgress !== null ? 35 * 60 * reviewProgress : isPlaying ? 12 : 0}
+      initialPitched={isComplete || isOfferVisible}
+      reviewMode={Boolean(isReviewMode)}
+    />
+  );
+}
+
+export function WebinarRoomV4({
+  initialPlaying = false,
+  initialTimeSec = 0,
+  initialPitched = false,
+  reviewMode = false,
+}: {
+  initialPlaying?: boolean;
+  initialTimeSec?: number;
+  initialPitched?: boolean;
+  reviewMode?: boolean;
+} = {}) {
+  const [pitched, setPitched] = useState(initialPitched);
 
   useEffect(() => {
+    if (reviewMode) return;
     track(EVENTS.roomOpened, {}, getRememberedLead()?.email);
-  }, []);
+  }, [reviewMode]);
 
   function handleMilestone(pct: number) {
+    if (reviewMode) return;
     const m = WATCH_MILESTONES.find((x) => x.pct === pct);
     if (!m) return;
     track(m.event, { pct }, getRememberedLead()?.email);
   }
 
   function handleComplete() {
+    if (reviewMode) return;
     track(EVENTS.completed, {}, getRememberedLead()?.email);
   }
 
   function handleOfferClick() {
+    if (reviewMode) return;
     track(EVENTS.offerCtaClicked, {}, getRememberedLead()?.email);
   }
 
@@ -58,11 +101,35 @@ export function WebinarRoomV4() {
             <WebinarPlayer
               title={wb.room.heading}
               chapters={wb.room.chapters}
+              initialPlaying={initialPlaying}
+              initialTimeSec={initialTimeSec}
               onMilestone={handleMilestone}
               onPitch={() => setPitched(true)}
               onComplete={handleComplete}
             />
           </div>
+
+          {pitched && (
+            <aside
+              className="v3-corner mt-6"
+              role="status"
+              style={{
+                border: "1px solid color-mix(in srgb, var(--v3-accent) 55%, var(--v3-line))",
+                background: "color-mix(in srgb, var(--v3-accent) 8%, var(--v3-panel))",
+                padding: "clamp(18px, 3vw, 28px)",
+              }}
+            >
+              <span
+                className="v3-mono"
+                style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-accent)" }}
+              >
+                YOUR NEXT STEP
+              </span>
+              <p className="mt-2" style={{ color: "var(--v3-ink)", fontSize: 17, lineHeight: 1.55 }}>
+                {wb.room.pitchCue}
+              </p>
+            </aside>
+          )}
 
           {/* Optimized bottom: what's inside + the stay-to-the-end hook */}
           <div
@@ -94,45 +161,43 @@ export function WebinarRoomV4() {
         </div>
       </section>
 
-      {/* Sticky book-a-call bar — slides up at the pitch, then stays. */}
-      <div
-        aria-hidden={!pitched}
-        style={{
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 40,
-          transform: pitched ? "translateY(0)" : "translateY(112%)",
-          transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)",
-          background: "color-mix(in srgb, var(--v3-bg) 90%, transparent)",
-          backdropFilter: "blur(10px)",
-          borderTop: "1px solid var(--v3-accent)",
-        }}
-      >
-        <div className="v3-wrap flex items-center justify-between gap-4" style={{ paddingTop: 13, paddingBottom: 13 }}>
-          <div className="hidden min-w-0 sm:block">
-            <span className="v3-mono" style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-accent)" }}>
-              THE SHORTCUT
-            </span>
-            <p style={{ fontSize: 15.5, color: "var(--v3-ink)", lineHeight: 1.3 }}>
-              {wb.room.bookBarNote}
-            </p>
+      {/* Do not render an invisible link before the offer appears. */}
+      {pitched && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 40,
+            background: "color-mix(in srgb, var(--v3-bg) 90%, transparent)",
+            backdropFilter: "blur(10px)",
+            borderTop: "1px solid var(--v3-accent)",
+          }}
+        >
+          <div className="v3-wrap flex items-center justify-between gap-4" style={{ paddingTop: 13, paddingBottom: 13 }}>
+            <div className="hidden min-w-0 sm:block">
+              <span className="v3-mono" style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-accent)" }}>
+                THE SHORTCUT
+              </span>
+              <p style={{ fontSize: 15.5, color: "var(--v3-ink)", lineHeight: 1.3 }}>
+                {wb.room.bookBarNote}
+              </p>
+            </div>
+            <Link
+              href="/webinar/call"
+              onClick={handleOfferClick}
+              className="v3-btn v3-btn-primary v3-clip w-full sm:w-auto"
+              style={{ paddingLeft: 12, whiteSpace: "nowrap" }}
+            >
+              <span className="v3-btn-badge">
+                <ArrowRightIcon className="h-4 w-4" />
+              </span>
+              {wb.room.offerCta}
+            </Link>
           </div>
-          <Link
-            href="/webinar/call"
-            onClick={handleOfferClick}
-            className="v3-btn v3-btn-primary v3-clip w-full sm:w-auto"
-            style={{ paddingLeft: 12, whiteSpace: "nowrap" }}
-            tabIndex={pitched ? 0 : -1}
-          >
-            <span className="v3-btn-badge">
-              <ArrowRightIcon className="h-4 w-4" />
-            </span>
-            {wb.room.offerCta}
-          </Link>
         </div>
-      </div>
+      )}
     </>
   );
 }

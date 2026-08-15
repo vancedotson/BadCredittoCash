@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { track, getRememberedLead } from "@/lib/tracking";
 import { EVENTS } from "@/lib/events";
-import { Kicker, Reveal, SectionScan } from "../../marketing-v3/shared/primitives";
+import { Kicker, SectionScan } from "../../marketing-v3/shared/primitives";
 import { useReveal } from "../../marketing-v3/shared/hooks";
 import { CheckIcon } from "@/components/marketing-v2/Icons";
 import { BookingWizard } from "./BookingWizard";
@@ -19,13 +19,13 @@ import { BookingWizard } from "./BookingWizard";
 const KICKER = "SCHEDULE // STRATEGY CALL";
 const HEADING = "Book your free strategy call.";
 const BODY =
-  "Pick a time that works for you. We'll look at what's happening with your credit and the calls you're getting, and I'll tell you the honest next step. No cost, no obligation.";
+  "Start with your details, then choose a free 30-minute phone call. Vance will review what’s happening, explain whether there may be a violation, and give you the honest next step. No cost. No obligation.";
 const COVERS = [
   "We review the calls you're getting and the items on your report.",
   "We find out whether there's a violation to hold them to.",
   "You leave knowing exactly where you stand, either way.",
 ];
-const FACTS = ["By phone", "Directly with Vance", "Free, no obligation"];
+const FACTS = ["30 minutes", "By phone", "Directly with Vance", "Free, no obligation"];
 
 const labelStyle = {
   fontSize: 10,
@@ -62,7 +62,7 @@ export function BookSchedulerV4() {
           <ul className="mt-3 flex flex-col gap-2.5">
             {COVERS.map((c) => (
               <li key={c} className="flex items-start gap-3" style={{ color: "var(--v3-mut)", fontSize: 15.5 }}>
-                <span style={{ color: "var(--v3-accent)", marginTop: 2 }}>
+                <span aria-hidden style={{ color: "var(--v3-accent)", marginTop: 2 }}>
                   <CheckIcon className="h-4 w-4" />
                 </span>
                 {c}
@@ -79,11 +79,11 @@ export function BookSchedulerV4() {
         </div>
 
         {/* Booking card — shared two-step wizard */}
-        <Reveal delay={1} className="order-2 min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+        <div className="order-2 min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-2">
           <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
             <BookingWizard />
           </div>
-        </Reveal>
+        </div>
       </div>
     </section>
   );

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { STAGES_IN_ORDER, STAGE_LABELS, type Stage } from "@/lib/stages";
 import { SEGMENTS_IN_ORDER, SEGMENT_LABELS } from "@/lib/segments";
 
-const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate/60 focus:border-trust";
+const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
 
 const VIEWS: Array<{ key: string; label: string }> = [
   { key: "", label: "All" },
@@ -95,13 +95,13 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
       </div>
 
       {/* Mobile: collapse the filter dropdowns behind a toggle (active filters still show as chips below) */}
-      <button type="button" onClick={() => setFiltersOpen((o) => !o)} className={`${inputClass} flex w-full items-center justify-between sm:hidden`}>
+      <button type="button" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} aria-controls="contact-filter-fields" className={`${inputClass} flex w-full items-center justify-between sm:hidden`}>
         <span>Filters{activeChips.length ? ` · ${activeChips.length}` : ""}</span>
         <span className="text-slate">{filtersOpen ? "▲" : "▾"}</span>
       </button>
 
       {/* Line C: filters */}
-      <div className={`${filtersOpen ? "flex" : "hidden"} flex-wrap gap-2 sm:flex`}>
+      <div id="contact-filter-fields" className={`${filtersOpen ? "flex" : "hidden"} flex-wrap gap-2 sm:flex`}>
         <select value={sp.get("stage") ?? ""} onChange={(e) => push({ stage: e.target.value })} className={inputClass} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
         <select value={sp.get("segment") ?? ""} onChange={(e) => push({ segment: e.target.value })} className={inputClass} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((s) => <option key={s} value={s}>{SEGMENT_LABELS[s]}</option>)}</select>
         <select value={sp.get("source") ?? ""} onChange={(e) => push({ source: e.target.value })} className={inputClass} aria-label="Source"><option value="">All sources</option>{sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select>
@@ -141,14 +141,14 @@ function AddContactModal({ owners, onClose, onDone }: { owners: string[]; onClos
   return (
     <Modal title="Add contact" onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
-        <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" className={field} />
-        <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" className={field} />
-        <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" className={field} />
+        <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" aria-label="Name" className={field} />
+        <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" aria-label="Email" className={field} />
+        <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" aria-label="Phone" className={field} />
         <div className="flex gap-3">
-          <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" className={field} />
-          <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select>
+          <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" aria-label="Source" className={field} />
+          <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} aria-label="Stage" className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select>
         </div>
-        <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+        <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} aria-label="Owner" className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
         {err ? <p className="text-sm text-red">{err}</p> : null}
         <ModalActions pending={pending} onClose={onClose} label="Add contact" />
       </form>
@@ -234,7 +234,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
   return (
     <Modal title="Import contacts (CSV)" onClose={onClose}>
       <p className="mb-3 text-sm text-slate">Preview and validate up to 500 rows before importing. Existing emails will be updated, not duplicated.</p>
-      <input type="file" accept=".csv,text/csv" onChange={onFile} className="w-full text-sm" />
+      <input type="file" accept=".csv,text/csv" onChange={onFile} aria-label="Choose CSV file" className="w-full text-sm" />
       {file.rows.length ? <div className="mt-4 space-y-2">
         <p className="text-sm font-medium text-heading">Map CSV columns ({file.rows.length} rows)</p>
         <div className="grid grid-cols-2 gap-2">
@@ -265,8 +265,8 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-lg font-semibold text-heading">{title}</h3>
+      <div role="dialog" aria-modal="true" aria-labelledby="crm-modal-title" className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 id="crm-modal-title" className="mb-4 text-lg font-semibold text-heading">{title}</h3>
         {children}
       </div>
     </div>

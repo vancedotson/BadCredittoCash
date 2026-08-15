@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "./supabase/admin";
 import { decryptSecret, encryptSecret } from "./secret-crypto";
+import { isCrmDemoMode } from "./demo";
 
 export const GOOGLE_CALENDAR_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
@@ -63,6 +64,7 @@ export async function getGoogleCalendarStatus(): Promise<{
   timezone?: string;
   connectedAt?: string;
 }> {
+  if (isCrmDemoMode()) return { connected: false };
   const { data, error } = await createAdminClient().rpc("get_google_calendar_connection");
   if (error) throw new Error(error.message);
   const connection = (data as GoogleConnectionRow[] | null)?.[0];

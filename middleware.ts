@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 const isDev = process.env.NODE_ENV === "development";
 const contentSecurityPolicy = [
@@ -35,6 +36,18 @@ export async function middleware(request: NextRequest) {
   const protectedPath = request.nextUrl.pathname.startsWith("/crm")
     || request.nextUrl.pathname.startsWith("/api/crm");
   if (!protectedPath) return secure(NextResponse.next());
+
+  const localDemo = isDev && process.env.VANCE_ENABLE_DEMO_DATA === "true";
+  if (localDemo) return secure(NextResponse.next({ request }), true);
+
+  if (!hasSupabaseConfig()) {
+    if (request.nextUrl.pathname.startsWith("/api/crm")) {
+      return secure(NextResponse.json({ error: "Authentication required." }, { status: 401 }), true);
+    }
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    return secure(NextResponse.redirect(loginUrl), true);
+  }
 
   const { response, claims } = await updateSession(request);
   if (claims?.sub) return secure(response, true);

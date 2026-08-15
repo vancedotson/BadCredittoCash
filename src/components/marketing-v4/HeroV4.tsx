@@ -33,11 +33,7 @@ export function HeroV4() {
       {/* left-weighted scrim: dark behind the headline, clear over the city */}
       <div
         aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(90deg, rgba(6,6,7,0.94) 0%, rgba(6,6,7,0.78) 38%, rgba(6,6,7,0.32) 72%, rgba(6,6,7,0.15) 100%)",
-        }}
+        className="v4-hero-scrim absolute inset-0"
       />
       <div
         aria-hidden
@@ -72,8 +68,8 @@ export function HeroV4() {
             <span className="v3-accent-text">Find out</span> if they owe you.
           </h1>
           <p
-            className="mt-7"
-            style={{ fontSize: "clamp(16px,1.7vw,19px)", color: "var(--v3-mut)", maxWidth: 560, lineHeight: 1.6 }}
+            className="v4-hero-copy mt-7"
+            style={{ fontSize: "clamp(16px,1.7vw,19px)", maxWidth: 560, lineHeight: 1.6 }}
           >
             {site.hero.subhead}
           </p>

@@ -23,6 +23,7 @@ import { type TaskPriority, type TaskType, type Recurrence } from "./tasks";
 import { displayEvent, CATEGORY_LABELS, EVENT_CATEGORIES, type EventCategory } from "./event-display";
 import { createClient as createServerSupabaseClient } from "./supabase/server";
 import { createAdminClient } from "./supabase/admin";
+import { isCrmDemoMode } from "./demo";
 
 export type Lead = {
   id: string;
@@ -284,7 +285,7 @@ type StoreState = {
 
 // Bump when the seed shape changes so a long-running dev server (which pins state
 // to globalThis across hot-reloads) reseeds instead of serving a stale shape.
-const SEED_VERSION = 6;
+const SEED_VERSION = 7;
 
 function defaultProfile(): CrmProfile {
   return {
@@ -353,6 +354,7 @@ function journeyFor(level: Level): Array<{ ev: string; min: number; props?: Reco
 
 function seedState(): StoreState {
   const now = Date.now();
+  const startOfToday = new Date().setHours(0, 0, 0, 0);
   const profiles: Array<{
     name: string; email: string; src: string; d: number; level: Level;
     phone?: string; owner?: string; tags?: string[]; stage?: Stage;
@@ -382,7 +384,7 @@ function seedState(): StoreState {
   let en = 20000;
 
   for (const p of profiles) {
-    const reg = now - p.d * DAY + 10 * 60 * 60 * 1000; // ~10:00 that day
+    const reg = startOfToday - p.d * DAY + 10 * 60 * 60 * 1000; // 10:00 that day
     const journey = journeyFor(p.level);
     const last = journey.length ? reg + journey[journey.length - 1].min * 60 * 1000 : reg;
     leads.push({
@@ -431,7 +433,7 @@ function seedState(): StoreState {
   // evaluate this module in more than one server bundle, and a bundle that has
   // not yet hydrated from Supabase would otherwise expose the fake contacts.
   // They are available only for an explicitly opted-in local demo environment.
-  if (process.env.VANCE_ENABLE_DEMO_DATA === "true") {
+  if (isCrmDemoMode()) {
     return { version: SEED_VERSION, leads, events, notes, tasks, settings: defaultSettings(), counter: 30000 };
   }
   return { version: SEED_VERSION, leads: [], events: [], notes: [], tasks: [], settings: defaultSettings(), counter: 30000 };
@@ -535,6 +537,7 @@ async function ownerIdForName(name?: string): Promise<string | null> {
  * while the repository migration proceeds in functional slices.
  */
 export async function hydrateStore(): Promise<void> {
+  if (isCrmDemoMode()) return;
   const supabase = await createServerSupabaseClient();
   const [contactsResult, eventsResult, notesResult, tasksResult] = await Promise.all([
     supabase.from("contacts").select("*, owner:crm_users!contacts_owner_id_fkey(display_name), contact_tags(tags(name))"),
@@ -718,6 +721,16 @@ export async function getFunnelStats(): Promise<FunnelStats> {
 }
 
 async function getDurableFunnelStages(owner?: string): Promise<FunnelStage[]> {
+  if (isCrmDemoMode()) {
+    const stages = (await getFunnelStats()).stages;
+    if (!owner) return stages;
+    const emails = new Set(leads.filter((lead) => lead.owner === owner).map((lead) => lead.email));
+    return FUNNEL_STAGES.map((stage) => ({
+      key: stage.key,
+      label: stage.label,
+      count: new Set(events.filter((event) => event.event === stage.event && event.email && emails.has(event.email)).map((event) => event.email)).size,
+    }));
+  }
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.rpc("get_crm_funnel_metrics_v1", {
     p_owner: owner ?? "",
@@ -887,9 +900,31 @@ type DatabaseContactSearchResult = {
 
 /** One database query supplies the page, aggregate strip, and bulk-selection IDs. */
 export async function getContactsPageData(filter: ContactFilter = {}): Promise<ContactsPageData> {
-  const supabase = await createServerSupabaseClient();
   const page = Math.max(1, Math.trunc(filter.page ?? 1));
   const pageSize = Math.max(1, Math.min(100000, Math.trunc(filter.pageSize ?? 25)));
+  if (isCrmDemoMode()) {
+    const matching = filterAndSortContacts(filter);
+    const rows = matching.slice((page - 1) * pageSize, page * pageSize);
+    const booked = matching.filter((contact) => contact.booked).length;
+    const avgWatchPct = matching.length
+      ? Math.round(matching.reduce((total, contact) => total + contact.watchPct, 0) / matching.length)
+      : 0;
+    return {
+      rows,
+      total: matching.length,
+      page,
+      pageSize,
+      matchingIds: matching.map((contact) => contact.id),
+      sources: [...new Set(allEnrichedContacts().map(contactSource))].sort(),
+      summary: {
+        total: matching.length,
+        booked,
+        avgWatchPct,
+        byStage: STAGES_IN_ORDER.map((stage) => ({ stage, count: matching.filter((contact) => contact.stage === stage).length })),
+      },
+    };
+  }
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.rpc("search_crm_contacts", {
     p_search: filter.search ?? "", p_stage: filter.stage ?? "", p_segment: filter.segment ?? "",
     p_source: filter.source ?? "", p_owner: filter.owner ?? "", p_tag: filter.tag ?? "",
@@ -933,6 +968,9 @@ export async function getContactsPageData(filter: ContactFilter = {}): Promise<C
 
 /** Distinct tags across all contacts (for the tag filter). */
 export async function listTags(): Promise<string[]> {
+  if (isCrmDemoMode()) {
+    return [...new Set([...state.settings.tags, ...leads.flatMap((lead) => lead.tags ?? [])])].sort();
+  }
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.from("tags").select("name").order("name");
   if (error) throw new Error(error.message);
@@ -960,6 +998,7 @@ export async function deleteContact(id: string): Promise<boolean> {
 }
 
 export async function listTrashedContacts(): Promise<TrashedContact[]> {
+  if (isCrmDemoMode()) return [];
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("contact_trash")
@@ -1013,6 +1052,10 @@ export async function getContact(idOrEmail: string): Promise<ContactDetail | nul
 }
 
 export async function getSequenceQueueStats(): Promise<SequenceQueueStats> {
+  if (isCrmDemoMode()) {
+    const queued = events.filter((event) => event.event === EVENTS.emailQueued).length;
+    return { activeEnrollments: queued, scheduledMessages: 6, retryingMessages: 1, sentMessages: 24, failedMessages: 0 };
+  }
   const supabase = await createServerSupabaseClient();
   const [active, scheduled, retrying, sent, failed] = await Promise.all([
     supabase.from("sequence_enrollments").select("id", { count: "exact", head: true }).eq("status", "active"),
@@ -1033,6 +1076,7 @@ export async function getSequenceQueueStats(): Promise<SequenceQueueStats> {
 }
 
 export async function getRecentSequenceFailures(limit = 10): Promise<SequenceFailure[]> {
+  if (isCrmDemoMode()) return [];
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("scheduled_messages")
@@ -1357,6 +1401,9 @@ function uniq<T>(xs: T[]): T[] {
 
 /** Tags with how many contacts carry them (merges the registry so 0-count tags show). */
 export async function listTagsWithCounts(): Promise<Array<{ tag: string; count: number }>> {
+  if (isCrmDemoMode()) {
+    return (await listTags()).map((tag) => ({ tag, count: leads.filter((lead) => lead.tags?.includes(tag)).length }));
+  }
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.from("tags").select("name, contact_tags(count)").order("name");
   if (error) throw new Error(error.message);
@@ -1413,6 +1460,7 @@ export async function deleteTag(tag: string): Promise<void> {
 // -------------------------------------------------------------------------
 
 export async function getSettings(): Promise<CrmSettings> {
+  if (isCrmDemoMode()) return state.settings;
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.from("settings").select("value").eq("key", "crm").maybeSingle();
   if (error) throw new Error(error.message);
@@ -1464,7 +1512,7 @@ export async function getStoreStatus(): Promise<StoreStatus> {
   const tags = await listTagsWithCounts();
   const owners = await listOwners();
   return {
-    backend: "Supabase Postgres",
+    backend: isCrmDemoMode() ? "Local design-review data" : "Supabase Postgres",
     seedVersion: state.version,
     counts: { contacts: leads.length, events: events.length, notes: notes.length, tasks: tasks.length, tags: tags.length, owners: owners.length },
   };
@@ -1544,6 +1592,24 @@ export type Booking = { id: string; contactId?: string; contactName?: string; em
 
 /** Booked calls, resolved to contacts (for the calendar + upcoming panel). */
 export async function listBookings(): Promise<Booking[]> {
+  if (isCrmDemoMode()) {
+    return events
+      .filter((event) => event.event === EVENTS.booked && event.email)
+      .map((event) => {
+        const contact = leads.find((lead) => lead.email === event.email);
+        const start = new Date(event.createdAt);
+        return {
+          id: event.id,
+          contactId: contact?.id,
+          contactName: contact?.name,
+          email: event.email,
+          createdAt: start.toISOString(),
+          endsAt: new Date(start.getTime() + 30 * 60 * 1000).toISOString(),
+          timezone: state.settings.profile.timezone,
+          status: "confirmed",
+        };
+      });
+  }
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("bookings")
@@ -1656,9 +1722,21 @@ export async function getNavData(): Promise<NavData> {
     "failed_email",
     "failed_booking",
   ].filter((kind): kind is string => Boolean(kind));
-  const supabase = await createServerSupabaseClient();
   let notificationRows: Array<Record<string, unknown>> = [];
-  if (enabledKinds.length) {
+  if (isCrmDemoMode()) {
+    const preview = (await getOverview()).actions.slice(0, 5);
+    notificationRows = preview.map((item, index) => ({
+      id: `demo-${item.id}`,
+      kind: item.kind === "hot" ? "high_intent" : item.kind,
+      title: item.title,
+      subtitle: item.subtitle,
+      href: item.href,
+      tone: item.tone,
+      read_at: null,
+      created_at: new Date(Date.now() - index * 60_000).toISOString(),
+    }));
+  } else if (enabledKinds.length) {
+    const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from("crm_notifications")
       .select("id, kind, title, subtitle, href, tone, read_at, created_at")

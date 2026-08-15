@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Inter, Source_Serif_4, Staatliches, Open_Sans } from "next/font/google";
 import { site } from "@/config/site";
 import { PublicPageViewTracker } from "@/components/PublicPageViewTracker";
+import { ThemeBeforePaint } from "@/components/ThemeBeforePaint";
 import "./globals.css";
 
 // Headlines — Poppins (SemiBold/Bold). Body — Inter. Quotes — Source Serif 4.
@@ -53,13 +54,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${poppins.variable} ${inter.variable} ${openSans.variable} ${sourceSerif.variable} ${staatliches.variable} h-full antialiased`}
     >
+      <head>
+        <ThemeBeforePaint />
+      </head>
       <body className="min-h-full flex flex-col">
-        <script
-          // Set the theme before paint to avoid a flash.
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
-          }}
-        />
         <PublicPageViewTracker />
         {children}
       </body>

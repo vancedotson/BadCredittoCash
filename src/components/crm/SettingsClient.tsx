@@ -53,7 +53,7 @@ export function ProfileForm({ profile }: { profile: CrmProfile }) {
         {PROFILE_FIELDS.map((f) => (
           <label key={f.key} className="block">
             <span className="mb-1 block text-xs font-medium text-heading">{f.label}</span>
-            <input value={form[f.key]} placeholder={f.placeholder} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} className="w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust" />
+            <input value={form[f.key]} aria-label={f.label} placeholder={f.placeholder} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} className="w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust" />
             {f.hint ? <span className="mt-1 block text-xs text-slate">{f.hint}</span> : null}
           </label>
         ))}
@@ -338,7 +338,7 @@ export function NotificationForm({ notify }: { notify: NotifyPrefs }) {
             <span className="block text-sm font-medium text-body">{it.label}</span>
             <span className="block text-xs text-slate">{it.hint}</span>
           </span>
-          <button type="button" role="switch" aria-checked={state[it.key]} onClick={() => toggle(it.key)} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${state[it.key] ? "bg-trust" : "bg-mist"}`}>
+          <button type="button" role="switch" aria-label={it.label} aria-checked={state[it.key]} onClick={() => toggle(it.key)} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${state[it.key] ? "bg-trust" : "bg-mist"}`}>
             <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-all ${state[it.key] ? "left-[22px]" : "left-0.5"}`} />
           </button>
         </label>
@@ -403,7 +403,7 @@ export function DataManagement({ status }: { status: Status }) {
       <div className="space-y-3 rounded-xl border border-mist p-4">
         <div><h3 className="text-sm font-semibold text-heading">Restore a full backup</h3><p className="text-xs text-slate">Validation is read-only. The final restore replaces current CRM records in one database transaction.</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <input type="file" accept="application/json,.json" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setBackup(null); setConfirmation(""); setError(""); }} className="max-w-full text-sm text-body" />
+          <input type="file" accept="application/json,.json" aria-label="Choose backup file" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setBackup(null); setConfirmation(""); setError(""); }} className="max-w-full text-sm text-body" />
           <button type="button" disabled={!file || working} onClick={previewRestore} className={BTN_GHOST}>{working && !preview ? "Validating…" : "Validate backup"}</button>
         </div>
         {preview ? <div className="space-y-3 rounded-lg border border-gold/40 bg-gold/5 p-3 text-sm">
@@ -412,8 +412,8 @@ export function DataManagement({ status }: { status: Status }) {
           <label className="block"><span className="mb-1 block text-xs text-slate">Type <strong>RESTORE VANCE CRM</strong> to replace current CRM data.</span><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} className={INPUT} /></label>
           <button type="button" disabled={working || confirmation !== "RESTORE VANCE CRM"} onClick={restoreBackup} className="rounded-lg bg-red px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{working ? "Restoring…" : "Restore this backup"}</button>
         </div> : null}
-        {error ? <p className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
-        {message ? <p className="rounded-lg bg-green/10 px-3 py-2 text-sm text-green">{message}</p> : null}
+        {error ? <p role="alert" className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
+        {message ? <p role="status" className="rounded-lg bg-green/10 px-3 py-2 text-sm text-green">{message}</p> : null}
       </div>
     </div>
   );

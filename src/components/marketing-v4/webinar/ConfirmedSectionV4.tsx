@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { site } from "@/config/site-v3";
 import { track, getRememberedLead } from "@/lib/tracking";
 import { EVENTS } from "@/lib/events";
@@ -29,36 +29,99 @@ const labelStyle = {
   color: "var(--v3-faint)",
 };
 
-export function ConfirmedSectionV4() {
+export function ReviewableConfirmedSectionV4() {
+  const reviewState = useSearchParams().get("state");
+  const isQuestionTwo = reviewState === "quiz-2";
+  const isQuestionThree = reviewState === "quiz-3";
+  const isQuizReady = reviewState === "quiz-ready";
+  const isQuizLoading = reviewState === "quiz-loading";
+  const isReviewMode = reviewState?.startsWith("quiz-") ?? false;
+  let initialAnswers: Record<string, string> | undefined;
+  if (isQuizReady || isQuizLoading) {
+    initialAnswers = {
+      concern: STEPS[0].options[0],
+      tried: STEPS[1].options[0],
+      urgency: STEPS[2].options[0],
+    };
+  } else if (isQuestionThree) {
+    initialAnswers = { concern: STEPS[0].options[0], tried: STEPS[1].options[0] };
+  } else if (isQuestionTwo) {
+    initialAnswers = { concern: STEPS[0].options[0] };
+  }
+
+  return (
+    <ConfirmedSectionV4
+      key={reviewState ?? "quiz-default"}
+      initialStep={isQuizReady || isQuizLoading || isQuestionThree ? 2 : isQuestionTwo ? 1 : 0}
+      initialAnswers={initialAnswers}
+      focusActionOnLoad={isQuizReady || isQuizLoading}
+      initialSubmitting={isQuizLoading}
+      reviewMode={isReviewMode}
+      trackView={!isReviewMode}
+    />
+  );
+}
+
+export function ConfirmedSectionV4({
+  initialStep = 0,
+  initialAnswers = {},
+  focusActionOnLoad = false,
+  initialSubmitting = false,
+  reviewMode = false,
+  trackView = true,
+}: {
+  initialStep?: number;
+  initialAnswers?: Record<string, string>;
+  focusActionOnLoad?: boolean;
+  initialSubmitting?: boolean;
+  reviewMode?: boolean;
+  trackView?: boolean;
+} = {}) {
   const ref = useReveal<HTMLDivElement>();
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
+  const actionRef = useRef<HTMLDivElement>(null);
+  const [step, setStep] = useState(() => Math.min(Math.max(initialStep, 0), STEPS.length - 1));
+  const [answers, setAnswers] = useState<Record<string, string>>(() => initialAnswers);
+  const [submitting, setSubmitting] = useState(initialSubmitting);
   const startedRef = useRef(false);
 
   useEffect(() => {
+    if (!trackView) return;
     track(EVENTS.confirmedView, {}, getRememberedLead()?.email);
-  }, []);
+  }, [trackView]);
+
+  useEffect(() => {
+    if (!focusActionOnLoad) return;
+    const timer = setTimeout(() => actionRef.current?.scrollIntoView({ block: "center" }), 350);
+    return () => clearTimeout(timer);
+  }, [focusActionOnLoad]);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
   const selected = answers[current.id];
 
   function choose(option: string) {
+    if (submitting) return;
     if (!startedRef.current) {
       startedRef.current = true;
-      track(EVENTS.quizStarted, {}, getRememberedLead()?.email);
+      if (!reviewMode) track(EVENTS.quizStarted, {}, getRememberedLead()?.email);
     }
     setAnswers((a) => ({ ...a, [current.id]: option }));
-    if (!isLast) setStep((s) => Math.min(STEPS.length - 1, s + 1));
+  }
+
+  function continueQuiz() {
+    if (!selected || isLast) return;
+    setStep((s) => Math.min(STEPS.length - 1, s + 1));
   }
 
   function submit() {
+    if (submitting) return;
     setSubmitting(true);
     const email = getRememberedLead()?.email;
-    track(EVENTS.quizCompleted, { ...answers }, email);
-    if (answers.concern) track(EVENTS.goalReplied, { goal: answers.concern }, email);
+    if (!reviewMode) {
+      track(EVENTS.quizCompleted, { ...answers }, email);
+      if (answers.concern) track(EVENTS.goalReplied, { goal: answers.concern }, email);
+    }
     router.push("/webinar/room");
   }
 
@@ -67,7 +130,7 @@ export function ConfirmedSectionV4() {
       <SectionScan />
       <div className="v3-wrap" ref={ref}>
         {/* TOP CONTAINER — where they are in the webinar journey (this = step 2) */}
-        <FunnelProgress current={2} note="Almost there. Your training is next." />
+        <FunnelProgress current={2} note="You're registered. Choose what matters most." />
 
         {/* On mobile the action must not be buried: order heading -> quiz -> learn.
             On lg the grid places heading (col1/row1) + learn (col1/row2) beside the
@@ -81,7 +144,7 @@ export function ConfirmedSectionV4() {
               <span style={{ color: "var(--v3-accent)" }}>Your training is ready.</span>
             </h1>
             <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
-              {wb.confirm.body}
+              Your place is saved. The training is ready whenever you are. Answer three quick questions so I can point you to the most useful part.
             </p>
           </div>
 
@@ -104,7 +167,11 @@ export function ConfirmedSectionV4() {
 
           {/* Quiz card — right after the heading on mobile */}
           <Reveal delay={1} className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2">
-            <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
+            <div
+              className="v3-panel v3-corner p-7 sm:p-9"
+              aria-busy={submitting}
+              style={{ borderRadius: 4 }}
+            >
               <p style={{ fontSize: 15.5, color: "var(--v3-ink)", lineHeight: 1.5 }}>
                 {quiz.intro}
               </p>
@@ -117,19 +184,31 @@ export function ConfirmedSectionV4() {
                   {quiz.progress[step]}
                 </span>
               </div>
-              <h3 className="v3-display mt-2.5" style={{ fontSize: 20, lineHeight: 1.15 }}>
+              <fieldset className="mt-2.5">
+              <legend className="v3-display" style={{ fontSize: 20, lineHeight: 1.15 }}>
                 {current.question}
-              </h3>
+              </legend>
+              <p
+                id={`quiz-${current.id}-guidance`}
+                className="mt-2"
+                aria-live="polite"
+                style={{ fontSize: 13, color: selected ? "var(--v3-accent)" : "var(--v3-mut)" }}
+              >
+                {isLast
+                  ? selected
+                    ? "Answer selected. Open the training when ready."
+                    : "Choose one answer to open the training."
+                  : selected
+                    ? "Answer selected. Continue when ready."
+                    : "Choose one answer to continue."}
+              </p>
               <div className="mt-4 flex flex-col gap-2.5">
                 {current.options.map((opt, oi) => {
                   const isSel = selected === opt;
                   return (
-                    <button
+                    <label
                       key={opt}
-                      type="button"
-                      onClick={() => choose(opt)}
-                      aria-pressed={isSel}
-                      className="flex items-center gap-3 rounded-sm px-3 py-2.5 text-left transition-colors"
+                      className="v4-quiz-option flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-left transition-colors"
                       style={{
                         border: `1px solid ${isSel ? "var(--v3-accent)" : "var(--v3-line)"}`,
                         background: isSel ? "color-mix(in srgb, var(--v3-accent) 12%, transparent)" : "rgba(0,0,0,0.28)",
@@ -137,6 +216,16 @@ export function ConfirmedSectionV4() {
                         fontSize: 15,
                       }}
                     >
+                      <input
+                        type="radio"
+                        name={`quiz-${current.id}`}
+                        value={opt}
+                          checked={isSel}
+                          disabled={submitting}
+                          onChange={() => choose(opt)}
+                        aria-describedby={`quiz-${current.id}-guidance`}
+                        className="sr-only"
+                      />
                       {/* numbered badge — signals these are the choices to click */}
                       <span
                         className="v3-mono grid place-items-center"
@@ -159,17 +248,19 @@ export function ConfirmedSectionV4() {
                           <CheckIcon className="h-4 w-4" />
                         </span>
                       ) : null}
-                    </button>
+                    </label>
                   );
                 })}
               </div>
+              </fieldset>
 
-              <div className="mt-6 flex items-center justify-between gap-3">
+              <div ref={actionRef} className="mt-6 flex items-center justify-between gap-3">
                 {step > 0 ? (
                   <button
                     type="button"
                     onClick={() => setStep((s) => Math.max(0, s - 1))}
-                    className="v3-mono"
+                    disabled={submitting}
+                    className="v4-quiz-back v3-mono whitespace-nowrap rounded-sm px-1 py-2 disabled:cursor-not-allowed disabled:opacity-50 sm:px-3"
                     style={{ fontSize: 12, letterSpacing: "0.1em", color: "var(--v3-mut)" }}
                   >
                     &larr; Back
@@ -187,22 +278,55 @@ export function ConfirmedSectionV4() {
                     style={{ paddingLeft: 12 }}
                   >
                     <span className="v3-btn-badge">
-                      <ArrowRightIcon className="h-4 w-4" />
+                      {submitting ? (
+                        <span
+                          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <ArrowRightIcon className="h-4 w-4" />
+                      )}
                     </span>
-                    {submitting ? "Opening the training…" : quiz.submitLabel}
+                    {submitting ? "Opening the training..." : quiz.submitLabel}
                   </button>
                 ) : (
-                  <span className="v3-mono" style={{ fontSize: 11.5, color: "var(--v3-faint)" }}>
-                    Tap an answer to continue
-                  </span>
+                  <button
+                    type="button"
+                    onClick={continueQuiz}
+                    disabled={!selected}
+                    className="v3-btn v3-btn-primary v3-clip disabled:opacity-50"
+                  >
+                    Continue
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </button>
                 )}
               </div>
+
+              {submitting ? (
+                <p
+                  role="status"
+                  className="mt-3 text-right"
+                  style={{ fontSize: 13, color: "var(--v3-accent)" }}
+                >
+                  Opening your training. Please wait.
+                </p>
+              ) : null}
 
               <div className="mt-5 text-center" style={{ borderTop: "1px solid var(--v3-line)", paddingTop: 16 }}>
                 <Link
                   href="/webinar/room"
+                  aria-disabled={submitting}
+                  tabIndex={submitting ? -1 : undefined}
+                  onClick={submitting ? (event) => event.preventDefault() : undefined}
                   className="v3-mono inline-block py-1.5"
-                  style={{ fontSize: 12, color: "var(--v3-faint)", letterSpacing: "0.04em" }}
+                  style={{
+                    fontSize: 13,
+                    color: "var(--v3-mut)",
+                    letterSpacing: "0.02em",
+                    textDecoration: "underline",
+                    opacity: submitting ? 0.5 : 1,
+                    pointerEvents: submitting ? "none" : "auto",
+                  }}
                 >
                   Prefer to skip? {wb.confirm.watchCta}
                 </Link>

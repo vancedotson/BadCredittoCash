@@ -6,7 +6,7 @@ import { WATCH_MILESTONES } from "@/lib/events";
 
 /**
  * Placeholder webinar player. There's no real recording yet (that's Vance's to
- * produce), so this simulates playback on a short demo timeline while firing the
+ * produce), so this simulates playback on the published runtime while firing the
  * SAME watch-progress signals a real <video> would: it calls `onMilestone` as
  * playback crosses 25/50/75/90 percent, `onPitch` at the transition mark (so the
  * room can reveal its CTA exactly where the script pitches), and `onComplete` at
@@ -21,6 +21,8 @@ type WebinarPlayerProps = {
   durationSec?: number;
   pitchAt?: number; // fraction 0..1
   chapters?: readonly string[];
+  initialPlaying?: boolean;
+  initialTimeSec?: number;
   onMilestone?: (pct: number) => void;
   onPitch?: () => void;
   onComplete?: () => void;
@@ -34,16 +36,19 @@ function fmt(s: number): string {
 
 export function WebinarPlayer({
   title,
-  durationSec = 45,
+  durationSec = 35 * 60,
   pitchAt = 0.7,
   chapters = [],
+  initialPlaying = false,
+  initialTimeSec = 0,
   onMilestone,
   onPitch,
   onComplete,
 }: WebinarPlayerProps) {
-  const [playing, setPlaying] = useState(false);
-  const [t, setT] = useState(0);
-  const tRef = useRef(0);
+  const safeInitialTime = Math.max(0, Math.min(durationSec, initialTimeSec));
+  const [playing, setPlaying] = useState(initialPlaying);
+  const [t, setT] = useState(safeInitialTime);
+  const tRef = useRef(safeInitialTime);
   const firedRef = useRef<Set<number>>(new Set());
   const pitchedRef = useRef(false);
   const completedRef = useRef(false);
@@ -107,10 +112,15 @@ export function WebinarPlayer({
   }
 
   const progress = durationSec ? (t / durationSec) * 100 : 0;
+  const isComplete = t >= durationSec;
+  const isPaused = !playing && t > 0 && !isComplete;
 
   return (
     <div
       className="v3-corner relative overflow-hidden"
+      role="region"
+      aria-label={`Training player: ${title}`}
+      data-player-state={playing ? "playing" : isComplete ? "completed" : isPaused ? "paused" : "idle"}
       style={{
         border: "1px solid var(--v3-line)",
         borderRadius: 4,
@@ -121,17 +131,31 @@ export function WebinarPlayer({
       {/* demo marker — honest about the placeholder */}
       <span
         className="v3-mono absolute left-4 top-4 z-10"
-        style={{ fontSize: 9.5, letterSpacing: "0.24em", color: "var(--v3-faint)" }}
+        style={{ fontSize: 9.5, letterSpacing: "0.24em", color: "var(--v3-mut)" }}
       >
-        DEMO PLAYER // PLACEHOLDER
+        FREE TRAINING
       </span>
+
+      {playing ? (
+        <span
+          className="v3-mono absolute right-4 top-4 z-10 flex items-center gap-2"
+          style={{ fontSize: 9.5, letterSpacing: "0.18em", color: "var(--v3-accent)" }}
+        >
+          <span
+            className="h-2 w-2 animate-pulse rounded-full bg-[var(--v3-accent)]"
+            aria-hidden="true"
+          />
+          PLAYING
+        </span>
+      ) : null}
 
       {/* stage: title + audio-wave while playing, big play glyph when idle */}
       <button
         type="button"
         onClick={toggle}
-        aria-label={playing ? "Pause" : "Play"}
-        className="absolute inset-0 grid place-items-center outline-none"
+        aria-label={playing ? "Pause" : isComplete ? "Replay" : "Play"}
+        aria-pressed={playing}
+        className="v4-player-stage absolute inset-0 grid place-items-center outline-none"
         style={{ cursor: "pointer" }}
       >
         {playing ? (
@@ -140,29 +164,47 @@ export function WebinarPlayer({
               <i key={k} style={{ height: `${20 + ((k * 7) % 80)}%`, animationDelay: `${(k % 8) * 0.06}s` }} />
             ))}
           </div>
+        ) : isComplete ? (
+          <span className="v4-player-start flex flex-col items-center gap-2 sm:gap-4" aria-live="polite">
+            <span
+              className="v4-player-start-icon grid place-items-center"
+              style={{
+                borderRadius: "50%",
+                background: "color-mix(in srgb, var(--v3-accent) 22%, transparent)",
+                border: "1px solid var(--v3-accent)",
+                color: "var(--v3-accent)",
+              }}
+            >
+              <PlayIcon className="h-8 w-8" />
+            </span>
+            <span
+              className="v3-mono"
+              style={{ fontSize: "clamp(10px,2.8vw,12px)", letterSpacing: "0.14em", color: "var(--v3-ink)" }}
+            >
+              Training complete
+            </span>
+          </span>
         ) : (
-          <span
-            className="grid place-items-center"
-            style={{
-              width: 76,
-              height: 76,
-              borderRadius: "50%",
-              background: "color-mix(in srgb, var(--v3-accent) 22%, transparent)",
-              border: "1px solid var(--v3-accent)",
-              color: "var(--v3-accent)",
-            }}
-          >
-            <PlayIcon className="h-8 w-8" />
+          <span className="v4-player-start flex flex-col items-center gap-2 sm:gap-4">
+            <span
+              className="v4-player-start-icon grid place-items-center"
+              style={{
+                borderRadius: "50%",
+                background: "color-mix(in srgb, var(--v3-accent) 22%, transparent)",
+                border: "1px solid var(--v3-accent)",
+                color: "var(--v3-accent)",
+              }}
+            >
+              <PlayIcon className="h-8 w-8" />
+            </span>
+            <span
+              className="v3-mono"
+              style={{ fontSize: "clamp(9px,2.8vw,11px)", letterSpacing: "0.14em", color: "var(--v3-mut)" }}
+            >
+              {isPaused ? "Press play to continue" : "Press play to start"}
+            </span>
           </span>
         )}
-        {/* Title overlay is redundant with the page <h1>; hide on phones where the
-            short 16:9 frame makes it collide with the play button. */}
-        <span
-          className="v3-display absolute hidden px-6 text-center sm:block"
-          style={{ bottom: 64, fontSize: "clamp(16px,2.4vw,26px)", color: "var(--v3-ink)", maxWidth: "80%" }}
-        >
-          {title}
-        </span>
       </button>
 
       {/* controls */}
@@ -171,6 +213,7 @@ export function WebinarPlayer({
           role="slider"
           aria-label="Seek"
           aria-valuenow={Math.round(progress)}
+          aria-valuetext={`${fmt(t)} of ${fmt(durationSec)}`}
           aria-valuemin={0}
           aria-valuemax={100}
           tabIndex={0}
@@ -179,10 +222,24 @@ export function WebinarPlayer({
             seek((e.clientX - r.left) / r.width);
           }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowRight") seek((t + durationSec * 0.1) / durationSec);
-            if (e.key === "ArrowLeft") seek((t - durationSec * 0.1) / durationSec);
+            if (e.key === "ArrowRight") {
+              e.preventDefault();
+              seek((t + durationSec * 0.1) / durationSec);
+            }
+            if (e.key === "ArrowLeft") {
+              e.preventDefault();
+              seek((t - durationSec * 0.1) / durationSec);
+            }
+            if (e.key === "Home") {
+              e.preventDefault();
+              seek(0);
+            }
+            if (e.key === "End") {
+              e.preventDefault();
+              seek(1);
+            }
           }}
-          className="relative"
+          className="v4-player-seek relative"
           style={{ height: 14, cursor: "pointer", display: "flex", alignItems: "center" }}
         >
           <div style={{ position: "absolute", inset: "0 0", top: "50%", height: 4, transform: "translateY(-50%)", background: "var(--v3-line)", borderRadius: 2 }} />
@@ -205,11 +262,16 @@ export function WebinarPlayer({
           ))}
         </div>
         <div className="mt-1 flex items-center justify-between">
-          <button type="button" onClick={toggle} className="v3-mono" style={{ fontSize: 11, color: "var(--v3-mut)", letterSpacing: "0.1em" }}>
-            {playing ? "❚❚ PAUSE" : "▶ PLAY"}
+          <button
+            type="button"
+            onClick={toggle}
+            className="v3-mono v4-player-control"
+            style={{ fontSize: 11, color: "var(--v3-mut)", letterSpacing: "0.1em" }}
+          >
+            {playing ? "PAUSE" : isComplete ? "REPLAY" : "PLAY"}
           </button>
           <span className="v3-mono" style={{ fontSize: 11, color: "var(--v3-faint)" }}>
-            {fmt(t)} / {fmt(durationSec)}
+            {fmt(t)} / {fmt(durationSec)} · {Math.round(progress)}%
           </span>
         </div>
       </div>

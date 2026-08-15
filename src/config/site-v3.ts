@@ -451,7 +451,7 @@ export const site = {
     call: {
       kicker: "INTAKE // BOOK YOUR CALL",
       heading: "Book your free strategy call.",
-      body: "You've seen the method. This call is where we point it at your situation. We look at what's happening to you, see whether you have a case, and I tell you the honest next step. No cost, no obligation.",
+      body: "Pick a free 30-minute call. I’ll review your situation, tell you whether you may have a case, and explain the honest next step.",
       covers: [
         "We review the calls you're getting and the items on your report.",
         "We find out whether there's a violation to hold them to.",
@@ -475,11 +475,15 @@ export const site = {
     booked: {
       kicker: "CONFIRMED // CALL BOOKED",
       heading: "Your call is booked.",
-      body: "Good move. Here's how to make our time count. Do these three things before we talk and we'll get much further, much faster.",
+      body: "You’re confirmed. We’ll send the appointment time by email. Add it to your calendar, then use the checklist below.",
       checklist: [
-        "Pull your credit reports from all three bureaus. They're free at annualcreditreport.com.",
-        "Gather any collection letters, texts, or voicemails you still have.",
-        "Write down the items you think are wrong or aren't yours.",
+        {
+          text: "Pull your credit reports from all three bureaus for free at",
+          linkLabel: "AnnualCreditReport.com",
+          href: "https://www.annualcreditreport.com/",
+        },
+        { text: "Gather any collection letters, texts, or voicemails you still have." },
+        { text: "Write down the items you think are wrong or aren't yours." },
       ],
     },
   },

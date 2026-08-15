@@ -3,8 +3,16 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isCrmDemoMode } from "@/lib/demo";
 
 export async function getCrmUser() {
+  if (isCrmDemoMode()) {
+    return {
+      sub: "local-design-review",
+      crmRole: "admin" as const,
+      displayName: "Vance",
+    };
+  }
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
 

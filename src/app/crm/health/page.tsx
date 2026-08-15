@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const styles: Record<HealthState, { dot: string; badge: string; label: string }> = {
   healthy: { dot: "bg-green", badge: "bg-green/12 text-green", label: "Healthy" },
   warning: { dot: "bg-gold", badge: "bg-gold/15 text-gold-deep", label: "Attention" },
-  error: { dot: "bg-red", badge: "bg-red/10 text-red", label: "Unavailable" },
+  error: { dot: "bg-red", badge: "border border-red/30 bg-card text-red", label: "Unavailable" },
 };
 
 export default async function HealthPage() {

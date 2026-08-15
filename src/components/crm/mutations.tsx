@@ -8,7 +8,7 @@ import type { Task } from "@/lib/store";
 import { CheckIcon } from "@/components/marketing-v2/Icons";
 
 const inputClass =
-  "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate/60 focus:border-trust";
+  "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

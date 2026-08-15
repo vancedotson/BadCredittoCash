@@ -440,6 +440,20 @@
 .v3-accent-text {
   color: var(--v3-accent);
 }
+
+/* The hero copy must stay readable over the skyline on every screen size. */
+.v4-hero-scrim {
+  background: linear-gradient(
+    90deg,
+    rgba(6, 6, 7, 0.96) 0%,
+    rgba(6, 6, 7, 0.82) 42%,
+    rgba(6, 6, 7, 0.32) 72%,
+    rgba(6, 6, 7, 0.15) 100%
+  );
+}
+.v4-hero-copy {
+  color: color-mix(in srgb, var(--v3-ink) 82%, transparent);
+}
 /* silver -> accent gradient headline (Editorial-noir touch) */
 .v3-grad {
   background: linear-gradient(
@@ -700,6 +714,48 @@
 }
 .v3-wave.playing i {
   animation: v3Wave 0.9s ease-in-out infinite;
+}
+
+/* Webinar player controls ------------------------------------------------- */
+.v4-player-stage:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--v3-accent);
+}
+.v4-player-start-icon {
+  width: 76px;
+  height: 76px;
+}
+.v4-player-seek:focus-visible {
+  outline: 2px solid var(--v3-accent);
+  outline-offset: 3px;
+}
+.v4-player-control {
+  min-width: 52px;
+  min-height: 32px;
+  border-radius: 2px;
+}
+.v4-player-control:focus-visible {
+  outline: 2px solid var(--v3-accent);
+  outline-offset: 2px;
+}
+.v4-booking-input:focus-visible {
+  border-color: var(--v3-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v3-accent) 22%, transparent);
+}
+.v4-booking-input[aria-invalid="true"] {
+  border-color: var(--v3-danger) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v3-danger) 18%, transparent);
+}
+.v4-registration-input:focus-visible {
+  border-color: var(--v3-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v3-accent) 22%, transparent);
+}
+.v4-quiz-option:focus-within {
+  outline: 2px solid var(--v3-accent);
+  outline-offset: 2px;
+}
+.v4-quiz-back:focus-visible {
+  outline: 2px solid var(--v3-accent);
+  outline-offset: 2px;
 }
 
 /* On-load cinematic intro -------------------------------------------------- */
@@ -1984,6 +2040,23 @@
 
 /* Mobile ------------------------------------------------------------------- */
 @media (max-width: 760px) {
+  .v4-player-start {
+    transform: translateY(-10px);
+  }
+  .v4-player-start-icon {
+    width: 58px;
+    height: 58px;
+  }
+
+  .v4-hero-scrim {
+    background: linear-gradient(
+      180deg,
+      rgba(6, 6, 7, 0.82) 0%,
+      rgba(6, 6, 7, 0.7) 58%,
+      rgba(6, 6, 7, 0.96) 100%
+    );
+  }
+
   .v3-scene-sticky {
     position: relative;
     min-height: auto;

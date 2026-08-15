@@ -22,8 +22,10 @@ export function SlotPicker({
   onTime,
   dayLayout = "row",
   labelSize = 10,
+  timezoneLabel = "",
   unavailableStarts = new Set<string>(),
   busyIntervals = [],
+  disabled = false,
 }: {
   days: Day[];
   dayKey: string;
@@ -33,8 +35,10 @@ export function SlotPicker({
   /** "row" = horizontal scroll strip (default); "calendar" = week-grid calendar. */
   dayLayout?: "row" | "calendar";
   labelSize?: number;
+  timezoneLabel?: string;
   unavailableStarts?: Set<string>;
   busyIntervals?: Array<{ start: string; end: string }>;
+  disabled?: boolean;
 }) {
   const slotLabel = slotLabelOf(days, dayKey, time);
   const lbl = { ...labelStyle, fontSize: labelSize };
@@ -69,7 +73,10 @@ export function SlotPicker({
                   <button
                     key={i}
                     type="button"
+                    disabled={disabled}
                     onClick={() => onDay(c.key)}
+                    aria-label={c.full}
+                    aria-pressed={c.key === dayKey}
                     className="rounded-sm px-1 py-2 text-center transition-colors"
                     style={{
                       border: `1px solid ${c.key === dayKey ? "var(--v3-accent)" : "var(--v3-line)"}`,
@@ -91,7 +98,10 @@ export function SlotPicker({
                 <button
                   key={d.key}
                   type="button"
+                  disabled={disabled}
                   onClick={() => onDay(d.key)}
+                  aria-label={d.full}
+                  aria-pressed={sel}
                   className="shrink-0 rounded-sm px-3 py-2 text-center transition-colors"
                   style={{
                     minWidth: 62,
@@ -111,6 +121,11 @@ export function SlotPicker({
 
       <div>
         <span className="v3-mono mb-2 block" style={lbl}>Available times</span>
+        {timezoneLabel ? (
+          <p className="mb-2.5" style={{ fontSize: 13, color: "var(--v3-mut)", lineHeight: 1.4 }}>
+            Times shown in {timezoneLabel}.
+          </p>
+        ) : null}
         <div className="grid grid-cols-2 gap-2">
           {TIMES.map((t) => {
             const sel = t === time;
@@ -127,16 +142,18 @@ export function SlotPicker({
               <button
                 key={t}
                 type="button"
-                onClick={() => !unavailable && onTime(t)}
-                disabled={unavailable}
+                data-booking-time={t}
+                onClick={() => !disabled && !unavailable && onTime(t)}
+                disabled={disabled || unavailable}
+                aria-pressed={sel}
                 className="v3-mono rounded-sm px-3 py-3 transition-colors"
                 style={{
                   fontSize: 15,
                   border: `1px solid ${sel ? "var(--v3-accent)" : "var(--v3-line)"}`,
                   background: sel ? "color-mix(in srgb, var(--v3-accent) 14%, transparent)" : "rgba(0,0,0,0.25)",
                   color: unavailable ? "var(--v3-faint)" : sel ? "var(--v3-ink)" : "var(--v3-mut)",
-                  opacity: unavailable ? 0.45 : 1,
-                  cursor: unavailable ? "not-allowed" : "pointer",
+                  opacity: unavailable ? 0.45 : disabled ? 0.7 : 1,
+                  cursor: disabled || unavailable ? "not-allowed" : "pointer",
                 }}
               >
                 {t}{unavailable ? " — Booked" : ""}
@@ -145,7 +162,9 @@ export function SlotPicker({
           })}
         </div>
         <p className="v3-mono mt-3" style={{ fontSize: 12.5, color: slotLabel ? "var(--v3-accent)" : "var(--v3-faint)" }}>
-          {slotLabel ? `Selected: ${slotLabel}` : "Pick a day and a time above."}
+          {slotLabel
+            ? `Selected: ${slotLabel}${timezoneLabel ? ` — ${timezoneLabel}` : ""}`
+            : "Pick a day and a time above."}
         </p>
       </div>
     </div>

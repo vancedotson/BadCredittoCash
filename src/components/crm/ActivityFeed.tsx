@@ -7,7 +7,7 @@ import { displayEvent, EVENT_CATEGORIES, CATEGORY_LABELS } from "@/lib/event-dis
 import { EventGlyph, toneClass } from "./ui";
 
 const DAY = 86400000;
-const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate/60 focus:border-trust";
+const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
 
 function startOfDay(d: Date) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
 function dayLabel(iso: string) {
@@ -52,9 +52,15 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
   const [total, setTotal] = useState(0);
   const [summary, setSummary] = useState<ActivitySummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const PAGE = 40;
+  async function fetchActivity(offset: number) {
+    const response = await fetch(`/api/crm/activity?${qs(offset)}`);
+    if (!response.ok) throw new Error("Activity could not be loaded.");
+    return response.json();
+  }
   function qs(offset: number) {
     const p = new URLSearchParams();
     if (search.trim()) p.set("search", search.trim());
@@ -72,8 +78,15 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
   useEffect(() => {
     const t = setTimeout(async () => {
       setLoading(true);
-      const res = await fetch(`/api/crm/activity?${qs(0)}`).then((r) => r.json());
-      setItems(res.items); setTotal(res.total); setSummary(res.summary); setLoading(false);
+      setError(null);
+      try {
+        const res = await fetchActivity(0);
+        setItems(res.items); setTotal(res.total); setSummary(res.summary);
+      } catch {
+        setError("Activity could not be loaded. Check the connection and try again.");
+      } finally {
+        setLoading(false);
+      }
     }, 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -95,8 +108,16 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
     setItems((prev) => [...prev, ...res.items]); setTotal(res.total);
   }
   async function refresh() {
-    const res = await fetch(`/api/crm/activity?${qs(0)}`).then((r) => r.json());
-    setItems(res.items); setTotal(res.total); setSummary(res.summary);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchActivity(0);
+      setItems(res.items); setTotal(res.total); setSummary(res.summary);
+    } catch {
+      setError("Activity could not be loaded. Check the connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
   async function exportCsv() {
     const res = await fetch(`/api/crm/activity?${qs(0).replace(/limit=\d+/, "limit=100000")}`).then((r) => r.json());
@@ -127,29 +148,34 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search contact or event…" className={`${inputClass} min-w-[180px] flex-1`} />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search contact or event…" aria-label="Search activity" className={`${inputClass} min-w-[180px] flex-1`} />
         <select value={owner} onChange={(e) => setOwner(e.target.value)} className={inputClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} aria-label="From" />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputClass} aria-label="To" />
         <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">
-          {(["date", "contact"] as const).map((g) => <button key={g} type="button" onClick={() => setGroup(g)} className={`rounded-md px-2.5 py-1.5 ${group === g ? "bg-navy text-white" : "text-slate"}`}>{g === "date" ? "By date" : "By contact"}</button>)}
+          {(["date", "contact"] as const).map((g) => <button key={g} type="button" aria-pressed={group === g} onClick={() => setGroup(g)} className={`rounded-md px-2.5 py-1.5 ${group === g ? "bg-navy text-white" : "text-slate"}`}>{g === "date" ? "By date" : "By contact"}</button>)}
         </div>
         <button type="button" onClick={refresh} className={inputClass}>Refresh</button>
-        <button type="button" onClick={() => setLive((v) => !v)} className={`${inputClass} ${live ? "border-green text-green" : ""}`}>{live ? "● Live" : "Go live"}</button>
+        <button type="button" aria-pressed={live} onClick={() => setLive((v) => !v)} className={`${inputClass} ${live ? "border-green text-green" : ""}`}>{live ? "● Live" : "Go live"}</button>
         <button type="button" onClick={exportCsv} className={inputClass}>Export</button>
       </div>
 
       {/* Category chips */}
       <div className="flex flex-wrap gap-1.5">
-        <button type="button" onClick={() => { setCategory(""); }} className={`rounded-full px-3 py-1 text-sm ${!category ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>All</button>
-        {EVENT_CATEGORIES.map((c) => <button key={c} type="button" onClick={() => setCategory(category === c ? "" : c)} className={`rounded-full px-3 py-1 text-sm ${category === c ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>{CATEGORY_LABELS[c]}</button>)}
-        <button type="button" onClick={() => setImportant((v) => !v)} className={`rounded-full px-3 py-1 text-sm ${important ? "bg-gold text-ink" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>★ Important</button>
+        <button type="button" aria-pressed={!category} onClick={() => { setCategory(""); }} className={`rounded-full px-3 py-1 text-sm ${!category ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>All</button>
+        {EVENT_CATEGORIES.map((c) => <button key={c} type="button" aria-pressed={category === c} onClick={() => setCategory(category === c ? "" : c)} className={`rounded-full px-3 py-1 text-sm ${category === c ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>{CATEGORY_LABELS[c]}</button>)}
+        <button type="button" aria-pressed={important} onClick={() => setImportant((v) => !v)} className={`rounded-full px-3 py-1 text-sm ${important ? "bg-gold text-ink" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>★ Important</button>
       </div>
 
       {/* Feed */}
       <div className="rounded-2xl border border-mist bg-card p-5">
         {loading && items.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate">Loading…</p>
+          <p role="status" className="py-6 text-center text-sm text-slate">Loading activity…</p>
+        ) : error ? (
+          <div role="alert" className="flex flex-wrap items-center justify-center gap-3 py-6 text-sm text-red">
+            <span>{error}</span>
+            <button type="button" onClick={refresh} className="font-semibold underline">Retry</button>
+          </div>
         ) : items.length === 0 ? (
           <p className="py-6 text-center text-sm text-slate">No activity matches these filters.</p>
         ) : (
@@ -168,7 +194,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
                           <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${toneClass(d.tone)}`}><EventGlyph icon={d.icon} className="h-3.5 w-3.5" /></span>
                           <span className="min-w-0 flex-1 truncate text-body">
                             {d.label}
-                            {e.contactId ? <> · <Link href={`/crm/contacts/${e.contactId}`} className="text-trust hover:underline">{e.contactName}</Link></> : e.email ? <span className="text-slate"> · {e.email}</span> : <span className="text-slate"> · anonymous</span>}
+                            {e.contactId ? <> · <Link href={`/crm/contacts/${e.contactId}`} className="text-trust underline underline-offset-2">{e.contactName}</Link></> : e.email ? <span className="text-slate"> · {e.email}</span> : <span className="text-slate"> · anonymous</span>}
                           </span>
                           {det ? <button type="button" onClick={() => toggle(e.id)} className="shrink-0 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
                           <span className="shrink-0 text-xs text-slate" title={absTime(e.createdAt)}>{relTime(e.createdAt)}</span>

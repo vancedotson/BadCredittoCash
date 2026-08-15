@@ -1,7 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { FunnelShell } from "@/components/marketing-v4/FunnelShell";
-import { WebinarRoomV4 } from "@/components/marketing-v4/webinar/WebinarRoomV4";
+import {
+  ReviewableWebinarRoomV4,
+  WebinarRoomV4,
+} from "@/components/marketing-v4/webinar/WebinarRoomV4";
 
 /**
  * /webinar/room — funnel step 3. The training. The player fires watch-progress
@@ -10,7 +14,9 @@ import { WebinarRoomV4 } from "@/components/marketing-v4/webinar/WebinarRoomV4";
 export default function WebinarRoomPage() {
   return (
     <FunnelShell>
-      <WebinarRoomV4 />
+      <Suspense fallback={<WebinarRoomV4 reviewMode />}>
+        <ReviewableWebinarRoomV4 />
+      </Suspense>
     </FunnelShell>
   );
 }

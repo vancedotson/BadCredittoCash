@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { site } from "@/config/site-v3";
-import { NavToggles } from "./DemoToggles";
 
 /**
  * v4 header — the Case File nav PLUS the animated gold "beam" along the bottom
@@ -49,7 +48,6 @@ export function HeaderV4() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <NavToggles />
           <Link
             href={site.cta.primary.href}
             className="v3-btn v3-btn-ghost v4-bar-cta"
@@ -94,7 +92,6 @@ export function HeaderV4() {
               </a>
             ))}
           </nav>
-          <NavToggles panel onPick={() => setOpen(false)} />
           <Link
             href={site.cta.primary.href}
             className="v3-btn v3-btn-primary v3-clip"

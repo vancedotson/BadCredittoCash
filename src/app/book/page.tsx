@@ -5,8 +5,8 @@ import { BookSchedulerV4 } from "@/components/marketing-v4/book/BookSchedulerV4"
 
 /**
  * /book — standalone strategy-call scheduler for non-webinar sequences (nurture,
- * direct outreach). Same case-file shell + V1/V2/V3 toggle as the funnel; books
- * through /api/book so it lands in the CRM.
+ * direct outreach). Uses the same case-file shell as the funnel and books
+ * through /api/book so the appointment lands in the CRM.
  */
 export default function BookPage() {
   return (

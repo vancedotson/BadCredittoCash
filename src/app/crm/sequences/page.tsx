@@ -104,8 +104,8 @@ export default async function SequencesPage() {
             { n: 4, t: "Schedule", d: "Its emails queue by their delays (immediately, +1h, +1d…)." },
             { n: 5, t: "Send", d: "Resend delivers it; transient API failures retry up to three attempts." },
           ].map((s, i, arr) => (
-            <div key={s.n} className="flex items-stretch gap-2">
-              <div className="w-40 rounded-xl border border-mist bg-cloud p-3">
+            <div key={s.n} className="flex w-full items-stretch gap-2 sm:w-auto">
+              <div className="w-full rounded-xl border border-mist bg-cloud p-3 sm:w-40">
                 <div className="flex items-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-full bg-navy text-[11px] font-semibold text-white">{s.n}</span><span className="font-medium text-heading">{s.t}</span></div>
                 <p className="mt-1.5 text-xs text-slate">{s.d}</p>
               </div>

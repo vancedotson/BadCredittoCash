@@ -15,7 +15,7 @@ import { SegmentBadge } from "@/components/crm/ui";
 import { ChevronRightIcon } from "@/components/marketing-v2/Icons";
 
 const inputClass =
-  "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate/60 focus:border-trust";
+  "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -155,7 +155,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
       ) : null}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" className={`${inputClass} min-w-[180px] flex-1`} />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" aria-label="Search pipeline" className={`${inputClass} min-w-[180px] flex-1`} />
         <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={inputClass} aria-label="Filter by owner">
           <option value="">All owners</option>
           <option value="__none__">Unassigned</option>
@@ -220,7 +220,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
       <div className="md:hidden">
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
           {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => (
-            <button key={s} type="button" onClick={(e) => { setMobileStage(s); e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${mobileStage === s ? "bg-navy text-white" : "border border-mist bg-card text-slate"}`}>
+            <button key={s} type="button" aria-pressed={mobileStage === s} onClick={(e) => { setMobileStage(s); e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${mobileStage === s ? "bg-navy text-white" : "border border-mist bg-card text-slate"}`}>
               {STAGE_LABELS[s]}
               <span className={`rounded-full px-1.5 text-xs ${mobileStage === s ? "bg-white/20" : "bg-mist/70"}`}>{cardsIn(s).length}</span>
             </button>
@@ -277,7 +277,7 @@ function Column({
           <span className="font-heading text-sm font-semibold text-heading">{STAGE_LABELS[stage]}</span>
           <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{cards.length}</span>
         </div>
-        <button type="button" onClick={onToggleCollapse} aria-label="Collapse" className="text-slate hover:text-heading">&#8211;</button>
+        <button type="button" onClick={onToggleCollapse} aria-label={`Collapse ${STAGE_LABELS[stage]}`} className="text-slate hover:text-heading">&#8211;</button>
       </div>
       <div className="flex min-h-[60px] flex-col gap-2 px-2 pb-2">
         {cards.length === 0 ? (
@@ -336,10 +336,10 @@ function PipelineCard({ c, owners, selected, pending, stageOf, onToggleSelect, o
         <span className="truncate capitalize">{source}{c.phone ? " · has phone" : ""}</span>
         <span className="shrink-0">{c.watchPct ? `${c.watchPct}% watched` : ""}</span>
       </div>
-      <div className="mt-0.5 text-[11px] text-slate/70">In stage {c.stageAgeDays}d · active {c.daysSinceActivity}d ago</div>
+      <div className="mt-0.5 text-[11px] text-slate">In stage {c.stageAgeDays}d · active {c.daysSinceActivity}d ago</div>
 
       <div className="mt-2 flex items-center gap-2">
-        <select value={stage} onChange={(e) => onMoveStage(c.id, e.target.value as Stage)} className="flex-1 rounded-lg border border-mist bg-card px-2 py-1 text-xs text-body outline-none focus:border-trust" aria-label="Move stage">
+        <select value={stage} onChange={(e) => onMoveStage(c.id, e.target.value as Stage)} className="flex-1 rounded-lg border border-mist bg-card px-2 py-1 text-xs text-body outline-none focus:border-trust" aria-label={`Move ${c.name} to another stage`}>
           {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
         </select>
       </div>
@@ -371,8 +371,8 @@ function LostReasonModal({ count, onCancel, onConfirm }: { count: number; onCanc
   const [reason, setReason] = useState("");
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onCancel}>
-      <div className="w-full max-w-sm rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-heading">Why lost?</h3>
+      <div role="dialog" aria-modal="true" aria-labelledby="lost-reason-title" className="w-full max-w-sm rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 id="lost-reason-title" className="text-lg font-semibold text-heading">Why lost?</h3>
         <p className="mt-1 text-sm text-slate">Marking {count === 1 ? "this contact" : `${count} contacts`} as Lost.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {LOST_REASONS.map((r) => (
@@ -408,19 +408,19 @@ function AddContactModal({ owners, onClose, onCreated }: { owners: string[]; onC
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-heading">Add contact</h3>
+      <form role="dialog" aria-modal="true" aria-labelledby="pipeline-add-title" onSubmit={submit} className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 id="pipeline-add-title" className="text-lg font-semibold text-heading">Add contact</h3>
         <div className="mt-4 space-y-3">
-          <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" className={field} />
-          <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" className={field} />
-          <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" className={field} />
+          <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" aria-label="Name" className={field} />
+          <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" aria-label="Email" className={field} />
+          <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" aria-label="Phone" className={field} />
           <div className="flex gap-3">
-            <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" className={field} />
-            <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} className={field}>
+            <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" aria-label="Source" className={field} />
+            <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} aria-label="Stage" className={field}>
               {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
             </select>
           </div>
-          <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}>
+          <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} aria-label="Owner" className={field}>
             <option value="">Unassigned</option>
             {owners.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>

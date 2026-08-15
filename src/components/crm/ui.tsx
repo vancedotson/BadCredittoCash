@@ -77,7 +77,7 @@ export function KpiTile({ label, value, hint }: { label: string; value: React.Re
     <div className="rounded-2xl border border-mist bg-card p-5">
       <div className="text-3xl font-bold tabular-nums text-heading">{value}</div>
       <div className="mt-1 text-sm text-slate">{label}</div>
-      {hint ? <div className="mt-0.5 text-xs text-slate/70">{hint}</div> : null}
+      {hint ? <div className="mt-0.5 text-xs text-slate">{hint}</div> : null}
     </div>
   );
 }

@@ -20,10 +20,10 @@
 
   /* Action accent (the 10%) */
   --color-gold: #f2a93b; /* Justice Gold — PRIMARY CTA (text must be Ink) */
-  --color-gold-deep: #d98e1f; /* CTA hover / pressed */
+  --color-gold-deep: #895400; /* accessible amber text / CTA hover */
 
   /* Semantic (used sparingly) */
-  --color-green: #1f9d57; /* success / checkmarks */
+  --color-green: #11713d; /* accessible success text / checkmarks */
   --color-red: #c0392b; /* errors/validation ONLY — never marketing */
 
   /* Neutrals (the 60%) */
@@ -59,6 +59,8 @@
   --color-sky: #10203a;
   --color-slate: #93a4b6;
   --color-mist: #2a3d54;
+  --color-gold-deep: #f4bd68;
+  --color-green: #69d596;
 }
 
 /* Base element defaults live in @layer base so Tailwind utilities

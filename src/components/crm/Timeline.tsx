@@ -58,7 +58,7 @@ export function Timeline({ events, notes }: { events: BehaviourEvent[]; notes: N
                 <>
                   <div className="text-sm text-body">{d!.label}</div>
                   {detail ? <div className="text-xs text-slate">{detail}</div> : null}
-                  <div className="text-xs text-slate/70">{fmt(row.at)}</div>
+                  <div className="text-xs text-slate">{fmt(row.at)}</div>
                 </>
               )}
             </div>

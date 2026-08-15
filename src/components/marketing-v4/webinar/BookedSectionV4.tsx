@@ -30,6 +30,21 @@ function escapeIcs(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
 
+function buildPreviewBooking(): BookingConfirmation {
+  const starts = new Date();
+  starts.setDate(starts.getDate() + 1);
+  while (starts.getDay() === 0 || starts.getDay() === 6) starts.setDate(starts.getDate() + 1);
+  starts.setHours(10, 0, 0, 0);
+  const ends = new Date(starts.getTime() + 30 * 60 * 1000);
+  return {
+    id: "designer-preview",
+    name: "Preview Guest",
+    startsAt: starts.toISOString(),
+    endsAt: ends.toISOString(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  };
+}
+
 export function BookedSectionV4() {
   const ref = useReveal<HTMLDivElement>();
   const [booking, setBooking] = useState<BookingConfirmation | null>(null);
@@ -37,6 +52,12 @@ export function BookedSectionV4() {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       try {
+        const previewState = new URLSearchParams(window.location.search).get("state");
+        if (previewState === "booking-details") {
+          setBooking(buildPreviewBooking());
+          return;
+        }
+        if (previewState === "booking-generic") return;
         const stored = sessionStorage.getItem("vance:last-booking");
         if (!stored) return;
         const parsed = JSON.parse(stored) as BookingConfirmation;
@@ -48,16 +69,24 @@ export function BookedSectionV4() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const formattedTime = useMemo(() => {
+  const formattedAppointment = useMemo(() => {
     if (!booking) return null;
     try {
-      return new Intl.DateTimeFormat(undefined, {
-        dateStyle: "full",
-        timeStyle: "short",
+      const starts = new Date(booking.startsAt);
+      const ends = new Date(booking.endsAt);
+      const date = new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeZone: booking.timezone }).format(starts);
+      const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short", timeZone: booking.timezone });
+      const zone = new Intl.DateTimeFormat(undefined, {
         timeZone: booking.timezone,
-      }).format(new Date(booking.startsAt));
+        timeZoneName: "long",
+      }).formatToParts(starts).find((part) => part.type === "timeZoneName")?.value ?? booking.timezone;
+      return { date, time: `${time.format(starts)} – ${time.format(ends)}`, zone };
     } catch {
-      return new Date(booking.startsAt).toLocaleString();
+      return {
+        date: new Date(booking.startsAt).toLocaleDateString(),
+        time: `${new Date(booking.startsAt).toLocaleTimeString()} – ${new Date(booking.endsAt).toLocaleTimeString()}`,
+        zone: booking.timezone,
+      };
     }
   }, [booking]);
 
@@ -111,15 +140,24 @@ export function BookedSectionV4() {
             {wb.booked.heading}
           </h1>
           <p className="mx-auto mt-5" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 560 }}>
-            {wb.booked.body}
+            {booking
+              ? wb.booked.body
+              : "You’re confirmed. Check your email for the appointment time and call details, then use the checklist below."}
           </p>
-          {booking && formattedTime ? (
+          {booking && formattedAppointment ? (
             <div className="v3-panel mx-auto mt-6 p-5" style={{ maxWidth: 560, borderRadius: 4 }}>
               <span className="v3-mono block" style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--v3-accent)" }}>
-                Your appointment
+                Your 30-minute appointment
               </span>
-              <strong className="mt-2 block" style={{ fontSize: 18, color: "var(--v3-ink)" }}>{formattedTime}</strong>
-              <span className="v3-mono mt-1 block" style={{ fontSize: 12, color: "var(--v3-faint)" }}>{booking.timezone}</span>
+              <strong className="mt-3 block" style={{ fontSize: 19, color: "var(--v3-ink)" }}>
+                {formattedAppointment.date}
+              </strong>
+              <strong className="mt-1 block" style={{ fontSize: 18, color: "var(--v3-accent)" }}>
+                {formattedAppointment.time}
+              </strong>
+              <span className="v3-mono mt-2 block" style={{ fontSize: 12, color: "var(--v3-faint)" }}>
+                {formattedAppointment.zone}
+              </span>
               <div className="mt-4 flex flex-col justify-center gap-3 sm:flex-row">
                 <a
                   href={googleCalendarUrl ?? "#"}
@@ -131,9 +169,19 @@ export function BookedSectionV4() {
                   Add to Google Calendar
                 </a>
                 <button type="button" onClick={downloadCalendarFile} className="v3-btn v3-btn-ghost" style={{ minHeight: 44 }}>
-                  Download calendar file
+                  Apple / Outlook (.ics)
                 </button>
               </div>
+              <p className="mt-4" style={{ fontSize: 13.5, color: "var(--v3-mut)" }}>
+                Need to change the time?{" "}
+                <a
+                  href={site.contact.phoneHref}
+                  style={{ color: "var(--v3-accent)", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3 }}
+                >
+                  Call {site.contact.phoneDisplay}
+                </a>
+                .
+              </p>
             </div>
           ) : null}
         </div>
@@ -144,11 +192,26 @@ export function BookedSectionV4() {
           </span>
           <ol className="mt-4 flex flex-col gap-4">
             {wb.booked.checklist.map((step, i) => (
-              <li key={step} className="flex items-start gap-4">
+              <li key={step.text} className="flex items-start gap-4">
                 <span className="v3-display" style={{ fontSize: 22, color: "var(--v3-accent)", lineHeight: 1, minWidth: 28 }}>
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <span style={{ color: "var(--v3-mut)", fontSize: 15.5, lineHeight: 1.5 }}>{step}</span>
+                <span style={{ color: "var(--v3-mut)", fontSize: 15.5, lineHeight: 1.5 }}>
+                  {step.text}{" "}
+                  {"href" in step ? (
+                    <>
+                      <a
+                        href={step.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: "var(--v3-accent)", textDecoration: "underline", textUnderlineOffset: 3 }}
+                      >
+                        {step.linkLabel}
+                      </a>
+                      .
+                    </>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ol>
@@ -168,7 +231,7 @@ export function BookedSectionV4() {
         </p>
 
         <div className="mt-8 text-center">
-          <Link href="/v4" className="v3-btn v3-btn-ghost" style={{ minHeight: 46 }}>
+          <Link href="/" className="v3-btn v3-btn-ghost" style={{ minHeight: 46 }}>
             Back to the case file
           </Link>
         </div>

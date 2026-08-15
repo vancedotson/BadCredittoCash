@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient } from "./supabase/admin";
 import { createClient as createServerSupabaseClient } from "./supabase/server";
 import { listGoogleBusyIntervals } from "./google-calendar";
+import { isCrmDemoMode } from "./demo";
 
 export type HealthState = "healthy" | "warning" | "error";
 
@@ -62,6 +63,17 @@ async function calendarCheck(): Promise<HealthCheck> {
 const checks = [databaseCheck, emailCheck, queueCheck, calendarCheck] as const;
 
 export async function getSystemHealth(): Promise<{ checkedAt: string; checks: HealthCheck[] }> {
+  if (isCrmDemoMode()) {
+    return {
+      checkedAt: new Date().toISOString(),
+      checks: [
+        { key: "database", label: "Database", state: "warning", detail: "Using local design-review data. Connect Supabase before launch." },
+        { key: "email", label: "Email provider", state: "error", detail: "Resend is not configured. Add the API key before sending real email." },
+        { key: "queue", label: "Email queue", state: "healthy", detail: "Preview queue is available and has no permanent failures." },
+        { key: "calendar", label: "Google Calendar", state: "warning", detail: "Calendar is disconnected in local design-review mode." },
+      ],
+    };
+  }
   const results = await Promise.allSettled(checks.map((check) => check()));
   const labels: Array<Pick<HealthCheck, "key" | "label">> = [
     { key: "database", label: "Database" },

@@ -1,10 +1,8 @@
 "use client";
 
-import { site } from "@/config/site-v3";
 import { HeaderV4 } from "./HeaderV4";
 import { HeroV4 } from "./HeroV4";
 import {
-  Intro,
   Faq,
   Footer,
 } from "../marketing-v3/shared/sections";
@@ -54,7 +52,6 @@ export function CaseFileV4Page() {
       </div>
       <Faq />
       <Footer />
-      <Intro label={site.ev.kickers.hero} />
     </>
   );
 }

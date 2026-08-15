@@ -52,7 +52,7 @@ export function CommandPalette({ contacts, onClose, onNewContact, onNewTask }: {
             else if (e.key === "Escape") onClose();
           }}
           placeholder="Search contacts or jump to…"
-          className="w-full border-b border-mist bg-card px-4 py-3.5 text-sm text-body outline-none placeholder:text-slate/60"
+          className="w-full border-b border-mist bg-card px-4 py-3.5 text-sm text-body outline-none placeholder:text-slate"
         />
         <ul className="max-h-80 overflow-y-auto py-1">
           {results.length === 0 ? (

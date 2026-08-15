@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAttribution, getVisitorId, rememberLead, track } from "@/lib/tracking";
 import { EVENTS } from "@/lib/events";
@@ -18,6 +18,7 @@ import { TurnstileWidget } from "@/components/TurnstileWidget";
  */
 type FieldStatus = "idle" | "valid" | "invalid";
 type FieldKey = "email" | "name" | "phone";
+type RegistrationPreviewState = "invalid" | "server-error" | "submitting";
 
 const validators: Record<FieldKey, (v: string) => string | null> = {
   email: (v) =>
@@ -35,22 +36,68 @@ const validators: Record<FieldKey, (v: string) => string | null> = {
 export function RegistrationFormV3({
   redirectTo = "/webinar/confirmed",
   source = "vance-webinar",
+  showPhone = true,
+  submitLabel = "Open my case",
+  loadingLabel = "Opening your case...",
+  reassurance = "Free. No judgment. We'll email you the link. No spam, ever.",
+  previewState,
 }: {
   redirectTo?: string;
   source?: string;
+  showPhone?: boolean;
+  submitLabel?: string;
+  loadingLabel?: string;
+  reassurance?: string;
+  previewState?: RegistrationPreviewState;
 } = {}) {
   const router = useRouter();
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
+  const serverErrorPreview = previewState === "server-error";
+  const submittingPreview = previewState === "submitting";
+  const filledPreview = serverErrorPreview || submittingPreview;
+  const [status, setStatus] = useState<"idle" | "loading" | "error">(
+    serverErrorPreview ? "error" : submittingPreview ? "loading" : "idle",
+  );
+  const [error, setError] = useState<string | null>(
+    serverErrorPreview ? "Your information is still here. Please try again." : null,
+  );
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileReset, setTurnstileReset] = useState(0);
+  const invalidPreview = previewState === "invalid";
   const [fields, setFields] = useState<
     Record<FieldKey, { status: FieldStatus; message: string | null }>
   >({
-    email: { status: "idle", message: null },
-    name: { status: "idle", message: null },
+    email: {
+      status: invalidPreview ? "invalid" : filledPreview ? "valid" : "idle",
+      message: invalidPreview ? validators.email("") : null,
+    },
+    name: {
+      status: invalidPreview ? "invalid" : filledPreview ? "valid" : "idle",
+      message: invalidPreview ? validators.name("") : null,
+    },
     phone: { status: "idle", message: null },
   });
+
+  useEffect(() => {
+    if (!invalidPreview && !serverErrorPreview && !submittingPreview) return;
+    let loadingScrollTimer: ReturnType<typeof setTimeout> | null = null;
+    const frame = requestAnimationFrame(() => {
+      if (invalidPreview) firstFieldRef.current?.focus({ preventScroll: true });
+      if (serverErrorPreview) errorRef.current?.scrollIntoView({ block: "center" });
+      if (submittingPreview) {
+        loadingScrollTimer = setTimeout(
+          () => loadingRef.current?.scrollIntoView({ block: "center" }),
+          350,
+        );
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      if (loadingScrollTimer) clearTimeout(loadingScrollTimer);
+    };
+  }, [invalidPreview, serverErrorPreview, submittingPreview]);
 
   function statusFor(key: FieldKey, value: string) {
     if (key === "phone" && value.trim() === "")
@@ -71,6 +118,8 @@ export function RegistrationFormV3({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setStatus("idle");
+    setError(null);
     const form = e.currentTarget;
     const data = new FormData(form);
     const values: Record<FieldKey, string> = {
@@ -150,7 +199,7 @@ export function RegistrationFormV3({
     }
   }
 
-  const fieldOrder: Array<{
+  const allFields: Array<{
     key: FieldKey;
     type: string;
     label: React.ReactNode;
@@ -184,6 +233,7 @@ export function RegistrationFormV3({
       hint: "So I can reach you if your email link bounces.",
     },
   ];
+  const fieldOrder = allFields.filter((field) => showPhone || field.key !== "phone");
 
   function borderColor(s: FieldStatus) {
     if (s === "invalid") return "var(--v3-danger)";
@@ -192,7 +242,12 @@ export function RegistrationFormV3({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3.5">
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      aria-busy={status === "loading"}
+      className="flex flex-col gap-3.5"
+    >
       {fieldOrder.map((f) => {
         const state = fields[f.key];
         return (
@@ -201,10 +256,10 @@ export function RegistrationFormV3({
               htmlFor={`v3-${f.key}`}
               className="v3-mono mb-1.5 block"
               style={{
-                fontSize: 10,
-                letterSpacing: "0.2em",
+                fontSize: 11.5,
+                letterSpacing: "0.16em",
                 textTransform: "uppercase",
-                color: "var(--v3-faint)",
+                color: "var(--v3-mut)",
               }}
             >
               {f.label}
@@ -212,11 +267,22 @@ export function RegistrationFormV3({
             <div className="relative">
               <input
                 id={`v3-${f.key}`}
+                ref={f.key === "email" ? firstFieldRef : undefined}
                 name={f.key}
                 type={f.type}
                 inputMode={f.inputMode}
                 required={f.key !== "phone"}
+                defaultValue={
+                  filledPreview
+                    ? f.key === "email"
+                      ? "alex@example.com"
+                      : f.key === "name"
+                        ? "Alex"
+                        : undefined
+                    : undefined
+                }
                 autoComplete={f.autoComplete}
+                disabled={status === "loading"}
                 placeholder={f.placeholder}
                 aria-invalid={state.status === "invalid"}
                 aria-describedby={
@@ -228,7 +294,7 @@ export function RegistrationFormV3({
                 }
                 onBlur={(e) => setField(f.key, e.currentTarget.value)}
                 onInput={(e) => setField(f.key, e.currentTarget.value, true)}
-                className="w-full rounded-sm px-4 py-3 pr-10 outline-none transition-colors"
+                className="v4-registration-input w-full rounded-sm px-4 py-3 pr-10 outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-70"
                 style={{
                   background: "rgba(0,0,0,0.35)",
                   border: `1px solid ${borderColor(state.status)}`,
@@ -276,17 +342,56 @@ export function RegistrationFormV3({
           name="marketingConsent"
           type="checkbox"
           value="yes"
-          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--v3-accent)]"
+          disabled={status === "loading"}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--v3-accent)] disabled:cursor-not-allowed disabled:opacity-70"
         />
-        <span>Send me occasional follow-up tips and updates by email. Optional; unsubscribe anytime.</span>
+        <span>Email me helpful follow-up tips. Optional. Unsubscribe anytime.</span>
       </label>
 
-      <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileReset} />
+      {previewState ? (
+        <div
+          className="flex min-h-[65px] items-center rounded-sm border border-[var(--v3-line)] px-4"
+          role="group"
+          aria-label="Security verification"
+        >
+          <p style={{ fontSize: 12.5, color: "var(--v3-faint)" }}>
+            Security check appears here on the live form.
+          </p>
+        </div>
+      ) : (
+        <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileReset} />
+      )}
 
       {error ? (
-        <p role="alert" style={{ fontSize: 13, color: "var(--v3-danger)" }}>
-          {error}
-        </p>
+        <div
+          ref={errorRef}
+          role="alert"
+          className="rounded-sm border px-4 py-3"
+          style={{ borderColor: "var(--v3-danger)", background: "rgba(239,68,68,0.08)" }}
+        >
+          <p className="font-semibold" style={{ fontSize: 14, color: "var(--v3-danger)" }}>
+            We couldn&apos;t send your link.
+          </p>
+          <p className="mt-1" style={{ fontSize: 13, color: "var(--v3-mut)" }}>
+            {error}
+          </p>
+        </div>
+      ) : null}
+
+      {status === "loading" ? (
+        <div
+          ref={loadingRef}
+          role="status"
+          className="rounded-sm border border-[var(--v3-accent)] px-4 py-3"
+          style={{ background: "color-mix(in srgb, var(--v3-accent) 8%, transparent)" }}
+        >
+          <p className="font-semibold" style={{ fontSize: 14, color: "var(--v3-ink)" }}>
+            Sending your private training link.
+          </p>
+          <p className="mt-1" style={{ fontSize: 13, color: "var(--v3-mut)" }}>
+            Please wait. Keep this page open.
+          </p>
+        </div>
       ) : null}
 
       <button
@@ -296,15 +401,22 @@ export function RegistrationFormV3({
         style={{ paddingLeft: 12 }}
       >
         <span className="v3-btn-badge">
-          <ArrowRightIcon className="h-4 w-4" />
+          {status === "loading" ? (
+            <span
+              className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+              aria-hidden="true"
+            />
+          ) : (
+            <ArrowRightIcon className="h-4 w-4" />
+          )}
         </span>
-        {status === "loading" ? "Opening your case…" : "Open my case"}
+        {status === "loading" ? loadingLabel : submitLabel}
       </button>
       <p
         className="text-center"
         style={{ fontSize: 12.5, color: "var(--v3-faint)" }}
       >
-        Free. No judgment. We&apos;ll email you the link. No spam, ever.
+        {reassurance}
       </p>
     </form>
   );

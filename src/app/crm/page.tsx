@@ -184,7 +184,7 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
               { l: "Avg reg → booked", v: data.speed.avgRegToBookedDays === null ? "—" : `${data.speed.avgRegToBookedDays}d`, hint: "time to convert" },
             ].map((r) => (
               <div key={r.l} className="flex items-center justify-between gap-3">
-                <dt className="text-slate">{r.l}<span className="ml-2 hidden text-xs text-slate/60 sm:inline">{r.hint}</span></dt>
+                <dt className="text-slate">{r.l}<span className="ml-2 hidden text-xs text-slate sm:inline">{r.hint}</span></dt>
                 <dd className="shrink-0 font-semibold tabular-nums text-heading">{r.v}</dd>
               </div>
             ))}
