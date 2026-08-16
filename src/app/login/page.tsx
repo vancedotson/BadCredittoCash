@@ -11,9 +11,9 @@ type LoginReviewState = (typeof LOGIN_REVIEW_STATES)[number];
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; state?: string }>;
+  searchParams: Promise<{ next?: string; state?: string; reason?: string }>;
 }) {
-  const { next, state } = await searchParams;
+  const { next, state, reason } = await searchParams;
   const reviewState = LOGIN_REVIEW_STATES.includes(state as LoginReviewState)
     ? (state as LoginReviewState)
     : undefined;
@@ -28,7 +28,7 @@ export default async function LoginPage({
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-trust">Vance Dotson</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-heading">CRM sign in</h1>
         <p className="mt-2 text-sm text-slate">Authorized team members only.</p>
-        <LoginForm nextPath={nextPath} reviewState={reviewState} authConfigured={authConfigured} />
+        <LoginForm nextPath={nextPath} reviewState={reviewState} authConfigured={authConfigured} sessionExpired={reason === "session-expired"} />
       </section>
     </main>
   );

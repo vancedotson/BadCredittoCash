@@ -38,7 +38,7 @@
   --color-body: #16202b; /* body text (was text-ink) */
   --color-heading: #0f2c4c; /* headings & dark emphasis (was text-navy) */
 
-  /* Type families (loaded via next/font in layout.tsx) */
+  /* Type families (self-hosted via next/font/local in fonts.ts) */
   --font-sans: var(--font-inter);
   --font-heading: var(--font-poppins);
   --font-serif: var(--font-source-serif);

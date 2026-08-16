@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TaskWithContact, ContactOption } from "@/lib/store";
@@ -10,6 +10,7 @@ import {
   type TaskPriority, type TaskType, type Recurrence,
 } from "@/lib/tasks";
 import { PhoneIcon, BellIcon, RefreshIcon, DocumentIcon, CheckIcon } from "@/components/marketing-v2/Icons";
+import { UndoNotice, type UndoNoticeState } from "@/components/crm/UndoNotice";
 
 const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
 const DAY = 86400000;
@@ -50,17 +51,35 @@ function TypeIcon({ type, className = "h-4 w-4" }: { type?: TaskType; className?
 
 // ---------------------------------------------------------------------------
 
-export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContact[]; contacts: ContactOption[]; owners: string[] }) {
+export function TasksClient({ tasks, contacts, owners, initialOwner }: { tasks: TaskWithContact[]; contacts: ContactOption[]; owners: string[]; initialOwner?: string }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [ownerF, setOwnerF] = useState("");
+  const [ownerF, setOwnerF] = useState(initialOwner ?? "__all__");
   const [prioF, setPrioF] = useState("");
   const [typeF, setTypeF] = useState("");
   const [view, setView] = useState<"due" | "today" | "contact">("due");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showDone, setShowDone] = useState(false);
+  const [filtersReady, setFiltersReady] = useState(false);
   const [modal, setModal] = useState<{ mode: "add" | "edit"; task?: TaskWithContact } | null>(null);
   const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+  const [undoNotice, setUndoNotice] = useState<UndoNoticeState | null>(null);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("crm-task-filters") ?? "null") as { owner?: string; priority?: string; type?: string; view?: "due" | "today" | "contact"; showDone?: boolean } | null;
+        if (saved) { if (saved.owner) setOwnerF(saved.owner); setPrioF(saved.priority ?? ""); setTypeF(saved.type ?? ""); if (saved.view) setView(saved.view); setShowDone(Boolean(saved.showDone)); }
+      } catch { /* ignore invalid saved filters */ }
+      setFiltersReady(true);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    if (!filtersReady) return;
+    localStorage.setItem("crm-task-filters", JSON.stringify({ owner: ownerF, priority: prioF, type: typeF, view, showDone }));
+  }, [filtersReady, ownerF, prioF, typeF, view, showDone]);
 
   function reportActionError(caught: unknown, retry: () => void) {
     setActionError({
@@ -73,7 +92,7 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
     let list = tasks;
     const s = q.trim().toLowerCase();
     if (s) list = list.filter((t) => t.title.toLowerCase().includes(s) || t.contactName.toLowerCase().includes(s));
-    if (ownerF) list = list.filter((t) => (ownerF === "__none__" ? !t.owner : t.owner === ownerF));
+    if (ownerF !== "__all__") list = list.filter((t) => (ownerF === "__none__" ? !t.owner : t.owner === ownerF));
     if (prioF) list = list.filter((t) => (t.priority ?? "normal") === prioF);
     if (typeF) list = list.filter((t) => (t.type ?? "follow_up") === typeF);
     return list;
@@ -93,8 +112,21 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   // mutations
   async function toggle(id: string) {
     setActionError(null);
+    const task = tasks.find((candidate) => candidate.id === id);
+    if (!task) return;
+    const wasDone = task.done;
     try {
-      await api("/api/crm/task", "PATCH", { id });
+      await api("/api/crm/task", "PATCH", { id, done: !wasDone });
+      const undo = async (): Promise<void> => {
+        try {
+          await api("/api/crm/task", "PATCH", { id, done: wasDone });
+          router.refresh();
+        } catch (caught) {
+          reportActionError(caught, () => void undo());
+          throw caught;
+        }
+      };
+      setUndoNotice((current) => ({ id: (current?.id ?? 0) + 1, message: wasDone ? "Task reopened." : "Task completed.", undo }));
       router.refresh();
     } catch (caught) {
       reportActionError(caught, () => void toggle(id));
@@ -112,10 +144,21 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   }
   async function snooze(ids: string[], days: number) {
     setActionError(null);
+    const previous = ids.map((id) => ({ id, dueDate: tasks.find((task) => task.id === id)?.dueDate }));
     try {
       const base = new Date(todayStart() + days * DAY);
       const iso = base.toISOString();
       await Promise.all(ids.map((id) => api("/api/crm/task", "PATCH", { id, dueDate: iso })));
+      const undo = async (): Promise<void> => {
+        try {
+          await Promise.all(previous.map((task) => api("/api/crm/task", "PATCH", { id: task.id, dueDate: task.dueDate ?? "" })));
+          router.refresh();
+        } catch (caught) {
+          reportActionError(caught, () => void undo());
+          throw caught;
+        }
+      };
+      setUndoNotice((current) => ({ id: (current?.id ?? 0) + 1, message: `${ids.length} task${ids.length === 1 ? "" : "s"} snoozed.`, undo }));
       setSelected(new Set()); router.refresh();
     } catch (caught) {
       reportActionError(caught, () => void snooze(ids, days));
@@ -123,8 +166,19 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   }
   async function complete(ids: string[]) {
     setActionError(null);
+    const previous = ids.map((id) => ({ id, done: tasks.find((task) => task.id === id)?.done ?? false }));
     try {
       await Promise.all(ids.map((id) => api("/api/crm/task", "PATCH", { id, done: true })));
+      const undo = async (): Promise<void> => {
+        try {
+          await Promise.all(previous.map((task) => api("/api/crm/task", "PATCH", task)));
+          router.refresh();
+        } catch (caught) {
+          reportActionError(caught, () => void undo());
+          throw caught;
+        }
+      };
+      setUndoNotice((current) => ({ id: (current?.id ?? 0) + 1, message: `${ids.length} task${ids.length === 1 ? "" : "s"} completed.`, undo }));
       setSelected(new Set()); router.refresh();
     } catch (caught) {
       reportActionError(caught, () => void complete(ids));
@@ -145,6 +199,7 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   }
 
   function toggleSel(id: string) { setSelected((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  function resetFilters() { setQ(""); setOwnerF("__all__"); setPrioF(""); setTypeF(""); setView("due"); setShowDone(false); }
 
   const rowProps = { selected, onSelect: toggleSel, onToggle: toggle, onEdit: (t: TaskWithContact) => setModal({ mode: "edit", task: t }), onDelete: del, onSnooze: (id: string, d: number) => snooze([id], d) };
 
@@ -169,7 +224,8 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-filters-ready={filtersReady ? "true" : "false"}>
+      {undoNotice ? <UndoNotice key={undoNotice.id} notice={undoNotice} onDismiss={() => setUndoNotice(null)} /> : null}
       {actionError ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
           <span className="flex-1">{actionError.message} No task changes were hidden.</span>
@@ -181,8 +237,9 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
       <div className="flex flex-wrap items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search tasks or contacts…" aria-label="Search tasks" className={`${inputClass} min-w-[180px] flex-1`} />
         <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={inputClass} aria-label="Owner">
-          <option value="">All owners</option><option value="__none__">Unassigned</option>
-          {owners.map((o) => <option key={o} value={o}>{o}</option>)}
+          {initialOwner ? <option value={initialOwner}>My work ({initialOwner})</option> : null}
+          <option value="__all__">All owners</option><option value="__none__">Unassigned</option>
+          {owners.filter((owner) => owner !== initialOwner).map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
         <select value={prioF} onChange={(e) => setPrioF(e.target.value)} className={inputClass} aria-label="Priority">
           <option value="">All priorities</option>
@@ -214,7 +271,9 @@ export function TasksClient({ tasks, contacts, owners }: { tasks: TaskWithContac
       ) : null}
 
       {/* Views */}
-      {view === "due" ? (
+      {filtered.length === 0 && (q || ownerF !== "__all__" || prioF || typeF) ? (
+        <div className="rounded-2xl border border-dashed border-mist bg-card px-5 py-10 text-center"><p className="text-sm text-slate">No tasks match these filters.</p><button type="button" onClick={resetFilters} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">Reset filters</button></div>
+      ) : view === "due" ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {renderGroup("Overdue", "text-red", overdue)}
           {renderGroup("Due today", "text-heading", dueToday)}

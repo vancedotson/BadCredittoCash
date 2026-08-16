@@ -49,6 +49,7 @@ export async function middleware(request: NextRequest) {
     return secure(NextResponse.redirect(loginUrl), true);
   }
 
+  const hadAuthCookie = request.cookies.getAll().some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
   const { response, claims } = await updateSession(request);
   if (claims?.sub) return secure(response, true);
 
@@ -58,6 +59,7 @@ export async function middleware(request: NextRequest) {
 
   const loginUrl = new URL("/login", request.url);
   loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+  if (hadAuthCookie) loginUrl.searchParams.set("reason", "session-expired");
   return secure(NextResponse.redirect(loginUrl), true);
 }
 

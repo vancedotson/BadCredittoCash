@@ -18,6 +18,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   const [palette, setPalette] = useState(false);
   const [quick, setQuick] = useState<"contact" | "task" | null>(null);
   const [notif, setNotif] = useState(false);
+  const [mobileMore, setMobileMore] = useState(false);
   const [notificationItems, setNotificationItems] = useState(nav.notifications);
   const [account, setAccount] = useState(false);
   const [help, setHelp] = useState(false);
@@ -117,6 +118,9 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
           <button type="button" onClick={() => setPalette(true)} className="flex w-full items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10" title="Search (⌘K)">
             <span className="text-white/50">⌕</span>{!collapsed ? <><span className="flex-1 text-left">Search</span><kbd className="rounded bg-white/10 px-1 text-[10px]">⌘K</kbd></> : null}
           </button>
+          <button type="button" onClick={() => setHelp(true)} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white">
+            <span>?</span>{!collapsed ? <><span className="flex-1 text-left">Keyboard shortcuts</span><kbd className="rounded bg-white/10 px-1 text-[10px]">?</kbd></> : null}
+          </button>
           {!collapsed ? (
             <div className="flex gap-1.5">
               <button type="button" onClick={() => setQuick("contact")} className="flex-1 rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep">+ Contact</button>
@@ -163,7 +167,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <header className="crm-topbar sticky top-0 z-20 text-white md:hidden">
+        <header className="crm-topbar sticky top-0 z-40 text-white md:hidden">
           <div className="flex h-14 items-center justify-between gap-2 px-4">
             <span className="flex items-center gap-2"><span className="font-heading font-bold text-white">Vance</span><span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-gold">CRM</span></span>
             <div className="flex items-center gap-1.5">
@@ -176,8 +180,43 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
               <button type="button" onClick={toggleDark} aria-label="Theme" className="grid h-8 w-8 place-items-center rounded-lg bg-white/10">{dark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}</button>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
-            {[...PRIMARY, ...SECONDARY].map((it) => { const active = isActive(it.href, it.exact); return <Link key={it.href} href={it.href} className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${active ? "bg-white/12 text-white" : "text-white/70"}`}><it.Icon className="h-4 w-4" />{it.label}{it.badge ? <span className="rounded-full bg-red px-1.5 text-[10px] font-semibold text-white">{it.badge}</span> : null}</Link>; })}
+          <nav aria-label="CRM pages" className="relative flex gap-1 px-2 pb-2">
+            {PRIMARY.map((it) => {
+              const active = isActive(it.href, it.exact);
+              return (
+                <Link key={it.href} href={it.href} onClick={() => setMobileMore(false)} aria-current={active ? "page" : undefined}
+                  className={`flex min-w-0 flex-1 items-center justify-center rounded-lg px-1 py-2 text-xs font-medium ${active ? "bg-white/12 text-white" : "text-white/70"}`}>
+                  <span className="truncate">{it.label}</span>
+                  {it.badge ? <span className="ml-1 rounded-full bg-red px-1 text-[9px] font-semibold text-white">{it.badge}</span> : null}
+                </Link>
+              );
+            })}
+            <button type="button" aria-expanded={mobileMore} aria-haspopup="menu" aria-controls="crm-mobile-more-menu" onClick={() => setMobileMore((open) => !open)}
+              className={`min-w-0 flex-1 rounded-lg px-1 py-2 text-xs font-medium ${SECONDARY.some((it) => isActive(it.href, it.exact)) || mobileMore ? "bg-white/12 text-white" : "text-white/70"}`}>
+              More
+            </button>
+            {mobileMore ? (
+              <>
+                <button type="button" aria-label="Close more pages" className="fixed inset-0 z-10 cursor-default" onClick={() => setMobileMore(false)} />
+                <div id="crm-mobile-more-menu" role="menu" aria-label="More CRM pages" className="absolute right-2 top-full z-20 w-56 overflow-hidden rounded-xl border border-mist bg-card p-1.5 text-body shadow-card">
+                  {SECONDARY.map((it) => {
+                    const active = isActive(it.href, it.exact);
+                    return (
+                      <Link key={it.href} href={it.href} role="menuitem" onClick={() => setMobileMore(false)} aria-current={active ? "page" : undefined}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${active ? "bg-cloud text-heading" : "text-body hover:bg-cloud"}`}>
+                        <it.Icon className="h-4 w-4 shrink-0" />
+                        {it.label}
+                      </Link>
+                    );
+                  })}
+                  <div className="my-1 border-t border-mist" />
+                  <button type="button" role="menuitem" onClick={() => { setHelp(true); setMobileMore(false); }} className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium text-body hover:bg-cloud">
+                    <span>Keyboard shortcuts</span>
+                    <kbd className="rounded border border-mist bg-cloud px-1.5 py-0.5 text-xs">?</kbd>
+                  </button>
+                </div>
+              </>
+            ) : null}
           </nav>
         </header>
 
@@ -223,8 +262,8 @@ function ShortcutsHelp({ onClose }: { onClose: () => void }) {
   const rows = [["⌘K / Ctrl+K", "Open search"], ["?", "This help"], ["g then o", "Overview"], ["g then c", "Contacts"], ["g then p", "Pipeline"], ["g then t", "Tasks"], ["g then l", "Calendar"], ["g then a", "Activity"], ["g then s", "Settings"]];
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 text-lg font-semibold text-heading">Keyboard shortcuts</h3>
+      <div role="dialog" aria-modal="true" aria-labelledby="keyboard-shortcuts-title" className="w-full max-w-sm rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 id="keyboard-shortcuts-title" className="mb-4 text-lg font-semibold text-heading">Keyboard shortcuts</h3>
         <dl className="space-y-2 text-sm">{rows.map(([k, v]) => <div key={k} className="flex items-center justify-between gap-3"><dt className="text-slate">{v}</dt><dd><kbd className="rounded border border-mist bg-cloud px-1.5 py-0.5 text-xs text-body">{k}</kbd></dd></div>)}</dl>
         <div className="mt-5 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Close</button></div>
       </div>

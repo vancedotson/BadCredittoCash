@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getNavData, hydrateStore } from "@/lib/store";
 import { CrmChrome } from "@/components/crm/CrmChrome";
 import { requireCrmUser } from "@/lib/auth";
+import { openSans } from "@/app/crm-font";
 
 // Internal tool — keep out of search results.
 export const metadata: Metadata = {
@@ -14,5 +15,5 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
   await requireCrmUser();
   await hydrateStore();
   const nav = await getNavData();
-  return <CrmChrome nav={nav}>{children}</CrmChrome>;
+  return <div className={openSans.variable}><CrmChrome nav={nav}>{children}</CrmChrome></div>;
 }

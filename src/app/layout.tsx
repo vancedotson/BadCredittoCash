@@ -1,39 +1,9 @@
 import type { Metadata } from "next";
-import { Poppins, Inter, Source_Serif_4, Staatliches, Open_Sans } from "next/font/google";
 import { site } from "@/config/site";
 import { PublicPageViewTracker } from "@/components/PublicPageViewTracker";
 import { ThemeBeforePaint } from "@/components/ThemeBeforePaint";
+import { inter, poppins, sourceSerif, staatliches } from "./fonts";
 import "./globals.css";
-
-// Headlines — Poppins (SemiBold/Bold). Body — Inter. Quotes — Source Serif 4.
-const poppins = Poppins({
-  variable: "--font-poppins",
-  weight: ["600", "700"],
-  subsets: ["latin"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-// CRM headings — Open Sans (variable weight; used bold). Scoped via .crm-scope.
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin"],
-});
-
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
-  subsets: ["latin"],
-});
-
-// Display face for the hero headline (Brian LaRossa, Erica Carras) — caps only.
-const staatliches = Staatliches({
-  variable: "--font-staatliches",
-  weight: "400",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -52,7 +22,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${poppins.variable} ${inter.variable} ${openSans.variable} ${sourceSerif.variable} ${staatliches.variable} h-full antialiased`}
+      className={`${poppins.variable} ${inter.variable} ${sourceSerif.variable} ${staatliches.variable} h-full antialiased`}
     >
       <head>
         <ThemeBeforePaint />

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isCrmDemoMode } from "./demo";
 import { createAdminClient } from "./supabase/admin";
 
 export type ContactPrivacyState = {
@@ -10,6 +11,7 @@ export type ContactPrivacyState = {
 };
 
 export async function getContactPrivacyState(contactId: string): Promise<ContactPrivacyState | null> {
+  if (isCrmDemoMode()) return { suppressed: false };
   const { data, error } = await createAdminClient()
     .from("contacts")
     .select("email_suppressed_at, email_suppression_reason, unsubscribed_at")

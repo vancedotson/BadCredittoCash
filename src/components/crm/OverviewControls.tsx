@@ -4,11 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 const RANGES = ["7", "30", "90"];
 
-export function OverviewControls({ owners }: { owners: string[] }) {
+export function OverviewControls({ owners, currentOwner }: { owners: string[]; currentOwner?: string }) {
   const router = useRouter();
   const sp = useSearchParams();
   const range = sp.get("range") ?? "30";
-  const owner = sp.get("owner") ?? "";
+  const owner = sp.get("owner") ?? currentOwner ?? "__all__";
 
   function set(next: Record<string, string>) {
     const p = new URLSearchParams(sp.toString());
@@ -26,9 +26,10 @@ export function OverviewControls({ owners }: { owners: string[] }) {
         ))}
       </div>
       <select value={owner} onChange={(e) => set({ owner: e.target.value })} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust" aria-label="Owner">
-        <option value="">All owners</option>
+        {currentOwner ? <option value={currentOwner}>My work ({currentOwner})</option> : null}
+        <option value="__all__">All owners</option>
         <option value="__none__">Unassigned</option>
-        {owners.map((o) => <option key={o} value={o}>{o}</option>)}
+        {owners.filter((candidate) => candidate !== currentOwner).map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
   );

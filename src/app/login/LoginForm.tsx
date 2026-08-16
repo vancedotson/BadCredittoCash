@@ -10,14 +10,17 @@ export function LoginForm({
   nextPath,
   reviewState,
   authConfigured,
+  sessionExpired,
 }: {
   nextPath: string;
   reviewState?: LoginReviewState;
   authConfigured: boolean;
+  sessionExpired?: boolean;
 }) {
   const [state, action, pending] = useActionState(login, undefined);
   const [email, setEmail] = useState(reviewState ? "team@funnelsgenius.com" : "");
   const [password, setPassword] = useState(reviewState === "login-loading" ? "preview-password" : "");
+  const [showPassword, setShowPassword] = useState(false);
   const [previewError, setPreviewError] = useState(
     reviewState === "missing-password"
       ? "Enter your password."
@@ -47,6 +50,7 @@ export function LoginForm({
       aria-busy={busy}
     >
       <input type="hidden" name="next" value={nextPath} />
+      {sessionExpired ? <p role="alert" className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-2.5 text-sm text-body"><span className="font-semibold">Your session expired.</span> Sign in again to continue where you left off.</p> : null}
       <div>
         <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-heading">Email</label>
         <input
@@ -64,20 +68,23 @@ export function LoginForm({
       </div>
       <div>
         <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-heading">Password</label>
-        <input
-          ref={passwordRef}
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          disabled={busy}
-          value={password}
-          onChange={(event) => { setPassword(event.currentTarget.value); setPreviewError(null); }}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? "login-error" : undefined}
-          className="w-full rounded-lg border border-mist bg-card px-3 py-2.5 text-body outline-none focus-visible:border-trust focus-visible:ring-2 focus-visible:ring-trust/25 aria-invalid:border-red disabled:cursor-not-allowed disabled:opacity-60"
-        />
+        <div className="relative">
+          <input
+            ref={passwordRef}
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            disabled={busy}
+            value={password}
+            onChange={(event) => { setPassword(event.currentTarget.value); setPreviewError(null); }}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "login-error" : undefined}
+            className="w-full rounded-lg border border-mist bg-card py-2.5 pl-3 pr-16 text-body outline-none focus-visible:border-trust focus-visible:ring-2 focus-visible:ring-trust/25 aria-invalid:border-red disabled:cursor-not-allowed disabled:opacity-60"
+          />
+          <button type="button" disabled={busy} onClick={() => setShowPassword((shown) => !shown)} aria-pressed={showPassword} className="absolute inset-y-0 right-0 px-3 text-xs font-medium text-trust disabled:opacity-50">{showPassword ? "Hide" : "Show"}</button>
+        </div>
       </div>
       {error ? <p id="login-error" role="alert" className="text-sm text-red">{error}</p> : null}
       {busy ? <p id="login-loading-status" role="status" className="text-sm text-slate">Signing in securely. Please wait.</p> : null}

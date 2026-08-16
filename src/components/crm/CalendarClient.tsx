@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { TaskWithContact, Booking, ContactOption } from "@/lib/store";
 import { PRIORITY_DOT, PRIORITIES, PRIORITY_LABELS, TASK_TYPES, TYPE_LABELS, type TaskPriority, type TaskType } from "@/lib/tasks";
+import { UndoNotice, type UndoNoticeState } from "@/components/crm/UndoNotice";
 
 const DAY = 86400000;
+const MOBILE_CALENDAR_QUERY = "(max-width: 767px)";
 const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors focus:border-trust";
+
+function subscribeToMobileCalendar(change: () => void) {
+  const query = window.matchMedia(MOBILE_CALENDAR_QUERY);
+  query.addEventListener("change", change);
+  return () => query.removeEventListener("change", change);
+}
+function mobileCalendarSnapshot() { return window.matchMedia(MOBILE_CALENDAR_QUERY).matches; }
+function serverMobileCalendarSnapshot() { return false; }
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 function keyOf(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
@@ -33,7 +43,9 @@ async function api(url: string, method: string, body: unknown) {
 
 export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: TaskWithContact[]; bookings: Booking[]; owners: string[]; contacts: ContactOption[] }) {
   const router = useRouter();
-  const [view, setView] = useState<"month" | "week" | "agenda">("month");
+  const isMobile = useSyncExternalStore(subscribeToMobileCalendar, mobileCalendarSnapshot, serverMobileCalendarSnapshot);
+  const [chosenView, setChosenView] = useState<"month" | "week" | "agenda" | null>(null);
+  const view = chosenView ?? (isMobile ? "agenda" : "month");
   const [cursor, setCursor] = useState<Date>(() => today());
   const [ownerF, setOwnerF] = useState("");
   const [prioF, setPrioF] = useState("");
@@ -45,6 +57,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   const [bookingError, setBookingError] = useState("");
   const [taskPending, setTaskPending] = useState<string | null>(null);
   const [taskError, setTaskError] = useState("");
+  const [undoNotice, setUndoNotice] = useState<UndoNoticeState | null>(null);
 
   const ft = tasks.filter((t) => {
     if (ownerF) { if (ownerF === "__none__" ? t.owner : t.owner !== ownerF) return false; }
@@ -61,10 +74,23 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
 
   // mutations
   async function complete(id: string) {
+    const task = tasks.find((candidate) => candidate.id === id);
+    if (!task) return;
     setTaskPending(id);
     setTaskError("");
+    const wasDone = task.done;
     try {
-      await api("/api/crm/task", "PATCH", { id });
+      await api("/api/crm/task", "PATCH", { id, done: !wasDone });
+      const undo = async (): Promise<void> => {
+        try {
+          await api("/api/crm/task", "PATCH", { id, done: wasDone });
+          router.refresh();
+        } catch (error) {
+          setTaskError(error instanceof Error ? error.message : "Could not undo the task change.");
+          throw error;
+        }
+      };
+      setUndoNotice((current) => ({ id: (current?.id ?? 0) + 1, message: wasDone ? "Task reopened." : "Task completed.", undo }));
       router.refresh();
     } catch (error) {
       setTaskError(error instanceof Error ? error.message : "Could not update the task.");
@@ -75,10 +101,21 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   async function reschedule(id: string, dayKey: string) {
     setTaskPending(id);
     setTaskError("");
+    const previousDueDate = tasks.find((task) => task.id === id)?.dueDate;
     try {
       const t = tasks.find((x) => x.id === id);
       const time = timeInput(t?.dueDate) || "09:00";
       await api("/api/crm/task", "PATCH", { id, dueDate: new Date(`${dayKey}T${time}`).toISOString() });
+      const undo = async (): Promise<void> => {
+        try {
+          await api("/api/crm/task", "PATCH", { id, dueDate: previousDueDate ?? "" });
+          router.refresh();
+        } catch (error) {
+          setTaskError(error instanceof Error ? error.message : "Could not undo the task reschedule.");
+          throw error;
+        }
+      };
+      setUndoNotice((current) => ({ id: (current?.id ?? 0) + 1, message: "Task rescheduled.", undo }));
       router.refresh();
     } catch (error) {
       setTaskError(error instanceof Error ? error.message : "Could not reschedule the task.");
@@ -102,8 +139,21 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   async function rescheduleCall(id: string, localDateTime: string) {
     setBookingPending(id);
     setBookingError("");
+    const previousStartsAt = bookings.find((booking) => booking.id === id)?.createdAt;
     try {
       await api("/api/crm/booking", "PATCH", { id, startsAt: new Date(localDateTime).toISOString() });
+      if (previousStartsAt) {
+        const undo = async (): Promise<void> => {
+          try {
+            await api("/api/crm/booking", "PATCH", { id, startsAt: previousStartsAt });
+            router.refresh();
+          } catch (error) {
+            setBookingError(error instanceof Error ? error.message : "Could not undo the appointment reschedule.");
+            throw error;
+          }
+        };
+        setUndoNotice((current) => ({ id: (current?.id ?? 0) + 1, message: "Appointment rescheduled.", undo }));
+      }
       setDayOpen(null);
       router.refresh();
     } catch (error) {
@@ -225,16 +275,17 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
 
   return (
     <div className="space-y-4">
+      {undoNotice ? <UndoNotice key={undoNotice.id} notice={undoNotice} onDismiss={() => setUndoNotice(null)} /> : null}
       {taskError && !dayOpen ? <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-red/30 bg-red/10 px-4 py-3 text-sm text-red"><div><p className="font-medium">The task was not changed.</p><p className="mt-0.5">{taskError} Try again when the connection is available.</p></div><button type="button" onClick={() => setTaskError("")} className="shrink-0 underline">Dismiss</button></div> : null}
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">{(["month", "week", "agenda"] as const).map((v) => <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={`rounded-md px-2.5 py-1.5 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>{v}</button>)}</div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">{(["month", "week", "agenda"] as const).map((v) => <button key={v} type="button" onClick={() => setChosenView(v)} aria-pressed={view === v} className={`rounded-md px-2.5 py-1.5 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>{v}</button>)}</div>
+        {view === "agenda" ? <span className="text-sm text-slate">Today forward</span> : <div className="flex items-center gap-1.5">
           <button type="button" onClick={prev} aria-label={`Previous ${view === "week" ? "week" : "month"}`} className="rounded-lg border border-mist px-2.5 py-1.5 text-sm text-body hover:bg-cloud">‹</button>
           <span className="min-w-[130px] text-center text-sm font-medium text-heading">{label}</span>
           <button type="button" onClick={next} aria-label={`Next ${view === "week" ? "week" : "month"}`} className="rounded-lg border border-mist px-2.5 py-1.5 text-sm text-body hover:bg-cloud">›</button>
           <button type="button" onClick={() => setCursor(today())} className="rounded-lg border border-mist px-2.5 py-1.5 text-sm text-body hover:bg-cloud">Today</button>
-        </div>
+        </div>}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={inputClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
           <select value={prioF} onChange={(e) => setPrioF(e.target.value)} className={inputClass} aria-label="Priority"><option value="">Any priority</option>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p as TaskPriority]}</option>)}</select>
@@ -278,7 +329,15 @@ function DayDetail({ dayKey, tasks, bookings, contacts, bookingError, bookingPen
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
         <h3 id="calendar-day-title" className="mb-3 text-lg font-semibold text-heading">{dayHeading(dayKey)}</h3>
-        {bookings.length ? <div className="mb-3 space-y-2">{bookings.map((b) => <div key={b.id} className="rounded-lg bg-green/10 px-3 py-2 text-sm"><div className="flex items-center gap-2"><span className="text-green">Call</span><Link href={`/crm/contacts/${b.contactId}`} className="text-body hover:text-trust">{b.contactName}</Link></div><div className="mt-2 flex flex-wrap items-center gap-2"><input type="datetime-local" defaultValue={dateTimeInput(b.createdAt)} min={dateTimeInput(new Date().toISOString())} disabled={bookingPending === b.id} onChange={(e) => e.target.value && onRescheduleCall(b.id, e.target.value)} className="rounded border border-mist bg-card px-2 py-1 text-xs disabled:opacity-60" aria-label="Reschedule appointment" /><button type="button" disabled={bookingPending === b.id} onClick={() => onCancelCall(b.id)} className="text-xs text-red hover:underline disabled:opacity-60">{bookingPending === b.id ? "Saving…" : "Cancel"}</button></div></div>)}</div> : null}
+        {bookings.length ? <div className="mb-3 space-y-2">{bookings.map((booking) => (
+          <BookingEditor
+            key={booking.id}
+            booking={booking}
+            pending={bookingPending === booking.id}
+            onSave={(startsAt) => onRescheduleCall(booking.id, startsAt)}
+            onCancel={() => onCancelCall(booking.id)}
+          />
+        ))}</div> : null}
         {bookingError ? <div role="alert" className="mb-3 rounded-lg border border-red/30 bg-red/10 px-3 py-2 text-sm text-red"><p>{bookingError}</p><p className="mt-1 text-xs">The appointment was not changed. Check the time and try again.</p></div> : null}
         {taskError ? <div role="alert" className="mb-3 rounded-lg border border-red/30 bg-red/10 px-3 py-2 text-sm text-red"><p>{taskError}</p><p className="mt-1 text-xs">The task was not changed. You can try again without reopening this day.</p></div> : null}
         <ul className="mb-4 space-y-2">
@@ -297,6 +356,36 @@ function DayDetail({ dayKey, tasks, bookings, contacts, bookingError, bookingPen
           <button type="submit" disabled={taskPending === "new"} className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-ink hover:bg-gold-deep disabled:cursor-wait disabled:opacity-60">{taskPending === "new" ? "Adding…" : "Add"}</button>
         </form>
         <div className="mt-4 flex justify-end"><button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Close</button></div>
+      </div>
+    </div>
+  );
+}
+
+function BookingEditor({ booking, pending, onSave, onCancel }: { booking: Booking; pending: boolean; onSave: (startsAt: string) => void; onCancel: () => void }) {
+  const initialValue = dateTimeInput(booking.createdAt);
+  const [startsAt, setStartsAt] = useState(initialValue);
+  const changed = startsAt !== initialValue;
+
+  return (
+    <div className="rounded-lg bg-green/10 px-3 py-2 text-sm">
+      <div className="flex items-center gap-2">
+        <span className="text-green">Call</span>
+        <Link href={`/crm/contacts/${booking.contactId}`} className="text-body hover:text-trust">{booking.contactName}</Link>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          type="datetime-local"
+          value={startsAt}
+          min={dateTimeInput(new Date().toISOString())}
+          disabled={pending}
+          onChange={(event) => setStartsAt(event.target.value)}
+          className="rounded border border-mist bg-card px-2 py-1 text-xs disabled:opacity-60"
+          aria-label="New appointment time"
+        />
+        <button type="button" disabled={pending || !changed || !startsAt} onClick={() => onSave(startsAt)} className="rounded bg-trust px-2 py-1 text-xs font-medium text-white disabled:opacity-50">
+          {pending ? "Saving…" : "Save new time"}
+        </button>
+        <button type="button" disabled={pending} onClick={onCancel} className="text-xs text-red hover:underline disabled:opacity-60">Cancel appointment</button>
       </div>
     </div>
   );

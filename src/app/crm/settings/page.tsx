@@ -7,6 +7,8 @@ import { ProfileForm, OwnerManager, TagManager, AppearanceForm, NotificationForm
 import { getGoogleCalendarStatus } from "@/lib/google-calendar";
 import { requireCrmUser } from "@/lib/auth";
 import { listAdminAuditEvents } from "@/lib/audit";
+import { listTeamMembers } from "@/lib/team-access";
+import { TeamAccess } from "@/components/crm/TeamAccess";
 
 export const dynamic = "force-dynamic";
 
@@ -21,30 +23,42 @@ const SEG_DEFS: Record<string, string> = {
   lead: "Fallback — only a page view, no real engagement yet.",
 };
 
-const NAV = [
-  { id: "profile", label: "Business profile" },
-  { id: "team", label: "Team" },
-  { id: "tags", label: "Tags" },
-  { id: "pipeline", label: "Pipeline" },
-  { id: "segments", label: "Segments" },
-  { id: "sequences", label: "Sequences" },
-  { id: "appearance", label: "Appearance" },
-  { id: "notifications", label: "Notifications" },
-  { id: "calendar", label: "Calendar" },
-  { id: "audit", label: "Audit history" },
-  { id: "trash", label: "Trash" },
-  { id: "data", label: "Data" },
+const NAV_GROUPS = [
+  { label: "Workspace", items: [
+    { id: "profile", label: "Business profile" },
+    { id: "team", label: "Team" },
+    { id: "tags", label: "Tags" },
+  ] },
+  { label: "CRM setup", items: [
+    { id: "pipeline", label: "Pipeline" },
+    { id: "segments", label: "Segments" },
+    { id: "sequences", label: "Sequences" },
+  ] },
+  { label: "Preferences", items: [
+    { id: "appearance", label: "Appearance" },
+    { id: "notifications", label: "Notifications" },
+    { id: "calendar", label: "Calendar" },
+  ] },
+  { label: "Security & data", items: [
+    { id: "audit", label: "Audit history", adminOnly: true },
+    { id: "trash", label: "Trash", adminOnly: true },
+    { id: "data", label: "Data" },
+  ] },
 ];
 
 export default async function SettingsPage() {
   const user = await requireCrmUser();
   await hydrateStore();
-  const [settings, workloads, owners, tags, status, insights, calendar, auditEvents, trashedContacts] = await Promise.all([
+  const [settings, workloads, owners, tags, status, insights, calendar, auditEvents, trashedContacts, teamMembers] = await Promise.all([
     getSettings(), getOwnerWorkloads(), listOwners(), listTagsWithCounts(), getStoreStatus(), getSettingsInsights(), getGoogleCalendarStatus(),
     user.crmRole === "admin" ? listAdminAuditEvents(50) : Promise.resolve([]),
     user.crmRole === "admin" ? listTrashedContacts() : Promise.resolve([]),
+    user.crmRole === "admin" ? listTeamMembers() : Promise.resolve([]),
   ]);
-  const settingsNav = user.crmRole === "admin" ? NAV : NAV.filter((item) => item.id !== "audit");
+  const settingsNav = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !("adminOnly" in item && item.adminOnly) || user.crmRole === "admin"),
+  }));
   const allSeq = [...Object.values(SEQUENCES), ...Object.values(SEGMENT_SEQUENCES)];
   const maxStage = Math.max(1, ...insights.stages.map((s) => s.count));
 
@@ -52,10 +66,19 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <PageTitle title="Settings" subtitle="Configure the business profile, team, tags, and preferences. Stages, segments, and sequences are code-defined and shown here for reference." />
 
-      <nav className="sticky top-2 z-10 -mx-1 flex flex-wrap gap-1.5 rounded-xl border border-mist bg-card/90 p-1.5 backdrop-blur">
-        {settingsNav.map((n) => (
-          <a key={n.id} href={`#${n.id}`} className="rounded-lg px-2.5 py-1 text-xs font-medium text-slate hover:bg-cloud hover:text-body">{n.label}</a>
-        ))}
+      <nav aria-label="Settings sections" className="sticky top-28 z-10 -mx-1 rounded-xl border border-mist bg-card/95 p-2 shadow-sm backdrop-blur md:top-2">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {settingsNav.map((group) => (
+            <div key={group.label} className="rounded-lg bg-cloud/60 p-2">
+              <div className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-wide text-slate">{group.label}</div>
+              <div className="flex flex-wrap gap-1">
+                {group.items.map((item) => (
+                  <a key={item.id} href={`#${item.id}`} className="rounded-md px-1.5 py-1 text-xs font-medium text-body hover:bg-card hover:text-trust">{item.label}</a>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </nav>
 
       {/* Business profile */}
@@ -71,7 +94,11 @@ export default async function SettingsPage() {
         {/* Team */}
         <section id="team" className="scroll-mt-16">
           <Card>
-            <h2 className="mb-3 text-lg font-semibold text-heading">Team &amp; owners</h2>
+            <h2 className="mb-3 text-lg font-semibold text-heading">Team access &amp; owners</h2>
+            {user.crmRole === "admin" ? <TeamAccess initialMembers={teamMembers} currentUserId={String(user.sub)} /> : <p className="text-sm text-slate">Only an administrator can manage login access.</p>}
+            <div className="my-5 border-t border-mist" />
+            <h3 className="mb-1 font-semibold text-heading">CRM owners</h3>
+            <p className="mb-3 text-sm text-slate">Assignment labels for contacts and tasks. Adding one does not create login access.</p>
             <OwnerManager workloads={workloads} defaultOwner={settings.defaultOwner} ownerNames={owners} />
           </Card>
         </section>

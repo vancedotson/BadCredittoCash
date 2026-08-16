@@ -126,12 +126,25 @@ export type SequenceQueueStats = {
 
 export type SequenceFailure = {
   id: string;
+  contactId?: string;
   contactName: string;
   email: string;
   templateKey: string;
   attempts: number;
   error: string;
   failedAt: string;
+};
+
+export type SequenceEnrollment = {
+  id: string;
+  contactId: string;
+  contactName: string;
+  email: string;
+  sequenceKey: string;
+  status: "active" | "paused";
+  enrolledAt: string;
+  scheduledMessages: number;
+  nextScheduledAt?: string;
 };
 
 export type ContactSort = "recent" | "created" | "name" | "stage" | "watch";
@@ -200,8 +213,19 @@ export type TaskStats = {
 };
 
 // ---- Overview (home dashboard) view types ----
-export type OverviewKpi = { key: string; label: string; value: string | number; delta?: number; deltaGood?: boolean; href: string };
-export type ActionItem = { id: string; kind: "overdue" | "hot" | "nofollow"; title: string; subtitle: string; href: string; tone: Tone };
+export type OverviewKpi = { key: string; label: string; value: string | number; delta?: number; deltaGood?: boolean; hint?: string; href: string };
+export type ActionItem = {
+  id: string;
+  kind: "overdue" | "hot" | "nofollow";
+  title: string;
+  subtitle: string;
+  href: string;
+  tone: Tone;
+  taskId?: string;
+  contactId?: string;
+  owner?: string;
+  dueDate?: string;
+};
 export type NotificationItem = {
   id: string;
   kind: "overdue" | "cooling" | "nofollow" | "booking" | "high_intent" | "failed_email" | "failed_booking" | "new_lead";
@@ -223,7 +247,7 @@ export type OverviewData = {
   sources: SourceStat[];
   bestSource: string | null;
   trend: TrendPoint[];
-  engagement: { showUpPct: number; watchToBookPct: number; avgWatchPct: number };
+  engagement: { showUpPct: number; watchToBookPct: number; avgWatchPct: number; registeredCount: number; roomOpenedCount: number; bookedCount: number; watchedCount: number };
   thisWeek: { booked: number; tasksCompleted: number; newClients: number };
   speed: { avgRegToBookedDays: number | null };
   owners: string[];
@@ -439,11 +463,13 @@ function seedState(): StoreState {
   return { version: SEED_VERSION, leads: [], events: [], notes: [], tasks: [], settings: defaultSettings(), counter: 30000 };
 }
 
-const globalForStore = globalThis as unknown as { __vanceStore?: StoreState };
+const globalForStore = globalThis as unknown as { __vanceStore?: StoreState; __vanceDemoSequenceStatuses?: Map<string, "active" | "paused"> };
 if (!globalForStore.__vanceStore || globalForStore.__vanceStore.version !== SEED_VERSION) {
   globalForStore.__vanceStore = seedState();
 }
 const state: StoreState = globalForStore.__vanceStore;
+const demoSequenceStatuses = globalForStore.__vanceDemoSequenceStatuses ?? new Map<string, "active" | "paused">();
+globalForStore.__vanceDemoSequenceStatuses = demoSequenceStatuses;
 // Defensive migration: fill any missing settings sub-shape so a stale globalThis
 // state (HMR that didn't reseed) can't 500 the CRM.
 if (!state.settings) state.settings = defaultSettings();
@@ -1041,6 +1067,13 @@ export async function getContact(idOrEmail: string): Promise<ContactDetail | nul
   const contactTasks = tasks
     .filter((t) => t.email === lead.email)
     .sort((a, b) => Number(a.done) - Number(b.done) || (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
+  if (isCrmDemoMode()) {
+    const sequences = [...new Set(evs.flatMap((event) => {
+      const sequence = event.props?.sequence;
+      return typeof sequence === "string" ? [sequence] : [];
+    }))];
+    return { contact, events: evs, notes: contactNotes, tasks: contactTasks, sequences };
+  }
   const supabase = await createServerSupabaseClient();
   const { data: enrollmentRows, error: enrollmentError } = await supabase
     .from("sequence_enrollments")
@@ -1054,7 +1087,7 @@ export async function getContact(idOrEmail: string): Promise<ContactDetail | nul
 export async function getSequenceQueueStats(): Promise<SequenceQueueStats> {
   if (isCrmDemoMode()) {
     const queued = events.filter((event) => event.event === EVENTS.emailQueued).length;
-    return { activeEnrollments: queued, scheduledMessages: 6, retryingMessages: 1, sentMessages: 24, failedMessages: 0 };
+    return { activeEnrollments: queued, scheduledMessages: 6, retryingMessages: 1, sentMessages: 24, failedMessages: 1 };
   }
   const supabase = await createServerSupabaseClient();
   const [active, scheduled, retrying, sent, failed] = await Promise.all([
@@ -1076,11 +1109,14 @@ export async function getSequenceQueueStats(): Promise<SequenceQueueStats> {
 }
 
 export async function getRecentSequenceFailures(limit = 10): Promise<SequenceFailure[]> {
-  if (isCrmDemoMode()) return [];
+  if (isCrmDemoMode()) {
+    const contact = leads.find((lead) => lead.email === "sofia@example.com") ?? leads[0];
+    return contact ? [{ id: "demo-failure-1", contactId: contact.id, contactName: contact.name, email: contact.email, templateKey: "booking_abandon:1", attempts: 3, error: "Provider temporarily rejected the message.", failedAt: new Date(Date.now() - DAY).toISOString() }] : [];
+  }
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("scheduled_messages")
-    .select("id, template_key, attempts, last_error, updated_at, contact:contacts!scheduled_messages_contact_id_fkey(name, email)")
+    .select("id, template_key, attempts, last_error, updated_at, contact:contacts!scheduled_messages_contact_id_fkey(id, name, email)")
     .eq("status", "failed")
     .order("updated_at", { ascending: false })
     .limit(Math.max(1, Math.min(25, Math.trunc(limit))));
@@ -1089,6 +1125,7 @@ export async function getRecentSequenceFailures(limit = 10): Promise<SequenceFai
     const relation = Array.isArray(row.contact) ? row.contact[0] : row.contact;
     return {
       id: row.id,
+      contactId: relation?.id,
       contactName: relation?.name ?? "Unknown contact",
       email: relation?.email ?? "",
       templateKey: row.template_key,
@@ -1097,6 +1134,56 @@ export async function getRecentSequenceFailures(limit = 10): Promise<SequenceFai
       failedAt: row.updated_at,
     };
   });
+}
+
+export async function getSequenceEnrollments(limit = 12): Promise<SequenceEnrollment[]> {
+  if (isCrmDemoMode()) {
+    const seen = new Set<string>();
+    const rows: SequenceEnrollment[] = [];
+    for (const event of [...events].sort((a, b) => b.createdAt.localeCompare(a.createdAt))) {
+      if (event.event !== EVENTS.emailQueued || !event.email) continue;
+      const sequenceKey = typeof event.props?.sequence === "string" ? event.props.sequence : "";
+      const contact = leads.find((lead) => lead.email === event.email);
+      if (!sequenceKey || !contact) continue;
+      const id = `demo:${contact.id}:${sequenceKey}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      rows.push({ id, contactId: contact.id, contactName: contact.name, email: contact.email, sequenceKey, status: demoSequenceStatuses.get(id) ?? "active", enrolledAt: event.createdAt, scheduledMessages: Number(event.props?.emails ?? 1) });
+      if (rows.length >= limit) break;
+    }
+    return rows;
+  }
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("sequence_enrollments")
+    .select("id, sequence_key, status, enrolled_at, contact:contacts!sequence_enrollments_contact_id_fkey(id, name, email), messages:scheduled_messages(status, scheduled_for)")
+    .in("status", ["active", "paused"])
+    .order("enrolled_at", { ascending: false })
+    .limit(Math.max(1, Math.min(50, Math.trunc(limit))));
+  if (error) throw new Error(error.message);
+  return (data ?? []).flatMap((row) => {
+    const contact = Array.isArray(row.contact) ? row.contact[0] : row.contact;
+    if (!contact) return [];
+    const messages = (row.messages ?? []) as Array<{ status: string; scheduled_for: string }>;
+    const scheduled = messages.filter((message) => message.status === "scheduled").sort((a, b) => a.scheduled_for.localeCompare(b.scheduled_for));
+    return [{ id: row.id, contactId: contact.id, contactName: contact.name, email: contact.email, sequenceKey: row.sequence_key, status: row.status === "paused" ? "paused" as const : "active" as const, enrolledAt: row.enrolled_at, scheduledMessages: scheduled.length, nextScheduledAt: scheduled[0]?.scheduled_for }];
+  });
+}
+
+export async function setSequenceEnrollmentStatus(id: string, status: "active" | "paused"): Promise<boolean> {
+  if (isCrmDemoMode()) { demoSequenceStatuses.set(id, status); return true; }
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.from("sequence_enrollments").update({ status }).eq("id", id).in("status", ["active", "paused"]).select("id").maybeSingle();
+  if (error) throw new Error(error.message);
+  return Boolean(data);
+}
+
+export async function retryFailedSequenceMessage(id: string): Promise<boolean> {
+  if (isCrmDemoMode()) return id === "demo-failure-1";
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.from("scheduled_messages").update({ status: "scheduled", scheduled_for: new Date().toISOString(), attempts: 0, last_error: null, provider_message_id: null, sent_at: null }).eq("id", id).eq("status", "failed").select("id").maybeSingle();
+  if (error) throw new Error(error.message);
+  return Boolean(data);
 }
 
 export async function getLeadById(id: string): Promise<Lead | null> {
@@ -1263,20 +1350,21 @@ export async function listContactOptions(): Promise<ContactOption[]> {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function getTaskStats(): Promise<TaskStats> {
+export async function getTaskStats(owner?: string): Promise<TaskStats> {
   const now = Date.now();
   const startOfToday = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).getTime();
   const tomorrow = startOfToday + DAY;
   const weekEnd = startOfToday + 7 * DAY;
   const weekAgo = now - 7 * DAY;
-  const open = tasks.filter((t) => !t.done);
+  const scoped = owner ? tasks.filter((task) => task.owner === owner) : tasks;
+  const open = scoped.filter((t) => !t.done);
   const due = (t: Task) => (t.dueDate ? new Date(t.dueDate).getTime() : null);
   const overdue = open.filter((t) => { const d = due(t); return d !== null && d < startOfToday; }).length;
   const dueToday = open.filter((t) => { const d = due(t); return d !== null && d >= startOfToday && d < tomorrow; }).length;
   const thisWeek = open.filter((t) => { const d = due(t); return d !== null && d >= startOfToday && d < weekEnd; }).length;
-  const completedThisWeek = tasks.filter((t) => t.done && t.completedAt && new Date(t.completedAt).getTime() >= weekAgo).length;
-  const doneCount = tasks.filter((t) => t.done).length;
-  const completionRatePct = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0;
+  const completedThisWeek = scoped.filter((t) => t.done && t.completedAt && new Date(t.completedAt).getTime() >= weekAgo).length;
+  const doneCount = scoped.filter((t) => t.done).length;
+  const completionRatePct = scoped.length ? Math.round((doneCount / scoped.length) * 100) : 0;
   return { open: open.length, overdue, dueToday, thisWeek, completedThisWeek, completionRatePct };
 }
 
@@ -1859,9 +1947,9 @@ export async function getOverview(rangeDays = 30, owner?: string): Promise<Overv
   const delta = (cur: number, prev: number) => (prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100));
   const kpis: OverviewKpi[] = [
     { key: "total", label: "Total contacts", value: contacts.length, href: "/crm/contacts" },
-    { key: "new", label: `New (${rangeDays}d)`, value: newCur, delta: delta(newCur, newPrev), deltaGood: true, href: "/crm/contacts?sort=created" },
-    { key: "booked", label: `Booked (${rangeDays}d)`, value: bookedCur, delta: delta(bookedCur, bookedPrev), deltaGood: true, href: "/crm/contacts?segment=booked" },
-    { key: "conv", label: "Reg → booked", value: `${regEmails.size ? Math.round((allBooked.size / regEmails.size) * 100) : 0}%`, href: "/crm/pipeline" },
+    { key: "new", label: `New (${rangeDays}d)`, value: newCur, delta: delta(newCur, newPrev), deltaGood: true, hint: `${newCur} now · ${newPrev} prior period`, href: "/crm/contacts?sort=created" },
+    { key: "booked", label: `Booked (${rangeDays}d)`, value: bookedCur, delta: delta(bookedCur, bookedPrev), deltaGood: true, hint: `${bookedCur} now · ${bookedPrev} prior period`, href: "/crm/contacts?segment=booked" },
+    { key: "conv", label: "Reg → booked", value: `${regEmails.size ? Math.round((allBooked.size / regEmails.size) * 100) : 0}%`, hint: `${allBooked.size} booked / ${regEmails.size} registered`, href: "/crm/pipeline" },
     { key: "tasks", label: "Open tasks", value: openTasksN, href: "/crm/tasks" },
   ];
 
@@ -1870,12 +1958,12 @@ export async function getOverview(rangeDays = 30, owner?: string): Promise<Overv
   const overdueTasks = tks.filter((t) => !t.done && t.dueDate && ms(t.dueDate) < t0).sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""));
   for (const t of overdueTasks.slice(0, 5)) {
     const c = contacts.find((x) => x.email === t.email);
-    actions.push({ id: `t_${t.id}`, kind: "overdue", title: t.title, subtitle: `${c?.name ?? t.email} · overdue`, href: `/crm/contacts/${c?.id ?? ""}`, tone: "danger" });
+    actions.push({ id: `t_${t.id}`, kind: "overdue", title: t.title, subtitle: `${c?.name ?? t.email} · overdue`, href: `/crm/contacts/${c?.id ?? ""}`, tone: "danger", taskId: t.id, contactId: c?.id, owner: t.owner, dueDate: t.dueDate });
   }
   const hot = contacts.filter((c) => !c.booked && ["high_watch", "offer_click_no_book", "booking_abandon"].includes(c.segment) && c.daysSinceActivity >= 2).sort((a, b) => b.daysSinceActivity - a.daysSinceActivity);
-  for (const c of hot.slice(0, 5)) actions.push({ id: `h_${c.id}`, kind: "hot", title: `${c.name} is cooling off`, subtitle: `${SEGMENT_LABELS[c.segment]} · ${c.daysSinceActivity}d quiet`, href: `/crm/contacts/${c.id}`, tone: "warn" });
+  for (const c of hot.slice(0, 5)) actions.push({ id: `h_${c.id}`, kind: "hot", title: `${c.name} is cooling off`, subtitle: `${SEGMENT_LABELS[c.segment]} · ${c.daysSinceActivity}d quiet`, href: `/crm/contacts/${c.id}`, tone: "warn", contactId: c.id, owner: c.owner });
   const noFollow = contacts.filter((c) => !c.booked && !c.nextTask && c.openTaskCount === 0 && ["registered_no_show", "low_watch", "mid_watch"].includes(c.segment) && c.daysSinceActivity >= 3).sort((a, b) => b.daysSinceActivity - a.daysSinceActivity);
-  for (const c of noFollow.slice(0, 4)) actions.push({ id: `n_${c.id}`, kind: "nofollow", title: `No follow-up set for ${c.name}`, subtitle: `${SEGMENT_LABELS[c.segment]} · ${c.daysSinceActivity}d quiet`, href: `/crm/contacts/${c.id}`, tone: "neutral" });
+  for (const c of noFollow.slice(0, 4)) actions.push({ id: `n_${c.id}`, kind: "nofollow", title: `No follow-up set for ${c.name}`, subtitle: `${SEGMENT_LABELS[c.segment]} · ${c.daysSinceActivity}d quiet`, href: `/crm/contacts/${c.id}`, tone: "neutral", contactId: c.id, owner: c.owner });
 
   // Pipeline snapshot (owner-filtered)
   const stageCount = (s: Stage) => contacts.filter((c) => c.stage === s).length;
@@ -1931,6 +2019,10 @@ export async function getOverview(rangeDays = 30, owner?: string): Promise<Overv
     showUpPct: regEmails.size ? Math.round((roomEmails.size / regEmails.size) * 100) : 0,
     watchToBookPct: roomEmails.size ? Math.round((allBooked.size / roomEmails.size) * 100) : 0,
     avgWatchPct: watched.length ? Math.round(watched.reduce((n, c) => n + c.watchPct, 0) / watched.length) : 0,
+    registeredCount: regEmails.size,
+    roomOpenedCount: roomEmails.size,
+    bookedCount: allBooked.size,
+    watchedCount: watched.length,
   };
 
   // This week (7d)

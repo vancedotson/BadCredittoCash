@@ -1,6 +1,7 @@
 import { Card, PageTitle } from "@/components/crm/ui";
 import { requireCrmUser } from "@/lib/auth";
 import { getSystemHealth, type HealthState } from "@/lib/system-health";
+import { HealthHistory } from "@/components/crm/HealthHistory";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,13 @@ const styles: Record<HealthState, { dot: string; badge: string; label: string }>
   warning: { dot: "bg-gold", badge: "bg-gold/15 text-gold-deep", label: "Attention" },
   error: { dot: "bg-red", badge: "border border-red/30 bg-card text-red", label: "Unavailable" },
 };
+
+const fixLinks = {
+  database: { href: "/crm/settings#data", label: "Review data setup" },
+  email: { href: "/crm/settings#sequences", label: "Review email setup" },
+  queue: { href: "/crm/sequences", label: "Open failed emails" },
+  calendar: { href: "/crm/settings#calendar", label: "Open Calendar settings" },
+} as const;
 
 export default async function HealthPage() {
   await requireCrmUser();
@@ -33,6 +41,7 @@ export default async function HealthPage() {
         <ul className="grid gap-3 sm:grid-cols-2">
           {health.checks.map((check) => {
             const style = styles[check.state];
+            const fix = fixLinks[check.key];
             return (
               <li key={check.key} className="rounded-xl border border-mist bg-cloud p-4">
                 <div className="flex items-center justify-between gap-3">
@@ -43,11 +52,13 @@ export default async function HealthPage() {
                   <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${style.badge}`}>{style.label}</span>
                 </div>
                 <p className="mt-2 text-sm text-slate">{check.detail}</p>
+                {check.state !== "healthy" ? <a href={fix.href} className="mt-3 inline-block text-sm font-medium text-trust hover:underline">{fix.label} →</a> : null}
               </li>
             );
           })}
         </ul>
       </Card>
+      <HealthHistory checkedAt={health.checkedAt} checks={health.checks} />
     </div>
   );
 }

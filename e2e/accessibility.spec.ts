@@ -384,6 +384,7 @@ for (const loginState of [
   { name: "missing-password sign in", url: "/login?state=missing-password", ready: /enter your password/i },
   { name: "invalid-login sign in", url: "/login?state=invalid-login", ready: /email or password is incorrect/i },
   { name: "loading sign in", url: "/login?state=login-loading", ready: /signing in securely/i },
+  { name: "expired-session sign in", url: "/login?reason=session-expired", ready: /your session expired/i },
 ]) {
   test(`${loginState.name} has no serious automated accessibility violations`, async ({ page }) => {
     await page.goto(loginState.url);
@@ -458,6 +459,20 @@ test("CRM overview has no serious automated accessibility violations", async ({ 
 test("CRM contacts has no serious automated accessibility violations", async ({ page }) => {
   await page.goto("/crm/contacts");
   await expect(page.getByRole("heading", { name: "Contacts", exact: true })).toBeVisible();
+
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  const serious = results.violations.filter(
+    (violation) => violation.impact === "serious" || violation.impact === "critical",
+  );
+  expect(serious, serious.map((violation) => `${violation.id}: ${violation.help}`).join("\n")).toEqual([]);
+});
+
+test("CRM contact detail has no serious automated accessibility violations", async ({ page }) => {
+  await page.goto("/crm/contacts");
+  await page.getByRole("link", { name: "Ana Martins", exact: true }).first().click();
+  await expect(page.getByRole("heading", { name: "Ana Martins", exact: true })).toBeVisible();
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

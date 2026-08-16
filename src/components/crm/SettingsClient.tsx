@@ -8,8 +8,20 @@ const INPUT = "min-w-0 flex-1 rounded-lg border border-mist bg-card px-3 py-2 te
 const BTN = "rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50";
 const BTN_GHOST = "rounded-lg border border-mist px-3 py-2 text-sm text-body hover:border-trust";
 
-async function post(body: Record<string, unknown>): Promise<Response> {
-  return fetch("/api/crm/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function post(body: Record<string, unknown>): Promise<void> {
+  const response = await fetch("/api/crm/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(payload?.error ?? "The setting could not be saved.");
+  }
+}
+
+function errorMessage(cause: unknown) {
+  return cause instanceof Error ? cause.message : "The setting could not be saved.";
+}
+
+function InlineError({ message }: { message: string }) {
+  return message ? <p role="alert" className="rounded-lg border border-red/30 bg-red/10 px-3 py-2 text-sm text-red">{message} Your unsaved choice is still here.</p> : null;
 }
 
 function useFlash(): [boolean, () => void] {
@@ -38,13 +50,21 @@ export function ProfileForm({ profile }: { profile: CrmProfile }) {
   const [form, setForm] = useState<CrmProfile>(profile);
   const [busy, setBusy] = useState(false);
   const [saved, flash] = useFlash();
+  const [error, setError] = useState("");
   const dirty = PROFILE_FIELDS.some((f) => form[f.key] !== profile[f.key]);
 
   async function save() {
     setBusy(true);
-    const res = await post({ action: "update-profile", profile: form });
-    setBusy(false);
-    if (res.ok) { flash(); router.refresh(); }
+    setError("");
+    try {
+      await post({ action: "update-profile", profile: form });
+      flash();
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -62,6 +82,7 @@ export function ProfileForm({ profile }: { profile: CrmProfile }) {
         <button type="button" onClick={save} disabled={busy || !dirty} className={BTN}>Save profile</button>
         <Saved show={saved} />
       </div>
+      <InlineError message={error} />
     </div>
   );
 }
@@ -77,25 +98,35 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
   const [editVal, setEditVal] = useState("");
   const [removing, setRemoving] = useState<string | null>(null);
   const [reassign, setReassign] = useState("");
+  const [error, setError] = useState("");
 
-  async function refresh() { router.refresh(); }
+  async function saveAction(body: Record<string, unknown>, onSaved: () => void) {
+    setError("");
+    try {
+      await post(body);
+      onSaved();
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    }
+  }
 
   async function add() {
     if (!name.trim()) return;
-    await post({ action: "add-owner", value: name.trim() });
-    setName(""); refresh();
+    await saveAction({ action: "add-owner", value: name.trim() }, () => setName(""));
   }
   async function rename(from: string) {
-    if (editVal.trim() && editVal.trim() !== from) await post({ action: "rename-owner", value: from, to: editVal.trim() });
-    setEditing(null); refresh();
+    if (!editVal.trim() || editVal.trim() === from) return;
+    await saveAction({ action: "rename-owner", value: from, to: editVal.trim() }, () => setEditing(null));
   }
   async function remove(owner: string) {
-    await post({ action: "remove-owner", value: owner, reassignTo: reassign || undefined });
-    setRemoving(null); setReassign(""); refresh();
+    await saveAction(
+      { action: "remove-owner", value: owner, reassignTo: reassign || undefined },
+      () => { setRemoving(null); setReassign(""); },
+    );
   }
   async function setDefault(owner: string) {
-    await post({ action: "set-default-owner", value: owner === defaultOwner ? "" : owner });
-    refresh();
+    await saveAction({ action: "set-default-owner", value: owner === defaultOwner ? "" : owner }, () => undefined);
   }
 
   return (
@@ -150,6 +181,7 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Add an owner…" className={INPUT} />
         <button type="submit" className={BTN}>Add</button>
       </form>
+      <div className="mt-3"><InlineError message={error} /></div>
     </div>
   );
 }
@@ -165,26 +197,37 @@ export function TagManager({ tags }: { tags: TagRow[] }) {
   const [editVal, setEditVal] = useState("");
   const [merging, setMerging] = useState<string | null>(null);
   const [mergeInto, setMergeInto] = useState("");
+  const [error, setError] = useState("");
 
-  function refresh() { router.refresh(); }
+  async function saveAction(body: Record<string, unknown>, onSaved: () => void) {
+    setError("");
+    try {
+      await post(body);
+      onSaved();
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    }
+  }
 
   async function add() {
     if (!create.trim()) return;
-    await post({ action: "create-tag", value: create.trim() });
-    setCreate(""); refresh();
+    await saveAction({ action: "create-tag", value: create.trim() }, () => setCreate(""));
   }
   async function rename(from: string) {
-    if (editVal.trim() && editVal.trim() !== from) await post({ action: "rename-tag", value: from, to: editVal.trim() });
-    setEditing(null); refresh();
+    if (!editVal.trim() || editVal.trim() === from) return;
+    await saveAction({ action: "rename-tag", value: from, to: editVal.trim() }, () => setEditing(null));
   }
   async function merge(from: string) {
-    if (mergeInto && mergeInto !== from) await post({ action: "merge-tag", value: from, to: mergeInto });
-    setMerging(null); setMergeInto(""); refresh();
+    if (!mergeInto || mergeInto === from) return;
+    await saveAction(
+      { action: "merge-tag", value: from, to: mergeInto },
+      () => { setMerging(null); setMergeInto(""); },
+    );
   }
   async function del(tag: string, count: number) {
     if (count > 0 && !window.confirm(`Delete #${tag}? It will be removed from ${count} contact${count === 1 ? "" : "s"}.`)) return;
-    await post({ action: "delete-tag", value: tag });
-    refresh();
+    await saveAction({ action: "delete-tag", value: tag }, () => undefined);
   }
 
   return (
@@ -233,6 +276,7 @@ export function TagManager({ tags }: { tags: TagRow[] }) {
           })}
         </ul>
       )}
+      <div className="mt-3"><InlineError message={error} /></div>
     </div>
   );
 }
@@ -266,15 +310,38 @@ export function AppearanceForm({ prefs }: { prefs: CrmPrefs }) {
   const [pageSize, setPageSize] = useState(prefs.defaultContactsPageSize);
   const [view, setView] = useState(prefs.defaultContactsView);
   const [saved, flash] = useFlash();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  function pickTheme(t: CrmPrefs["theme"]) {
+  async function pickTheme(t: CrmPrefs["theme"]) {
+    const previous = theme;
     setTheme(t);
     applyTheme(t);
-    post({ action: "update-prefs", prefs: { theme: t } });
+    setBusy(true);
+    setError("");
+    try {
+      await post({ action: "update-prefs", prefs: { theme: t } });
+      flash();
+    } catch (cause) {
+      setTheme(previous);
+      applyTheme(previous);
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
   }
   async function saveDefaults() {
-    await post({ action: "update-prefs", prefs: { defaultContactsPageSize: pageSize, defaultContactsView: view } });
-    flash(); router.refresh();
+    setBusy(true);
+    setError("");
+    try {
+      await post({ action: "update-prefs", prefs: { defaultContactsPageSize: pageSize, defaultContactsView: view } });
+      flash();
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -283,7 +350,7 @@ export function AppearanceForm({ prefs }: { prefs: CrmPrefs }) {
         <div className="mb-2 text-xs font-medium text-heading">Theme</div>
         <div className="flex flex-wrap gap-2">
           {(["light", "dark", "system"] as const).map((t) => (
-            <button key={t} type="button" onClick={() => pickTheme(t)} className={`rounded-lg border px-3 py-2 text-sm capitalize ${theme === t ? "border-trust bg-sky text-trust" : "border-mist text-body hover:border-trust"}`}>{t}</button>
+            <button key={t} type="button" disabled={busy} onClick={() => void pickTheme(t)} className={`rounded-lg border px-3 py-2 text-sm capitalize disabled:opacity-60 ${theme === t ? "border-trust bg-sky text-trust" : "border-mist text-body hover:border-trust"}`}>{t}</button>
           ))}
         </div>
       </div>
@@ -302,9 +369,10 @@ export function AppearanceForm({ prefs }: { prefs: CrmPrefs }) {
         </label>
       </div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={saveDefaults} className={BTN}>Save defaults</button>
+        <button type="button" disabled={busy} onClick={saveDefaults} className={BTN}>Save defaults</button>
         <Saved show={saved} />
       </div>
+      <InlineError message={error} />
     </div>
   );
 }
@@ -322,11 +390,24 @@ const NOTIFY_ITEMS: Array<{ key: keyof NotifyPrefs; label: string; hint: string 
 export function NotificationForm({ notify }: { notify: NotifyPrefs }) {
   const [state, setState] = useState<NotifyPrefs>(notify);
   const [saved, flash] = useFlash();
+  const [pending, setPending] = useState<keyof NotifyPrefs | null>(null);
+  const [error, setError] = useState("");
 
-  function toggle(key: keyof NotifyPrefs) {
+  async function toggle(key: keyof NotifyPrefs) {
+    const previous = state;
     const next = { ...state, [key]: !state[key] };
     setState(next);
-    post({ action: "update-prefs", prefs: { notify: next } }).then((r) => { if (r.ok) flash(); });
+    setPending(key);
+    setError("");
+    try {
+      await post({ action: "update-prefs", prefs: { notify: next } });
+      flash();
+    } catch (cause) {
+      setState(previous);
+      setError(errorMessage(cause));
+    } finally {
+      setPending(null);
+    }
   }
 
   return (
@@ -338,11 +419,12 @@ export function NotificationForm({ notify }: { notify: NotifyPrefs }) {
             <span className="block text-sm font-medium text-body">{it.label}</span>
             <span className="block text-xs text-slate">{it.hint}</span>
           </span>
-          <button type="button" role="switch" aria-label={it.label} aria-checked={state[it.key]} onClick={() => toggle(it.key)} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${state[it.key] ? "bg-trust" : "bg-mist"}`}>
+          <button type="button" role="switch" aria-label={it.label} aria-checked={state[it.key]} disabled={pending !== null} onClick={() => void toggle(it.key)} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${state[it.key] ? "bg-trust" : "bg-mist"}`}>
             <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-all ${state[it.key] ? "left-[22px]" : "left-0.5"}`} />
           </button>
         </label>
       ))}
+      <div className="pt-2"><InlineError message={error} /></div>
     </div>
   );
 }
@@ -377,11 +459,18 @@ export function DataManagement({ status }: { status: Status }) {
   async function restoreBackup() {
     if (!backup || confirmation !== "RESTORE VANCE CRM") return;
     setWorking(true); setError(""); setMessage("");
-    const response = await fetch("/api/crm/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backup, confirmation }) });
-    const payload = await response.json().catch(() => null) as { error?: string } | null;
-    if (!response.ok) setError(payload?.error ?? "Restore failed safely; current data was not partially replaced.");
-    else { setMessage("Backup restored. Pending emails from the snapshot were cancelled for safety."); setConfirmation(""); router.refresh(); }
-    setWorking(false);
+    try {
+      const response = await fetch("/api/crm/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ backup, confirmation }) });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Restore failed safely; current data was not partially replaced.");
+      setMessage("Backup restored. Pending emails from the snapshot were cancelled for safety.");
+      setConfirmation("");
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setWorking(false);
+    }
   }
 
   return (
@@ -427,21 +516,26 @@ export function ContactTrash({ contacts }: { contacts: TrashedContact[] }) {
   async function restore(contact: TrashedContact) {
     setRestoring(contact.id);
     setError("");
-    const response = await fetch("/api/crm/trash", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: contact.id }),
-    });
-    const payload = await response.json().catch(() => null) as { error?: string } | null;
-    if (!response.ok) setError(payload?.error ?? "Could not restore this contact.");
-    else router.refresh();
-    setRestoring(null);
+    try {
+      const response = await fetch("/api/crm/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: contact.id }),
+      });
+      const payload = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(payload?.error ?? "Could not restore this contact.");
+      router.refresh();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setRestoring(null);
+    }
   }
 
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate">Deleted contacts and their related CRM history remain here until restored.</p>
-      {error ? <p className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
       {contacts.length ? <ul className="divide-y divide-mist rounded-xl border border-mist">
         {contacts.map((contact) => <li key={contact.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
@@ -450,7 +544,7 @@ export function ContactTrash({ contacts }: { contacts: TrashedContact[] }) {
             <div className="mt-1 text-[11px] text-slate">Deleted {new Date(contact.deletedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}{contact.deletedBy ? ` by ${contact.deletedBy}` : ""}</div>
           </div>
           <button type="button" disabled={restoring === contact.id} onClick={() => restore(contact)} className={BTN}>
-            {restoring === contact.id ? "Restoringâ€¦" : "Restore"}
+            {restoring === contact.id ? "Restoring…" : "Restore"}
           </button>
         </li>)}
       </ul> : <p className="rounded-xl border border-mist bg-cloud p-4 text-sm text-slate">Trash is empty.</p>}

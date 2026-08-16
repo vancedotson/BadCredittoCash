@@ -13,6 +13,7 @@ import {
 } from "@/lib/stages";
 import { SegmentBadge } from "@/components/crm/ui";
 import { ChevronRightIcon } from "@/components/marketing-v2/Icons";
+import { UndoNotice, type UndoNoticeState } from "@/components/crm/UndoNotice";
 
 const inputClass =
   "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
@@ -50,6 +51,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   const [addOpen, setAddOpen] = useState(false);
   const [mobileStage, setMobileStage] = useState<Stage>("new");
   const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+  const [undoNotice, setUndoNotice] = useState<UndoNoticeState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function scrollByCol(dir: number) {
@@ -80,10 +82,46 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
 
   async function move(ids: string[], toStage: Stage, lostReason?: string) {
     setActionError(null);
+    const previous = ids.flatMap((id) => {
+      const contact = contacts.find((candidate) => candidate.id === id);
+      return contact ? [{ id, stage: stageOf(contact), lostReason: contact.lostReason }] : [];
+    });
     setOv((p) => { const n = { ...p }; ids.forEach((id) => (n[id] = toStage)); return n; });
     setPending((p) => { const n = new Set(p); ids.forEach((id) => n.add(id)); return n; });
     try {
-      await Promise.all(ids.map((id) => api(`/api/crm/contact/${id}`, "PATCH", { stage: toStage, ...(lostReason ? { lostReason } : {}), expectedUpdatedAt: contacts.find((contact) => contact.id === id)?.updatedAt })));
+      const results = await Promise.all(ids.map((id) => api(`/api/crm/contact/${id}`, "PATCH", { stage: toStage, ...(lostReason ? { lostReason } : {}), expectedUpdatedAt: contacts.find((contact) => contact.id === id)?.updatedAt })));
+      const latestUpdatedAt = new Map(ids.map((id, index) => [
+        id,
+        (results[index] as { lead?: { updatedAt?: string } }).lead?.updatedAt,
+      ]));
+      const undo = async (): Promise<void> => {
+        setOv((current) => {
+          const next = { ...current };
+          previous.forEach((contact) => { next[contact.id] = contact.stage; });
+          return next;
+        });
+        try {
+          await Promise.all(previous.map((contact) => api(`/api/crm/contact/${contact.id}`, "PATCH", {
+            stage: contact.stage,
+            lostReason: contact.lostReason ?? "",
+            ...(latestUpdatedAt.get(contact.id) ? { expectedUpdatedAt: latestUpdatedAt.get(contact.id) } : {}),
+          })));
+          router.refresh();
+        } catch (error) {
+          setOv((current) => {
+            const next = { ...current };
+            previous.forEach((contact) => { next[contact.id] = toStage; });
+            return next;
+          });
+          setActionError({ message: error instanceof Error ? error.message : "Could not undo the stage move.", retry: () => { void undo(); } });
+          throw error;
+        }
+      };
+      setUndoNotice((current) => ({
+        id: (current?.id ?? 0) + 1,
+        message: `${ids.length} contact${ids.length === 1 ? "" : "s"} moved to ${STAGE_LABELS[toStage]}.`,
+        undo,
+      }));
       router.refresh();
     } catch (error) {
       setOv((p) => { const n = { ...p }; ids.forEach((id) => delete n[id]); return n; });
@@ -147,6 +185,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
 
   return (
     <div className="space-y-4">
+      {undoNotice ? <UndoNotice key={undoNotice.id} notice={undoNotice} onDismiss={() => setUndoNotice(null)} /> : null}
       {actionError ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
           <span>{actionError.message} The board was kept safe.</span>

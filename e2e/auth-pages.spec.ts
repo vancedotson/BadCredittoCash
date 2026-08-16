@@ -43,6 +43,18 @@ test("invalid login state keeps the email and offers password recovery", async (
   await expect(password).toBeFocused();
   await expect(page.locator("#login-error")).toContainText(/email or password is incorrect/i);
   await expect(page.getByRole("link", { name: "Forgot your password?", exact: true })).toBeVisible();
+  await password.fill("preview-password");
+  await page.getByRole("button", { name: "Show", exact: true }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(page.getByRole("button", { name: "Hide", exact: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("expired session explains why sign in is needed", async ({ page }) => {
+  await page.goto("/login?reason=session-expired&next=/crm/tasks");
+  const sessionAlert = page.getByRole("alert").filter({ hasText: "Your session expired." });
+  await expect(sessionAlert).toContainText("Your session expired.");
+  await expect(sessionAlert).toContainText("Sign in again to continue where you left off.");
+  await expect(page.locator('input[name="next"]')).toHaveValue("/crm/tasks");
 });
 
 test("sign in loading state locks the form and announces progress", async ({ page }) => {

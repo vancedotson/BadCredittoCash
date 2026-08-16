@@ -1,8 +1,9 @@
 import { SEQUENCES, SEGMENT_SEQUENCES, type Sequence } from "@/config/sequences";
 import { SEQUENCE_FOR_SEGMENT } from "@/lib/automations";
 import { SEGMENTS_IN_ORDER, type Segment } from "@/lib/segments";
-import { hydrateStore, getRecentSequenceFailures, getSettings, getSequenceQueueStats } from "@/lib/store";
+import { hydrateStore, getRecentSequenceFailures, getSettings, getSequenceEnrollments, getSequenceQueueStats } from "@/lib/store";
 import { PageTitle, Card, SegmentBadge } from "@/components/crm/ui";
+import { SequenceOperations } from "@/components/crm/SequenceOperations";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,11 @@ function SequenceCard({ seq }: { seq: Sequence }) {
 
 export default async function SequencesPage() {
   await hydrateStore();
-  const [{ profile }, queue, failures] = await Promise.all([
+  const [{ profile }, queue, failures, enrollments] = await Promise.all([
     getSettings(),
     getSequenceQueueStats(),
     getRecentSequenceFailures(),
+    getSequenceEnrollments(),
   ]);
   const mergeFields = [
     { token: "{{watch_link}}", meaning: "The contact's link to the on-demand training.", value: profile.trainingUrl },
@@ -115,32 +117,7 @@ export default async function SequencesPage() {
         </div>
       </Card>
 
-      {failures.length > 0 ? (
-        <Card>
-          <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-heading">Permanent failures</h2>
-              <p className="mt-1 text-xs text-slate">Messages appear here after a permanent provider error or after all safe retries are exhausted.</p>
-            </div>
-            <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Needs attention</span>
-          </div>
-          <div className="divide-y divide-mist overflow-hidden rounded-xl border border-mist">
-            {failures.map((failure) => (
-              <div key={failure.id} className="grid gap-1 bg-white px-4 py-3 text-sm md:grid-cols-[1.2fr_1fr_auto] md:items-center md:gap-4">
-                <div>
-                  <div className="font-medium text-heading">{failure.contactName}</div>
-                  <div className="text-xs text-slate">{failure.email}</div>
-                </div>
-                <div>
-                  <div className="text-body">{failure.templateKey} · {failure.attempts} attempt{failure.attempts === 1 ? "" : "s"}</div>
-                  <div className="mt-0.5 line-clamp-2 text-xs text-red-700">{failure.error}</div>
-                </div>
-                <time className="text-xs text-slate" dateTime={failure.failedAt}>{new Date(failure.failedAt).toLocaleString()}</time>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ) : null}
+      <SequenceOperations initialEnrollments={enrollments} initialFailures={failures} />
 
       {/* Behavior → sequence map */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

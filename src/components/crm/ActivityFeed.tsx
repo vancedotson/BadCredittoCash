@@ -39,6 +39,26 @@ function detailOf(e: ActivityItem): string {
 }
 function csvEscape(v: unknown) { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 
+type ActivityCluster = { key: string; eventKey: string; items: ActivityItem[] };
+
+function eventGroupKey(eventName: string) {
+  return eventName.startsWith("webinar_watch_") ? "webinar_watch_progress" : eventName;
+}
+
+function clusterRows(rows: ActivityItem[]): ActivityCluster[] {
+  const clusters = new Map<string, ActivityCluster>();
+  for (const item of rows) {
+    const eventKey = eventGroupKey(item.event);
+    const contactKey = item.contactId ?? item.email ?? "anonymous";
+    const dayKey = item.createdAt.slice(0, 10);
+    const key = `${contactKey}:${dayKey}:${eventKey}`;
+    const cluster = clusters.get(key) ?? { key, eventKey, items: [] };
+    cluster.items.push(item);
+    clusters.set(key, cluster);
+  }
+  return [...clusters.values()];
+}
+
 export function ActivityFeed({ owners }: { owners: string[] }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -54,6 +74,23 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [filtersReady, setFiltersReady] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      try {
+        const saved = JSON.parse(localStorage.getItem("crm-activity-filters") ?? "null") as { category?: string; important?: boolean; owner?: string; group?: "date" | "contact" } | null;
+        if (saved) { setCategory(saved.category ?? ""); setImportant(Boolean(saved.important)); setOwner(saved.owner ?? ""); if (saved.group) setGroup(saved.group); }
+      } catch { /* ignore invalid saved filters */ }
+      setFiltersReady(true);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    if (!filtersReady) return;
+    localStorage.setItem("crm-activity-filters", JSON.stringify({ category, important, owner, group }));
+  }, [filtersReady, category, important, owner, group]);
 
   const PAGE = 40;
   async function fetchActivity(offset: number) {
@@ -119,6 +156,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
       setLoading(false);
     }
   }
+  function resetFilters() { setSearch(""); setCategory(""); setImportant(false); setOwner(""); setFrom(""); setTo(""); }
   async function exportCsv() {
     const res = await fetch(`/api/crm/activity?${qs(0).replace(/limit=\d+/, "limit=100000")}`).then((r) => r.json());
     const rows = (res.items as ActivityItem[]).map((e) => [absTime(e.createdAt), e.contactName ?? "", e.email ?? "", displayEvent(e.event).label, displayEvent(e.event).category].map(csvEscape).join(","));
@@ -136,7 +174,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-filters-ready={filtersReady ? "true" : "false"}>
       {/* Summary strip */}
       {summary ? (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-mist bg-cloud px-4 py-2.5 text-sm">
@@ -169,6 +207,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
 
       {/* Feed */}
       <div className="rounded-2xl border border-mist bg-card p-5">
+        <p className="mb-4 text-xs text-slate">Repeated activity from the same contact on the same day is grouped.</p>
         {loading && items.length === 0 ? (
           <p role="status" className="py-6 text-center text-sm text-slate">Loading activity…</p>
         ) : error ? (
@@ -177,29 +216,41 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
             <button type="button" onClick={refresh} className="font-semibold underline">Retry</button>
           </div>
         ) : items.length === 0 ? (
-          <p className="py-6 text-center text-sm text-slate">No activity matches these filters.</p>
+          <div className="py-6 text-center"><p className="text-sm text-slate">No activity matches these filters.</p><button type="button" onClick={resetFilters} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">Reset filters</button></div>
         ) : (
           <div className="space-y-5">
             {[...groups.entries()].map(([label, rows]) => (
               <div key={label}>
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate">{label}</div>
                 <ul className="space-y-1">
-                  {rows.map((e) => {
+                  {clusterRows(rows).map((cluster) => {
+                    const e = cluster.items[0];
                     const d = displayEvent(e.event);
                     const det = detailOf(e);
-                    const open = expanded.has(e.id);
+                    const open = expanded.has(cluster.key);
+                    const repeated = cluster.items.length > 1;
+                    const label = cluster.eventKey === "webinar_watch_progress" ? "Training watch progress" : d.label;
                     return (
-                      <li key={e.id}>
+                      <li key={cluster.key}>
                         <div className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-cloud">
                           <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${toneClass(d.tone)}`}><EventGlyph icon={d.icon} className="h-3.5 w-3.5" /></span>
                           <span className="min-w-0 flex-1 truncate text-body">
-                            {d.label}
+                            {label}
                             {e.contactId ? <> · <Link href={`/crm/contacts/${e.contactId}`} className="text-trust underline underline-offset-2">{e.contactName}</Link></> : e.email ? <span className="text-slate"> · {e.email}</span> : <span className="text-slate"> · anonymous</span>}
                           </span>
-                          {det ? <button type="button" onClick={() => toggle(e.id)} className="shrink-0 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
+                          {repeated ? <span className="shrink-0 rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{cluster.items.length} {cluster.eventKey === "webinar_watch_progress" ? "milestones" : "times"}</span> : null}
+                          {det || repeated ? <button type="button" onClick={() => toggle(cluster.key)} aria-expanded={open} className="shrink-0 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
                           <span className="shrink-0 text-xs text-slate" title={absTime(e.createdAt)}>{relTime(e.createdAt)}</span>
                         </div>
-                        {open && det ? <div className="ml-12 mb-1 text-xs text-slate">{det}</div> : null}
+                        {open ? (
+                          <div className="mb-1 ml-12 text-xs text-slate">
+                            {repeated ? (
+                              <ul className="space-y-1">
+                                {cluster.items.map((item) => <li key={item.id}>{displayEvent(item.event).label} · {absTime(item.createdAt)}</li>)}
+                              </ul>
+                            ) : det}
+                          </div>
+                        ) : null}
                       </li>
                     );
                   })}

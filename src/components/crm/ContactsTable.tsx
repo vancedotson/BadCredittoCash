@@ -154,7 +154,7 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
           </thead>
           <tbody className="divide-y divide-mist">
             {rows.length === 0 ? (
-              <tr><td colSpan={10} className="px-4 py-10 text-center text-slate">No contacts match these filters.</td></tr>
+              <tr><td colSpan={10} className="px-4 py-10 text-center text-slate"><p>No contacts match these filters.</p><button type="button" onClick={() => router.push("/crm/contacts")} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">Reset filters</button></td></tr>
             ) : rows.map((c) => {
               const checked = allMatching || selected.has(c.id);
               return (
@@ -185,7 +185,7 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
 
       {/* Mobile cards */}
       <div className="space-y-2 md:hidden">
-        {rows.length === 0 ? <p className="py-6 text-center text-sm text-slate">No contacts match these filters.</p> : rows.map((c) => (
+        {rows.length === 0 ? <div className="py-6 text-center text-sm text-slate"><p>No contacts match these filters.</p><button type="button" onClick={() => router.push("/crm/contacts")} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">Reset filters</button></div> : rows.map((c) => (
           <div key={c.id} className={`rounded-xl border border-mist bg-card p-3 ${allMatching || selected.has(c.id) ? "ring-1 ring-trust" : ""}`}>
             <div className="flex items-start gap-2">
               <input type="checkbox" checked={allMatching || selected.has(c.id)} onChange={() => toggleOne(c.id)} className="mt-0.5 h-4 w-4 shrink-0 accent-trust" aria-label={`Select ${c.name}`} />
