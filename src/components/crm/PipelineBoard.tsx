@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Contact } from "@/lib/store";
@@ -35,7 +36,7 @@ function agingColor(days: number): string {
 
 // ---------------------------------------------------------------------------
 
-export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owners: string[] }) {
+export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact[]; owners: string[]; focusId?: string }) {
   const router = useRouter();
   const [ov, setOv] = useState<Record<string, Stage>>({});
   const [pending, setPending] = useState<Set<string>>(new Set());
@@ -49,15 +50,24 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   const [overStage, setOverStage] = useState<Stage | null>(null);
   const [lostIds, setLostIds] = useState<string[] | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [mobileStage, setMobileStage] = useState<Stage>("new");
+  const [mobileStage, setMobileStage] = useState<Stage>(() => contacts.find((contact) => contact.id === focusId)?.stage ?? "new");
   const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
   const [undoNotice, setUndoNotice] = useState<UndoNoticeState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [boardScroll, setBoardScroll] = useState({ left: false, right: true });
 
   function scrollByCol(dir: number) {
     scrollRef.current?.scrollBy({ left: dir * 320, behavior: "smooth" });
   }
-
+  function syncBoardScroll() {
+    const element = scrollRef.current;
+    if (!element) return;
+    setBoardScroll({
+      left: element.scrollLeft > 2,
+      right: element.scrollLeft < element.scrollWidth - element.clientWidth - 2,
+    });
+  }
   const stageOf = (c: Contact): Stage => ov[c.id] ?? c.stage;
   const sourceOf = (c: Contact) => c.utm?.utm_source ?? c.source ?? "direct";
   const sources = useMemo(() => [...new Set(contacts.map(sourceOf))].sort(), [contacts]);
@@ -70,6 +80,28 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
     if (sourceF) list = list.filter((c) => sourceOf(c) === sourceF);
     return list;
   }, [contacts, q, ownerF, sourceF]);
+  useEffect(() => {
+    const raf = requestAnimationFrame(syncBoardScroll);
+    window.addEventListener("resize", syncBoardScroll);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", syncBoardScroll); };
+  }, [filtered]);
+
+  useEffect(() => {
+    if (!focusId) return;
+    const revealTimer = window.setTimeout(() => {
+      const board = boardRef.current;
+      if (!board) return;
+      const cards = [...board.querySelectorAll<HTMLElement>(`[data-pipeline-contact="${CSS.escape(focusId)}"]`)];
+      const card = cards.find((candidate) => candidate.getClientRects().length > 0);
+      if (!card) return;
+      board.classList.add("pipeline-guided-focus");
+      card.classList.add("pipeline-card-selected", "pipeline-card-pulse");
+      card.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }, 120);
+    const fadeTimer = window.setTimeout(() => boardRef.current?.classList.remove("pipeline-guided-focus"), 2120);
+    const pulseTimer = window.setTimeout(() => boardRef.current?.querySelectorAll(".pipeline-card-pulse").forEach((card) => card.classList.remove("pipeline-card-pulse")), 3120);
+    return () => { window.clearTimeout(revealTimer); window.clearTimeout(fadeTimer); window.clearTimeout(pulseTimer); };
+  }, [focusId]);
 
   function sortCards(cards: Contact[]): Contact[] {
     const s = [...cards];
@@ -170,7 +202,7 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
   }
 
   const dropHandlers = (stage: Stage) => ({
-    onDragOver: (e: React.DragEvent) => { e.preventDefault(); if (overStage !== stage) setOverStage(stage); },
+    onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overStage !== stage) setOverStage(stage); },
     onDragLeave: () => setOverStage((s) => (s === stage ? null : s)),
     onDrop: (e: React.DragEvent) => {
       e.preventDefault();
@@ -181,10 +213,10 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
     },
   });
 
-  const cardProps = { owners, selected, pending, stageOf, onToggleSelect: toggleSelect, onMoveStage: (id: string, s: Stage) => requestMove([id], s), onAssign: assign, onQuickTask: quickTask, onDragStart: setDragId, onDragEnd: () => setDragId(null) };
+  const cardProps = { owners, selected, pending, draggingId: dragId, stageOf, onToggleSelect: toggleSelect, onMoveStage: (id: string, s: Stage) => requestMove([id], s), onAssign: assign, onQuickTask: quickTask, onDragStart: setDragId, onDragEnd: () => setDragId(null) };
 
   return (
-    <div className="space-y-4">
+    <div ref={boardRef} className="space-y-4">
       {undoNotice ? <UndoNotice key={undoNotice.id} notice={undoNotice} onDismiss={() => setUndoNotice(null)} /> : null}
       {actionError ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
@@ -193,23 +225,23 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
         </div>
       ) : null}
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" aria-label="Search pipeline" className={`${inputClass} min-w-[180px] flex-1`} />
-        <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={inputClass} aria-label="Filter by owner">
+      <div className="grid grid-cols-2 gap-2 xl:flex xl:flex-wrap xl:items-center">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" aria-label="Search pipeline" className={`${inputClass} col-span-2 min-h-10 w-full min-w-[180px] xl:flex-1`} />
+        <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Filter by owner">
           <option value="">All owners</option>
           <option value="__none__">Unassigned</option>
           {owners.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
-        <select value={sourceF} onChange={(e) => setSourceF(e.target.value)} className={inputClass} aria-label="Filter by source">
+        <select value={sourceF} onChange={(e) => setSourceF(e.target.value)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Filter by source">
           <option value="">All sources</option>
           {sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
         </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className={inputClass} aria-label="Sort">
+        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Sort">
           <option value="recent">Recent activity</option>
           <option value="stale">Stalest first</option>
           <option value="name">Name</option>
         </select>
-        <button type="button" onClick={() => setAddOpen(true)} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">
+        <button type="button" onClick={() => setAddOpen(true)} className="min-h-10 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">
           + Add contact
         </button>
       </div>
@@ -236,14 +268,14 @@ export function PipelineBoard({ contacts, owners }: { contacts: Contact[]; owner
       {/* Desktop kanban — all stages in one horizontal, scrollable row */}
       <div className="hidden md:block">
         <div className="mb-2 flex items-center justify-end gap-2">
-          <button type="button" onClick={() => scrollByCol(-1)} aria-label="Scroll left" className="grid h-8 w-8 place-items-center rounded-lg border border-mist bg-card text-slate transition-colors hover:bg-cloud hover:text-heading">
+          <button type="button" onClick={() => scrollByCol(-1)} disabled={!boardScroll.left} aria-label="Scroll left" className="grid h-9 w-9 place-items-center rounded-lg border border-mist bg-card text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">
             <ChevronRightIcon className="h-4 w-4 rotate-180" />
           </button>
-          <button type="button" onClick={() => scrollByCol(1)} aria-label="Scroll right" className="grid h-8 w-8 place-items-center rounded-lg border border-mist bg-card text-slate transition-colors hover:bg-cloud hover:text-heading">
+          <button type="button" onClick={() => scrollByCol(1)} disabled={!boardScroll.right} aria-label="Scroll right" className="grid h-9 w-9 place-items-center rounded-lg border border-mist bg-card text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">
             <ChevronRightIcon className="h-4 w-4" />
           </button>
         </div>
-        <div ref={scrollRef} className="flex gap-4 overflow-x-auto pb-2">
+        <div ref={scrollRef} onScroll={syncBoardScroll} className="crm-scroll flex gap-4 overflow-x-auto pb-2">
           {ACTIVE_STAGES.map((stage) => (
             <Column key={stage} stage={stage} cards={cardsIn(stage)} collapsed={collapsed.has(stage)} onToggleCollapse={() => toggleCollapse(stage)} over={overStage === stage} drop={dropHandlers(stage)} cardProps={cardProps} />
           ))}
@@ -286,6 +318,7 @@ type CardProps = {
   owners: string[];
   selected: Set<string>;
   pending: Set<string>;
+  draggingId: string | null;
   stageOf: (c: Contact) => Stage;
   onToggleSelect: (id: string) => void;
   onMoveStage: (id: string, s: Stage) => void;
@@ -310,7 +343,7 @@ function Column({
     );
   }
   return (
-    <div className={`flex ${closed ? "w-64" : "w-72"} shrink-0 flex-col rounded-2xl border bg-cloud transition-colors ${over ? "border-trust ring-2 ring-trust/30" : "border-mist"}`} {...drop}>
+    <div className={`flex ${closed ? "w-64" : "w-72"} shrink-0 flex-col rounded-2xl border bg-cloud transition-all duration-200 ${over ? "-translate-y-0.5 border-trust bg-sky/40 shadow-card ring-2 ring-trust/30" : "border-mist"}`} {...drop}>
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="font-heading text-sm font-semibold text-heading">{STAGE_LABELS[stage]}</span>
@@ -334,73 +367,137 @@ type PipelineBoardDrop = (stage: Stage) => {
   onDrop: (e: React.DragEvent) => void;
 };
 
-function PipelineCard({ c, owners, selected, pending, stageOf, onToggleSelect, onMoveStage, onAssign, onQuickTask, onDragStart, onDragEnd }: { c: Contact } & CardProps) {
+function PipelineCard({ c, owners, selected, pending, draggingId, stageOf, onToggleSelect, onMoveStage, onAssign, onQuickTask, onDragStart, onDragEnd }: { c: Contact } & CardProps) {
   const [menu, setMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [task, setTask] = useState("");
   const [taskPending, setTaskPending] = useState(false);
+  const dragPreviewRef = useRef<HTMLElement | null>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const lastDragXRef = useRef(0);
   const stage = stageOf(c);
   const isPending = pending.has(c.id);
+  const isDragging = draggingId === c.id;
   const source = c.utm?.utm_source ?? c.source ?? "direct";
+
+  function removeDragPreview() {
+    dragPreviewRef.current?.remove();
+    dragPreviewRef.current = null;
+  }
+  useEffect(() => removeDragPreview, []);
+
+  function beginDrag(event: React.DragEvent<HTMLElement>) {
+    event.dataTransfer.setData("text/plain", c.id);
+    event.dataTransfer.effectAllowed = "move";
+    const sourceCard = event.currentTarget;
+    const bounds = sourceCard.getBoundingClientRect();
+    const preview = sourceCard.cloneNode(true) as HTMLElement;
+    preview.setAttribute("aria-hidden", "true");
+    dragOffsetRef.current = {
+      x: Math.min(event.clientX - bounds.left, bounds.width - 20),
+      y: Math.min(event.clientY - bounds.top, bounds.height - 20),
+    };
+    lastDragXRef.current = event.clientX;
+    Object.assign(preview.style, {
+      position: "fixed",
+      left: "0",
+      top: "0",
+      width: `${bounds.width}px`,
+      margin: "0",
+      opacity: "1",
+      background: "var(--color-card)",
+      pointerEvents: "none",
+      transform: `translate3d(${event.clientX - dragOffsetRef.current.x}px, ${event.clientY - dragOffsetRef.current.y}px, 0) rotate(0deg) scale(1.025)`,
+      transformOrigin: "center",
+      transition: "transform 75ms cubic-bezier(.2,.75,.3,1), box-shadow 120ms ease",
+      boxShadow: "0 22px 48px rgba(15, 44, 76, 0.3), 0 7px 18px rgba(15, 44, 76, 0.2)",
+      willChange: "transform",
+      zIndex: "9999",
+    });
+    document.body.appendChild(preview);
+    dragPreviewRef.current = preview;
+    const transparentDragImage = document.createElement("canvas");
+    transparentDragImage.width = 1;
+    transparentDragImage.height = 1;
+    event.dataTransfer.setDragImage(transparentDragImage, 0, 0);
+    onDragStart(c.id);
+  }
+  function animateDrag(event: React.DragEvent<HTMLElement>) {
+    const preview = dragPreviewRef.current;
+    if (!preview || (!event.clientX && !event.clientY)) return;
+    const deltaX = event.clientX - lastDragXRef.current;
+    const tilt = Math.max(-5, Math.min(5, deltaX * 0.7));
+    const x = event.clientX - dragOffsetRef.current.x;
+    const y = event.clientY - dragOffsetRef.current.y;
+    preview.style.transform = `translate3d(${x}px, ${y}px, 0) rotate(${tilt}deg) scale(1.025)`;
+    lastDragXRef.current = event.clientX;
+  }
+  function finishDrag() {
+    removeDragPreview();
+    onDragEnd();
+  }
 
   return (
     <article
+      data-pipeline-contact={c.id}
       draggable
-      onDragStart={(e) => { e.dataTransfer.setData("text/plain", c.id); onDragStart(c.id); }}
-      onDragEnd={onDragEnd}
-      className={`relative rounded-xl border border-mist bg-card p-3 transition-opacity ${isPending ? "opacity-50" : ""}`}
-      style={{ borderLeft: `3px solid ${agingColor(c.stageAgeDays)}`, cursor: "grab" }}
+      onDragStart={beginDrag}
+      onDrag={animateDrag}
+      onDragEnd={finishDrag}
+      className={`relative rounded-xl border border-mist bg-card p-3 transition-[transform,opacity,box-shadow] duration-200 ${isPending ? "opacity-50" : ""} ${isDragging ? "scale-[0.985] opacity-60 shadow-inner" : "hover:-translate-y-0.5 hover:shadow-card"}`}
+      style={{ borderLeft: `3px solid ${agingColor(c.stageAgeDays)}`, cursor: isDragging ? "grabbing" : "grab" }}
     >
       <div className="flex items-start gap-2">
-        <input type="checkbox" checked={selected.has(c.id)} onChange={() => onToggleSelect(c.id)} className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-trust" aria-label={`Select ${c.name}`} />
+        <label className="-m-2 grid h-10 w-10 shrink-0 cursor-pointer place-items-center" aria-label={`Select ${c.name}`}><input type="checkbox" checked={selected.has(c.id)} onChange={() => onToggleSelect(c.id)} className="h-4 w-4 accent-trust" /></label>
         <Link href={`/crm/contacts/${c.id}`} className="min-w-0 flex-1 truncate text-sm font-medium text-heading hover:text-trust">{c.name}</Link>
-        <button type="button" onClick={() => setMenu((m) => !m)} aria-label="Actions" className="shrink-0 px-1 text-slate hover:text-heading">&#8942;</button>
+        <button type="button" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ top: Math.max(16, Math.min(rect.bottom + 8, window.innerHeight - 300)), right: Math.max(16, window.innerWidth - rect.right) }); setMenu((m) => !m); }} aria-label="Actions" className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center text-lg text-slate hover:text-heading">&#8942;</button>
       </div>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         <SegmentBadge segment={c.segment} />
-        {c.owner ? <span className="rounded-md bg-sky px-1.5 py-0.5 text-[11px] font-medium text-trust">{c.owner}</span> : null}
-        {(c.tags ?? []).slice(0, 1).map((t) => <span key={t} className="rounded-md bg-mist/60 px-1.5 py-0.5 text-[11px] text-slate">#{t}</span>)}
+        {c.owner ? <span className="rounded-md bg-sky px-1.5 py-0.5 text-xs font-medium text-trust">{c.owner}</span> : null}
+        {(c.tags ?? []).slice(0, 1).map((t) => <span key={t} className="rounded-md bg-mist/60 px-1.5 py-0.5 text-xs text-slate">#{t}</span>)}
       </div>
 
       {/* why-now signal */}
       {c.nextTask ? (
-        <div className={`mt-1.5 truncate text-xs ${c.nextTask.overdue ? "text-red" : "text-slate"}`}>
+        <div className={`mt-1.5 truncate text-sm ${c.nextTask.overdue ? "text-red" : "text-slate"}`}>
           &#9873; {c.nextTask.title}{c.nextTask.overdue ? " · overdue" : ""}
         </div>
       ) : c.daysSinceActivity >= 5 ? (
-        <div className="mt-1.5 text-xs text-gold-deep">No follow-up set</div>
+        <div className="mt-1.5 text-sm text-gold-deep">No follow-up set</div>
       ) : null}
 
-      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-slate">
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-sm text-slate">
         <span className="truncate capitalize">{source}{c.phone ? " · has phone" : ""}</span>
         <span className="shrink-0">{c.watchPct ? `${c.watchPct}% watched` : ""}</span>
       </div>
-      <div className="mt-0.5 text-[11px] text-slate">In stage {c.stageAgeDays}d · active {c.daysSinceActivity}d ago</div>
+      <div className="mt-0.5 text-xs text-slate">In stage {c.stageAgeDays}d · active {c.daysSinceActivity}d ago</div>
 
       <div className="mt-2 flex items-center gap-2">
-        <select value={stage} onChange={(e) => onMoveStage(c.id, e.target.value as Stage)} className="flex-1 rounded-lg border border-mist bg-card px-2 py-1 text-xs text-body outline-none focus:border-trust" aria-label={`Move ${c.name} to another stage`}>
+        <select value={stage} onChange={(e) => onMoveStage(c.id, e.target.value as Stage)} className="min-h-9 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust" aria-label={`Move ${c.name} to another stage`}>
           {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
         </select>
       </div>
 
       {/* actions menu */}
-      {menu ? (
+      {menu && menuPosition ? createPortal(
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
-          <div className="absolute right-2 top-9 z-20 w-52 rounded-xl border border-mist bg-card p-3 shadow-card">
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-slate">Assign to</label>
+          <div className="fixed inset-0 z-[80] bg-navy/25 backdrop-blur-[1px]" onClick={() => setMenu(false)} />
+          <div className="fixed z-[90] w-60 rounded-xl border border-trust/40 bg-card p-4 shadow-2xl ring-1 ring-navy/10" style={menuPosition}>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Assign to</label>
             <select value={c.owner ?? ""} onChange={(e) => { onAssign(c.id, e.target.value); setMenu(false); }} className="mb-3 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust">
               <option value="">Unassigned</option>
               {owners.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
-            <label className="mb-1 block text-[11px] uppercase tracking-wide text-slate">Quick task</label>
+            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Quick task</label>
             <div className="flex gap-1.5">
               <input value={task} onChange={(e) => setTask(e.target.value)} placeholder="Task…" className="min-w-0 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust" />
               <button disabled={taskPending} type="button" onClick={async () => { if (!task.trim()) return; setTaskPending(true); try { await onQuickTask(c.email, task.trim()); setTask(""); setMenu(false); } catch { /* the board-level retry keeps the draft available */ } finally { setTaskPending(false); } }} className="rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep disabled:opacity-60">{taskPending ? "…" : "Add"}</button>
             </div>
             <Link href={`/crm/contacts/${c.id}`} className="mt-3 block text-sm text-trust hover:underline">Open contact &#8594;</Link>
           </div>
-        </>
+        </>, document.body
       ) : null}
     </article>
   );
@@ -447,13 +544,13 @@ function AddContactModal({ owners, onClose, onCreated }: { owners: string[]; onC
 
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <form role="dialog" aria-modal="true" aria-labelledby="pipeline-add-title" onSubmit={submit} className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+      <form role="dialog" aria-modal="true" aria-labelledby="pipeline-add-title" onSubmit={submit} className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-mist bg-card p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <h3 id="pipeline-add-title" className="text-lg font-semibold text-heading">Add contact</h3>
         <div className="mt-4 space-y-3">
           <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" aria-label="Name" className={field} />
           <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" aria-label="Email" className={field} />
           <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" aria-label="Phone" className={field} />
-          <div className="flex gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" aria-label="Source" className={field} />
             <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} aria-label="Stage" className={field}>
               {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}

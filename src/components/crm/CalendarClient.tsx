@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { TaskWithContact, Booking, ContactOption } from "@/lib/store";
@@ -52,12 +52,32 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   const [typeF, setTypeF] = useState("");
   const [hideDone, setHideDone] = useState(false);
   const [dayOpen, setDayOpen] = useState<string | null>(null);
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [bookingPending, setBookingPending] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState("");
   const [taskPending, setTaskPending] = useState<string | null>(null);
   const [taskError, setTaskError] = useState("");
   const [undoNotice, setUndoNotice] = useState<UndoNoticeState | null>(null);
+  const calendarScrollRef = useRef<HTMLDivElement>(null);
+  const [calendarScroll, setCalendarScroll] = useState({ left: false, right: false });
+
+  function syncCalendarScroll() {
+    const element = calendarScrollRef.current;
+    if (!element) { setCalendarScroll({ left: false, right: false }); return; }
+    setCalendarScroll({
+      left: element.scrollLeft > 2,
+      right: element.scrollLeft < element.scrollWidth - element.clientWidth - 2,
+    });
+  }
+  function moveCalendar(direction: -1 | 1) {
+    calendarScrollRef.current?.scrollBy({ left: direction * 320, behavior: "smooth" });
+  }
+  useEffect(() => {
+    const raf = requestAnimationFrame(syncCalendarScroll);
+    window.addEventListener("resize", syncCalendarScroll);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", syncCalendarScroll); };
+  }, [view, cursor]);
 
   const ft = tasks.filter((t) => {
     if (ownerF) { if (ownerF === "__none__" ? t.owner : t.owner !== ownerF) return false; }
@@ -191,7 +211,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   const dropProps = (dayKey: string) => ({ onDragOver: (e: React.DragEvent) => e.preventDefault(), onDrop: (e: React.DragEvent) => { e.preventDefault(); const id = dragId ?? e.dataTransfer.getData("text/plain"); if (id) reschedule(id, dayKey); setDragId(null); } });
   const chip = (t: TaskWithContact) => (
     <button key={t.id} type="button" draggable onDragStart={(e) => { e.dataTransfer.setData("text/plain", t.id); setDragId(t.id); }} onClick={() => setDayOpen(keyFromIso(t.dueDate!))}
-      className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-[11px] ${t.done ? "text-slate line-through" : "text-body"} hover:bg-cloud`} style={{ borderLeft: `2px solid ${PRIORITY_DOT[t.priority ?? "normal"]}`, cursor: "grab" }} title={`${t.title} · ${t.contactName}`}>
+      className={`block w-full truncate rounded px-1.5 py-0.5 text-left text-xs ${t.done ? "text-slate line-through" : "text-body"} hover:bg-cloud`} style={{ borderLeft: `2px solid ${PRIORITY_DOT[t.priority ?? "normal"]}`, cursor: "grab" }} title={`${t.title} · ${t.contactName}`}>
       {timeOf(t.dueDate) ? <span className="text-slate">{timeOf(t.dueDate)} </span> : null}{t.title}
     </button>
   );
@@ -202,7 +222,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
     for (let i = 0; i < first.getDay(); i++) cells.push(null);
     for (let d = 1; d <= new Date(my, mm + 1, 0).getDate(); d++) cells.push({ key: `${my}-${pad(mm + 1)}-${pad(d)}`, day: d });
     return (
-      <div className="overflow-x-auto"><div className="sm:min-w-[720px]">
+      <div ref={calendarScrollRef} onScroll={syncCalendarScroll} className="crm-scroll overflow-x-auto"><div className="sm:min-w-[720px]">
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-wide text-slate">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => <div key={d} className="py-1"><span className="sm:hidden">{d[0]}</span><span className="hidden sm:inline">{d}</span></div>)}</div>
         <div className="grid grid-cols-7 gap-1">
           {cells.map((c, i) => {
@@ -217,7 +237,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
                 {/* mobile: compact dots, tap opens the day */}
                 <button type="button" onClick={() => setDayOpen(c.key)} aria-label={`Open ${dayHeading(c.key)}: ${dt.length} task${dt.length === 1 ? "" : "s"}, ${bk.length} booked call${bk.length === 1 ? "" : "s"}`} className="flex w-full flex-wrap gap-0.5 sm:hidden">{dt.slice(0, 4).map((t, j) => <span key={j} className="h-1.5 w-1.5 rounded-full" style={{ background: PRIORITY_DOT[t.priority ?? "normal"] }} />)}{bk.length ? <span className="h-1.5 w-1.5 rounded-full bg-green" /> : null}</button>
                 {/* desktop: text chips */}
-                <div className="hidden space-y-1 sm:block">{dt.slice(0, 3).map(chip)}{dt.length > 3 ? <button type="button" onClick={() => setDayOpen(c.key)} className="px-1.5 text-[10px] text-slate hover:text-heading">+{dt.length - 3} more</button> : null}</div>
+                <div className="hidden space-y-1 sm:block">{dt.slice(0, 3).map(chip)}{dt.length > 3 ? <button type="button" onClick={() => setDayOpen(c.key)} className="px-1.5 text-xs text-slate hover:text-heading">+{dt.length - 3} more</button> : null}</div>
               </div>
             );
           })}
@@ -230,15 +250,15 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
     const s = startOfWeek(cursor);
     const days = Array.from({ length: 7 }, (_, i) => addDays(s, i));
     return (
-      <div className="overflow-x-auto"><div className="grid grid-cols-1 gap-1 sm:min-w-[840px] sm:grid-cols-7">
+      <div ref={calendarScrollRef} onScroll={syncCalendarScroll} className="crm-scroll overflow-x-auto"><div className="grid grid-cols-1 gap-1 sm:min-w-[840px] sm:grid-cols-7">
         {days.map((d) => { const key = keyOf(d); const dt = tasksByDay.get(key) ?? []; const bk = bookingsByDay.get(key) ?? []; const isToday = key === keyOf(new Date());
           return (
             <div key={key} className={`min-h-0 rounded-lg border p-2 sm:min-h-[220px] ${isToday ? "border-trust bg-sky/30" : "border-mist bg-card"}`} {...dropProps(key)}>
               <button type="button" onClick={() => setDayOpen(key)} className="mb-2 block text-left text-xs font-medium text-heading">{d.toLocaleDateString("en-US", { weekday: "short" })} <span className="text-slate">{d.getDate()}</span></button>
               <div className="space-y-1">
-              {bk.map((b) => <div key={b.id} className="truncate rounded bg-green/10 px-1.5 py-0.5 text-[11px] text-green">📞 {timeOf(b.createdAt)} {b.contactName}</div>)}
+              {bk.map((b) => <div key={b.id} className="truncate rounded bg-green/10 px-1.5 py-0.5 text-xs text-green">📞 {timeOf(b.createdAt)} {b.contactName}</div>)}
                 {dt.map(chip)}
-                {dt.length === 0 && bk.length === 0 ? <p className="text-[11px] text-slate">—</p> : null}
+                {dt.length === 0 && bk.length === 0 ? <p className="text-xs text-slate">—</p> : null}
               </div>
             </div>
           );
@@ -258,7 +278,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
             <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate">{dayHeading(key)}</div>
             <ul className="space-y-1.5">
               {bk.map((b) => <li key={b.id} className="flex items-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm"><span className="rounded bg-green/15 px-1.5 py-0.5 text-xs text-green">Call</span><span className="text-body">{b.contactName}</span><span className="text-xs text-slate">· {timeOf(b.createdAt)}</span></li>)}
-              {dt.map((t) => <li key={t.id} className="flex items-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm" style={{ borderLeft: `3px solid ${PRIORITY_DOT[t.priority ?? "normal"]}` }}><button type="button" onClick={() => complete(t.id)} className={`grid h-4 w-4 shrink-0 place-items-center rounded border ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button><span className={`min-w-0 flex-1 truncate ${t.done ? "text-slate line-through" : "text-body"}`}>{timeOf(t.dueDate) ? <span className="text-slate">{timeOf(t.dueDate)} · </span> : null}{t.title}</span><Link href={`/crm/contacts/${t.contactId}`} className="shrink-0 text-xs text-trust hover:underline">{t.contactName}</Link></li>)}
+              {dt.map((t) => <li key={t.id} className="flex items-center gap-2 rounded-lg border border-mist bg-card px-2 py-2 text-sm sm:px-3" style={{ borderLeft: `3px solid ${PRIORITY_DOT[t.priority ?? "normal"]}` }}><button type="button" onClick={() => complete(t.id)} aria-label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg border ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button><span className="min-w-0 flex-1"><span className={`block truncate ${t.done ? "text-slate line-through" : "text-body"}`}>{timeOf(t.dueDate) ? <span className="text-slate">{timeOf(t.dueDate)} · </span> : null}{t.title}</span><Link href={`/crm/contacts/${t.contactId}`} className="mt-0.5 block truncate text-xs text-trust hover:underline sm:hidden">{t.contactName}</Link></span><Link href={`/crm/contacts/${t.contactId}`} className="hidden max-w-40 shrink-0 truncate text-xs text-trust hover:underline sm:block">{t.contactName}</Link></li>)}
             </ul>
           </div>
         );
@@ -271,6 +291,7 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
   function from7() { return startOfDayMs(new Date()) + 7 * DAY; }
   const upcoming = [
     ...ft.filter((t) => !t.done && t.dueDate && new Date(t.dueDate).getTime() >= todayMs && new Date(t.dueDate).getTime() < upEnd).map((t) => ({ kind: "task" as const, at: t.dueDate!, t })),
+    ...bookings.filter((booking) => new Date(booking.createdAt).getTime() >= todayMs && new Date(booking.createdAt).getTime() < upEnd).map((booking) => ({ kind: "booking" as const, at: booking.createdAt, booking })),
   ].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 8);
 
   return (
@@ -278,44 +299,64 @@ export function CalendarClient({ tasks, bookings, owners, contacts }: { tasks: T
       {undoNotice ? <UndoNotice key={undoNotice.id} notice={undoNotice} onDismiss={() => setUndoNotice(null)} /> : null}
       {taskError && !dayOpen ? <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-red/30 bg-red/10 px-4 py-3 text-sm text-red"><div><p className="font-medium">The task was not changed.</p><p className="mt-0.5">{taskError} Try again when the connection is available.</p></div><button type="button" onClick={() => setTaskError("")} className="shrink-0 underline">Dismiss</button></div> : null}
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">{(["month", "week", "agenda"] as const).map((v) => <button key={v} type="button" onClick={() => setChosenView(v)} aria-pressed={view === v} className={`rounded-md px-2.5 py-1.5 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>{v}</button>)}</div>
-        {view === "agenda" ? <span className="text-sm text-slate">Today forward</span> : <div className="flex items-center gap-1.5">
-          <button type="button" onClick={prev} aria-label={`Previous ${view === "week" ? "week" : "month"}`} className="rounded-lg border border-mist px-2.5 py-1.5 text-sm text-body hover:bg-cloud">‹</button>
+      <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">{(["month", "week", "agenda"] as const).map((v) => <button key={v} type="button" onClick={() => setChosenView(v)} aria-pressed={view === v} className={`min-h-10 rounded-md px-3 py-2 capitalize ${view === v ? "bg-navy text-white" : "text-slate"}`}>{v}</button>)}</div>
+        {view === "agenda" ? <span className="text-sm text-slate">Today forward</span> : <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={prev} aria-label={`Previous ${view === "week" ? "week" : "month"}`} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">‹</button>
           <span className="min-w-[130px] text-center text-sm font-medium text-heading">{label}</span>
-          <button type="button" onClick={next} aria-label={`Next ${view === "week" ? "week" : "month"}`} className="rounded-lg border border-mist px-2.5 py-1.5 text-sm text-body hover:bg-cloud">›</button>
-          <button type="button" onClick={() => setCursor(today())} className="rounded-lg border border-mist px-2.5 py-1.5 text-sm text-body hover:bg-cloud">Today</button>
+          <button type="button" onClick={next} aria-label={`Next ${view === "week" ? "week" : "month"}`} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">›</button>
+          <button type="button" onClick={() => setCursor(today())} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Today</button>
         </div>}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={inputClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-          <select value={prioF} onChange={(e) => setPrioF(e.target.value)} className={inputClass} aria-label="Priority"><option value="">Any priority</option>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p as TaskPriority]}</option>)}</select>
-          <select value={typeF} onChange={(e) => setTypeF(e.target.value)} className={inputClass} aria-label="Type"><option value="">Any type</option>{TASK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t as TaskType]}</option>)}</select>
-          <label className="flex items-center gap-1.5 text-sm text-slate"><input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} className="h-4 w-4 accent-trust" />Hide done</label>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:ml-auto xl:flex">
+          <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+          <select value={prioF} onChange={(e) => setPrioF(e.target.value)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Priority"><option value="">Any priority</option>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p as TaskPriority]}</option>)}</select>
+          <select value={typeF} onChange={(e) => setTypeF(e.target.value)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Type"><option value="">Any type</option>{TASK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t as TaskType]}</option>)}</select>
+          <label className="flex min-h-10 items-center gap-2 rounded-lg border border-mist bg-card px-3 text-sm text-slate"><input type="checkbox" checked={hideDone} onChange={(e) => setHideDone(e.target.checked)} className="h-4 w-4 accent-trust" />Hide done</label>
         </div>
       </div>
 
       {/* Summary */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-mist bg-cloud px-4 py-2.5 text-sm">
-        <span className="text-body"><span className="font-semibold tabular-nums">{summary.tasks}</span> <span className="text-slate">tasks this month</span></span>
-        <span className="text-body"><span className="font-semibold tabular-nums">{summary.done}</span> <span className="text-slate">done</span></span>
-        <span className="text-body"><span className="font-semibold tabular-nums text-red">{summary.overdue}</span> <span className="text-slate">overdue</span></span>
-        <span className="text-body"><span className="font-semibold tabular-nums text-green">{summary.bookings}</span> <span className="text-slate">bookings</span></span>
+      <div className="rounded-xl border border-mist bg-cloud px-4 py-2.5 text-sm">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <span className="text-body"><span className="font-semibold tabular-nums">{summary.tasks}</span> <span className="text-slate">tasks this month</span></span>
+          <span className="text-body"><span className="font-semibold tabular-nums">{summary.done}</span> <span className="text-slate">done</span></span>
+          <span className="text-body"><span className="font-semibold tabular-nums text-red">{summary.overdue}</span> <span className="text-slate">overdue</span></span>
+          <span className="text-body"><span className="font-semibold tabular-nums text-green">{summary.bookings}</span> <span className="text-slate">bookings</span></span>
+          <button type="button" onClick={() => setUpcomingOpen(true)} className="ml-auto flex min-h-10 items-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 font-medium text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky">
+            <span>Upcoming</span><span className="rounded-full bg-trust px-2 py-0.5 text-xs font-semibold tabular-nums text-white">{upcoming.length}</span>
+          </button>
+        </div>
+        <div aria-label="Calendar color legend" className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-mist pt-2 text-xs">
+          <span className="font-medium text-heading">Color guide</span>
+          {PRIORITIES.map((priority) => <span key={priority} className="inline-flex items-center gap-1.5 text-slate"><span className="h-2.5 w-2.5 rounded-full ring-1 ring-navy/10" style={{ background: PRIORITY_DOT[priority] }} />{PRIORITY_LABELS[priority]} priority</span>)}
+          <span className="inline-flex items-center gap-1.5 text-slate"><span className="h-2.5 w-2.5 rounded-full bg-green ring-1 ring-navy/10" />Booked call</span>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_260px]">
-        <div>{view === "month" ? renderMonth() : view === "week" ? renderWeek() : renderAgenda()}</div>
-        {/* Upcoming panel */}
-        <aside className="rounded-2xl border border-mist bg-card p-4">
-          <h2 className="mb-3 text-sm font-semibold text-heading">Upcoming (7 days)</h2>
+      <div>
+        {view !== "agenda" ? <div className="mb-2 hidden items-center justify-end gap-1.5 sm:flex"><button type="button" onClick={() => moveCalendar(-1)} disabled={!calendarScroll.left} aria-label="Scroll calendar left" className="grid h-9 w-9 place-items-center rounded-lg border border-mist bg-card text-lg text-trust hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">‹</button><button type="button" onClick={() => moveCalendar(1)} disabled={!calendarScroll.right} aria-label="Scroll calendar right" className="grid h-9 w-9 place-items-center rounded-lg border border-mist bg-card text-lg text-trust hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">›</button></div> : null}
+        {view === "month" ? renderMonth() : view === "week" ? renderWeek() : renderAgenda()}
+      </div>
+
+      {upcomingOpen ? (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-navy/40 p-4 backdrop-blur-[1px]" onClick={() => setUpcomingOpen(false)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="calendar-upcoming-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-trust/40 bg-card p-4 shadow-2xl ring-1 ring-navy/10 sm:p-5" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div><h2 id="calendar-upcoming-title" className="text-base font-semibold text-heading">Upcoming tasks</h2><p className="mt-0.5 text-xs text-slate">Next 7 days</p></div>
+              <button type="button" onClick={() => setUpcomingOpen(false)} aria-label="Close upcoming tasks" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-mist text-xl text-body hover:border-trust hover:bg-sky">×</button>
+            </div>
           {upcoming.length === 0 ? <p className="text-sm text-slate">Nothing due.</p> : (
-            <ul className="space-y-2">{upcoming.map((u) => <li key={u.t.id} className="text-sm"><Link href={`/crm/contacts/${u.t.contactId}`} className="block truncate text-body hover:text-trust" style={{ borderLeft: `2px solid ${PRIORITY_DOT[u.t.priority ?? "normal"]}`, paddingLeft: 8 }}>{u.t.title}</Link><span className="text-xs text-slate">{dayHeading(keyFromIso(u.at))}{timeOf(u.at) ? ` · ${timeOf(u.at)}` : ""} · {u.t.contactName}</span></li>)}</ul>
+            <ul className="space-y-2.5">{upcoming.map((u) => u.kind === "task" ? <li key={`task-${u.t.id}`} className="rounded-lg border border-mist bg-cloud/50 px-3 py-2 text-sm"><Link href={`/crm/contacts/${u.t.contactId}`} className="block truncate font-medium text-body hover:text-trust" style={{ borderLeft: `3px solid ${PRIORITY_DOT[u.t.priority ?? "normal"]}`, paddingLeft: 8 }}>{u.t.title}</Link><span className="mt-1 block text-xs text-slate">{dayHeading(keyFromIso(u.at))}{timeOf(u.at) ? ` · ${timeOf(u.at)}` : ""} · {u.t.contactName}</span></li> : <li key={`booking-${u.booking.id}`} className="rounded-lg border border-mist bg-cloud/50 px-3 py-2 text-sm"><Link href={`/crm/contacts/${u.booking.contactId}`} className="block truncate border-l-[3px] border-green pl-2 font-medium text-body hover:text-trust">Call · {u.booking.contactName}</Link><span className="mt-1 block text-xs text-slate">{dayHeading(keyFromIso(u.at))}{timeOf(u.at) ? ` · ${timeOf(u.at)}` : ""}</span></li>)}</ul>
           )}
           <div className="mt-4 border-t border-mist pt-3">
             <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate">Recent bookings</h3>
             {bookings.slice(0, 4).length === 0 ? <p className="text-sm text-slate">None yet.</p> : <ul className="space-y-1.5">{bookings.slice(0, 4).map((b) => <li key={b.id} className="text-xs"><Link href={`/crm/contacts/${b.contactId}`} className="text-body hover:text-trust">{b.contactName}</Link><span className="text-slate"> · {new Date(b.createdAt).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></li>)}</ul>}
           </div>
-        </aside>
-      </div>
+          </section>
+        </div>
+      ) : null}
 
       {dayOpen ? <DayDetail dayKey={dayOpen} tasks={tasksByDay.get(dayOpen) ?? []} bookings={bookingsByDay.get(dayOpen) ?? []} contacts={contacts} bookingError={bookingError} bookingPending={bookingPending} taskError={taskError} taskPending={taskPending} onClose={() => { setDayOpen(null); setBookingError(""); setTaskError(""); }} onComplete={complete} onReschedule={reschedule} onRescheduleCall={rescheduleCall} onCancelCall={cancelCall} onAdd={addTask} /> : null}
     </div>
@@ -327,7 +368,7 @@ function DayDetail({ dayKey, tasks, bookings, contacts, bookingError, bookingPen
   const [title, setTitle] = useState("");
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-mist bg-card p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <h3 id="calendar-day-title" className="mb-3 text-lg font-semibold text-heading">{dayHeading(dayKey)}</h3>
         {bookings.length ? <div className="mb-3 space-y-2">{bookings.map((booking) => (
           <BookingEditor
@@ -342,11 +383,11 @@ function DayDetail({ dayKey, tasks, bookings, contacts, bookingError, bookingPen
         {taskError ? <div role="alert" className="mb-3 rounded-lg border border-red/30 bg-red/10 px-3 py-2 text-sm text-red"><p>{taskError}</p><p className="mt-1 text-xs">The task was not changed. You can try again without reopening this day.</p></div> : null}
         <ul className="mb-4 space-y-2">
           {tasks.length === 0 ? <li className="text-sm text-slate">No tasks.</li> : tasks.map((t) => (
-            <li key={t.id} className="flex items-center gap-2 rounded-lg border border-mist px-3 py-2 text-sm" style={{ borderLeft: `3px solid ${PRIORITY_DOT[t.priority ?? "normal"]}` }}>
-              <button type="button" disabled={taskPending === t.id} onClick={() => onComplete(t.id)} aria-label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} className={`grid h-4 w-4 shrink-0 place-items-center rounded border disabled:opacity-50 ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button>
-              <span className={`min-w-0 flex-1 truncate ${t.done ? "text-slate line-through" : "text-body"}`}>{t.title}</span>
-              <Link href={`/crm/contacts/${t.contactId}`} className="shrink-0 text-xs text-trust hover:underline">{t.contactName}</Link>
-              <input type="date" defaultValue={dayKey} disabled={taskPending === t.id} onChange={(e) => e.target.value && onReschedule(t.id, e.target.value)} className="shrink-0 rounded border border-mist px-1 py-0.5 text-xs disabled:opacity-50" aria-label="Reschedule" />
+            <li key={t.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-2 rounded-lg border border-mist px-2 py-2 text-sm sm:flex sm:items-center sm:px-3" style={{ borderLeft: `3px solid ${PRIORITY_DOT[t.priority ?? "normal"]}` }}>
+              <button type="button" disabled={taskPending === t.id} onClick={() => onComplete(t.id)} aria-label={`${t.done ? "Reopen" : "Complete"} ${t.title}`} className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg border disabled:opacity-50 ${t.done ? "border-green bg-green text-white" : "border-mist"}`}>{t.done ? "✓" : ""}</button>
+              <span className="min-w-0 flex-1"><span className={`block truncate ${t.done ? "text-slate line-through" : "text-body"}`}>{t.title}</span><span className="mt-1 flex flex-wrap items-center gap-2 sm:hidden"><Link href={`/crm/contacts/${t.contactId}`} className="max-w-36 truncate text-xs text-trust hover:underline">{t.contactName}</Link><input type="date" defaultValue={dayKey} disabled={taskPending === t.id} onChange={(e) => e.target.value && onReschedule(t.id, e.target.value)} className="min-h-9 rounded border border-mist bg-card px-2 py-1 text-xs disabled:opacity-50" aria-label="Reschedule" /></span></span>
+              <Link href={`/crm/contacts/${t.contactId}`} className="hidden max-w-28 shrink-0 truncate text-xs text-trust hover:underline sm:block">{t.contactName}</Link>
+              <input type="date" defaultValue={dayKey} disabled={taskPending === t.id} onChange={(e) => e.target.value && onReschedule(t.id, e.target.value)} className="hidden min-h-9 shrink-0 rounded border border-mist bg-card px-2 py-1 text-xs disabled:opacity-50 sm:block" aria-label="Reschedule" />
             </li>
           ))}
         </ul>

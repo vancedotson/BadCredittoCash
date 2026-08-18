@@ -69,7 +69,7 @@ export function ProfileForm({ profile }: { profile: CrmProfile }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {PROFILE_FIELDS.map((f) => (
           <label key={f.key} className="block">
             <span className="mb-1 block text-xs font-medium text-heading">{f.label}</span>
@@ -78,7 +78,7 @@ export function ProfileForm({ profile }: { profile: CrmProfile }) {
           </label>
         ))}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 border-t border-mist pt-4">
         <button type="button" onClick={save} disabled={busy || !dirty} className={BTN}>Save profile</button>
         <Saved show={saved} />
       </div>
@@ -139,7 +139,7 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
           const isDefault = w.owner === defaultOwner;
           const others = ownerNames.filter((o) => o !== w.owner);
           return (
-            <li key={w.owner} className="rounded-lg border border-mist px-3 py-2 text-sm">
+            <li key={w.owner} className="rounded-lg border border-mist px-3 py-3 text-sm">
               {editing === w.owner ? (
                 <div className="flex items-center gap-2">
                   <input value={editVal} autoFocus onChange={(e) => setEditVal(e.target.value)} className={INPUT} />
@@ -147,7 +147,7 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
                   <button type="button" onClick={() => setEditing(null)} className="text-slate hover:text-body">Cancel</button>
                 </div>
               ) : (
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-medium text-body">{w.owner}</span>
@@ -155,7 +155,7 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
                     </div>
                     <div className="text-xs text-slate">{w.contacts} contact{w.contacts === 1 ? "" : "s"} · {w.openTasks} open task{w.openTasks === 1 ? "" : "s"}</div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs sm:justify-end">
                     <button type="button" onClick={() => setDefault(w.owner)} className="text-slate hover:text-trust">{isDefault ? "Unset" : "Make default"}</button>
                     <button type="button" onClick={() => { setEditing(w.owner); setEditVal(w.owner); }} className="text-slate hover:text-trust">Rename</button>
                     <button type="button" onClick={() => { setRemoving(removing === w.owner ? null : w.owner); setReassign(""); }} className="text-slate hover:text-red">Remove</button>
@@ -163,7 +163,7 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
                 </div>
               )}
               {removing === w.owner ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-cloud px-3 py-2 text-xs">
+                <div className="mt-3 flex flex-col items-stretch gap-2 rounded-lg border border-red/20 bg-red/5 px-3 py-3 text-xs sm:flex-row sm:flex-wrap sm:items-center">
                   <span className="text-slate">Reassign their {w.contacts} contact{w.contacts === 1 ? "" : "s"} and {w.openTasks} task{w.openTasks === 1 ? "" : "s"} to:</span>
                   <select value={reassign} onChange={(e) => setReassign(e.target.value)} className="rounded-lg border border-mist bg-card px-2 py-1 text-xs">
                     <option value="">Unassigned</option>
@@ -177,7 +177,7 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
           );
         })}
       </ul>
-      <form onSubmit={(e) => { e.preventDefault(); add(); }} className="flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); add(); }} className="flex flex-col gap-2 sm:flex-row">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Add an owner…" className={INPUT} />
         <button type="submit" className={BTN}>Add</button>
       </form>
@@ -232,7 +232,7 @@ export function TagManager({ tags }: { tags: TagRow[] }) {
 
   return (
     <div>
-      <form onSubmit={(e) => { e.preventDefault(); add(); }} className="mb-3 flex gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); add(); }} className="mb-3 flex flex-col gap-2 sm:flex-row">
         <input value={create} onChange={(e) => setCreate(e.target.value)} placeholder="Create a tag…" className={INPUT} />
         <button type="submit" className={BTN}>Create</button>
       </form>
@@ -252,16 +252,19 @@ export function TagManager({ tags }: { tags: TagRow[] }) {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between gap-3">
-                    <span className="min-w-0 truncate text-body">#{t.tag} <span className="text-slate">· {t.count}</span></span>
-                    <div className="flex shrink-0 items-center gap-2 text-xs">
-                      <button type="button" onClick={() => { setEditing(t.tag); setEditVal(t.tag); }} className="text-slate hover:text-trust">Rename</button>
-                      {others.length ? <button type="button" onClick={() => { setMerging(merging === t.tag ? null : t.tag); setMergeInto(""); }} className="text-slate hover:text-trust">Merge</button> : null}
-                      <button type="button" onClick={() => del(t.tag, t.count)} className="text-slate hover:text-red">Delete</button>
-                    </div>
+                    <span className="min-w-0 truncate font-medium text-body">#{t.tag} <span className="font-normal text-slate">· {t.count} contact{t.count === 1 ? "" : "s"}</span></span>
+                    <details className="relative shrink-0">
+                      <summary aria-label={`Actions for ${t.tag}`} className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-lg border border-mist text-lg text-body hover:border-trust hover:bg-sky">⋯</summary>
+                      <div className="absolute right-0 z-20 mt-1 grid min-w-32 overflow-hidden rounded-lg border border-trust/30 bg-card p-1 text-xs shadow-xl">
+                        <button type="button" onClick={() => { setEditing(t.tag); setEditVal(t.tag); }} className="rounded-md px-3 py-2 text-left text-body hover:bg-cloud">Rename</button>
+                        {others.length ? <button type="button" onClick={() => { setMerging(merging === t.tag ? null : t.tag); setMergeInto(""); }} className="rounded-md px-3 py-2 text-left text-body hover:bg-cloud">Merge</button> : null}
+                        <button type="button" onClick={() => del(t.tag, t.count)} className="rounded-md px-3 py-2 text-left text-red hover:bg-red/10">Delete</button>
+                      </div>
+                    </details>
                   </div>
                 )}
                 {merging === t.tag ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg bg-cloud px-3 py-2 text-xs">
+                  <div className="mt-2 flex flex-col items-stretch gap-2 rounded-lg bg-cloud px-3 py-3 text-xs sm:flex-row sm:flex-wrap sm:items-center">
                     <span className="text-slate">Merge #{t.tag} into:</span>
                     <select value={mergeInto} onChange={(e) => setMergeInto(e.target.value)} className="rounded-lg border border-mist bg-card px-2 py-1 text-xs">
                       <option value="">Choose a tag…</option>
@@ -354,7 +357,7 @@ export function AppearanceForm({ prefs }: { prefs: CrmPrefs }) {
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-heading">Default contacts per page</span>
           <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body">
@@ -414,15 +417,15 @@ export function NotificationForm({ notify }: { notify: NotifyPrefs }) {
     <div className="space-y-1">
       <div className="mb-2 flex items-center gap-3"><span className="text-xs text-slate">Which conditions surface in the notifications bell.</span><Saved show={saved} /></div>
       {NOTIFY_ITEMS.map((it) => (
-        <label key={it.key} className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-mist px-3 py-2">
+        <div key={it.key} className="flex min-h-16 items-center justify-between gap-3 rounded-lg border border-mist px-3 py-2">
           <span className="min-w-0">
             <span className="block text-sm font-medium text-body">{it.label}</span>
             <span className="block text-xs text-slate">{it.hint}</span>
           </span>
-          <button type="button" role="switch" aria-label={it.label} aria-checked={state[it.key]} disabled={pending !== null} onClick={() => void toggle(it.key)} className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${state[it.key] ? "bg-trust" : "bg-mist"}`}>
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-all ${state[it.key] ? "left-[22px]" : "left-0.5"}`} />
+          <button type="button" role="switch" aria-label={it.label} aria-checked={state[it.key]} disabled={pending !== null} onClick={() => void toggle(it.key)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-60 ${state[it.key] ? "bg-trust" : "bg-mist"}`}>
+            <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-card shadow-sm transition-all ${state[it.key] ? "left-[22px]" : "left-0.5"}`} />
           </button>
-        </label>
+        </div>
       ))}
       <div className="pt-2"><InlineError message={error} /></div>
     </div>
@@ -475,24 +478,25 @@ export function DataManagement({ status }: { status: Status }) {
 
   return (
     <div className="space-y-4">
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div><h3 className="text-sm font-semibold text-heading">Data overview</h3><p className="mt-1 text-xs text-slate">Current storage and record totals.</p></div>
+      <dl className="grid grid-cols-2 gap-3 rounded-xl border border-mist bg-cloud/50 p-3 sm:grid-cols-3">
         <div><dt className="text-xs text-slate">Backend</dt><dd className="text-sm font-medium text-body">{status.backend}</dd></div>
         <div><dt className="text-xs text-slate">Seed version</dt><dd className="text-sm font-medium text-body">v{status.seedVersion}</dd></div>
         {Object.entries(status.counts).map(([k, v]) => (
           <div key={k}><dt className="text-xs capitalize text-slate">{k}</dt><dd className="text-sm font-medium text-body">{v}</dd></div>
         ))}
       </dl>
-      <div className="flex flex-wrap gap-2">
+      <div><h3 className="mb-2 text-sm font-semibold text-heading">Export &amp; backup</h3><div className="flex flex-wrap gap-2">
         <a href="/api/crm/backup" className={BTN_GHOST}>Download full backup (JSON)</a>
         <a href="/api/crm/export" className={BTN_GHOST}>Export contacts (CSV)</a>
-      </div>
+      </div></div>
       <p className="rounded-lg border border-mist bg-cloud/50 p-3 text-xs text-slate">
         The full backup contains CRM records and settings, but never passwords, API keys, or Google credentials. Download one before planned migrations or cleanup.
       </p>
-      <div className="space-y-3 rounded-xl border border-mist p-4">
-        <div><h3 className="text-sm font-semibold text-heading">Restore a full backup</h3><p className="text-xs text-slate">Validation is read-only. The final restore replaces current CRM records in one database transaction.</p></div>
+      <div className="space-y-3 rounded-xl border border-red/30 bg-red/5 p-4">
+        <div><div className="mb-1 inline-flex rounded-full bg-red/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red">Danger zone</div><h3 className="text-sm font-semibold text-heading">Restore a full backup</h3><p className="mt-1 text-xs text-slate">Validation is read-only. The final restore replaces current CRM records in one database transaction.</p></div>
         <div className="flex flex-wrap items-center gap-2">
-          <input type="file" accept="application/json,.json" aria-label="Choose backup file" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setBackup(null); setConfirmation(""); setError(""); }} className="max-w-full text-sm text-body" />
+          <input type="file" accept="application/json,.json" aria-label="Choose backup file" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setBackup(null); setConfirmation(""); setError(""); }} className="max-w-full text-sm text-body file:mr-3 file:rounded-lg file:border file:border-mist file:bg-card file:px-3 file:py-2 file:text-sm file:text-body" />
           <button type="button" disabled={!file || working} onClick={previewRestore} className={BTN_GHOST}>{working && !preview ? "Validating…" : "Validate backup"}</button>
         </div>
         {preview ? <div className="space-y-3 rounded-lg border border-gold/40 bg-gold/5 p-3 text-sm">
@@ -534,16 +538,16 @@ export function ContactTrash({ contacts }: { contacts: TrashedContact[] }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate">Deleted contacts and their related CRM history remain here until restored.</p>
       {error ? <p role="alert" className="rounded-lg bg-red/10 px-3 py-2 text-sm text-red">{error}</p> : null}
+      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-slate">Deleted contacts and their related CRM history remain here until restored.</p><span className="rounded-full bg-cloud px-2 py-1 text-xs font-medium text-body">{contacts.length} deleted</span></div>
       {contacts.length ? <ul className="divide-y divide-mist rounded-xl border border-mist">
-        {contacts.map((contact) => <li key={contact.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        {contacts.map((contact) => <li key={contact.id} className="flex flex-col items-stretch gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="font-medium text-body">{contact.name}</div>
             <div className="truncate text-xs text-slate">{contact.email}</div>
             <div className="mt-1 text-[11px] text-slate">Deleted {new Date(contact.deletedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}{contact.deletedBy ? ` by ${contact.deletedBy}` : ""}</div>
           </div>
-          <button type="button" disabled={restoring === contact.id} onClick={() => restore(contact)} className={BTN}>
+          <button type="button" disabled={restoring === contact.id} onClick={() => restore(contact)} className={`${BTN} sm:shrink-0`}>
             {restoring === contact.id ? "Restoring…" : "Restore"}
           </button>
         </li>)}

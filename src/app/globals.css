@@ -300,3 +300,120 @@
     opacity: 0;
   }
 }
+/* Settings navigation target: make the destination card unmistakable. */
+.settings-page section > div {
+  transition: border-color 180ms ease, box-shadow 180ms ease, opacity 240ms ease, filter 240ms ease;
+}
+
+.settings-page section:target > div,
+.settings-page section.settings-section-selected > div {
+  border-color: var(--color-trust);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-trust) 18%, transparent);
+}
+
+.settings-page.settings-focus section:not(.settings-section-pulse) > div {
+  opacity: 0.42;
+  filter: saturate(0.7);
+}
+
+.settings-page section.settings-section-pulse > div {
+  border-color: var(--color-trust);
+  animation: settingsTargetPulse 750ms ease-in-out 4;
+}
+
+@keyframes settingsTargetPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-trust) 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-trust) 12%, transparent), 0 10px 28px color-mix(in srgb, var(--color-trust) 16%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-page section.settings-section-pulse > div {
+    animation: none;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-trust) 22%, transparent);
+  }
+}
+
+/* Contact → pipeline guided focus. */
+.pipeline-guided-focus [data-pipeline-contact]:not(.pipeline-card-selected) {
+  opacity: 0.3;
+  filter: saturate(0.65);
+}
+
+[data-pipeline-contact] {
+  transition: transform 200ms ease, opacity 240ms ease, filter 240ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+[data-pipeline-contact].pipeline-card-selected {
+  border-color: var(--color-trust);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-trust) 20%, transparent);
+}
+
+[data-pipeline-contact].pipeline-card-pulse {
+  animation: pipelineContactPulse 750ms ease-in-out 4;
+}
+
+@keyframes pipelineContactPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-trust) 20%, transparent); }
+  50% { transform: scale(1.025); box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-trust) 13%, transparent), 0 14px 30px color-mix(in srgb, var(--color-trust) 20%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-pipeline-contact].pipeline-card-pulse { animation: none; }
+}
+
+/* Desktop CRM sidebar: bounded secondary-navigation drawer. */
+.crm-sidebar-options {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gold) color-mix(in srgb, var(--color-navy) 72%, transparent);
+  overscroll-behavior: contain;
+}
+
+.crm-sidebar-options::-webkit-scrollbar { width: 7px; }
+.crm-sidebar-options::-webkit-scrollbar-track { background: color-mix(in srgb, var(--color-navy) 72%, transparent); border-radius: 999px; }
+.crm-sidebar-options::-webkit-scrollbar-thumb { background: var(--color-gold); border-radius: 999px; }
+
+.crm-more-arrow {
+  animation: crmMoreArrow 1.15s ease-in-out infinite;
+}
+
+.crm-more-arrow-down {
+  animation: crmMoreArrowDown 1.15s ease-in-out infinite;
+}
+
+.crm-sidebar-drawer-enter {
+  transform-origin: bottom center;
+  animation: crmSidebarDrawerEnter 220ms cubic-bezier(.2,.8,.25,1) both;
+}
+
+.crm-sidebar-popup-enter {
+  transform-origin: left bottom;
+  animation: crmSidebarPopupEnter 200ms cubic-bezier(.2,.8,.25,1) both;
+}
+
+@keyframes crmMoreArrow {
+  0%, 100% { transform: translateY(2px); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes crmMoreArrowDown {
+  0%, 100% { transform: translateY(-2px); }
+  50% { transform: translateY(3px); }
+}
+
+@keyframes crmSidebarDrawerEnter {
+  from { opacity: 0; transform: translateY(18px) scaleY(0.94); }
+  to { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+@keyframes crmSidebarPopupEnter {
+  from { opacity: 0; transform: translateX(-10px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crm-more-arrow, .crm-more-arrow-down, .crm-sidebar-drawer-enter, .crm-sidebar-popup-enter { animation: none; }
+}

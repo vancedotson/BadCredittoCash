@@ -31,7 +31,7 @@ export function RecentPin({ id, name }: { id: string; name: string }) {
   }
 
   return (
-    <button type="button" onClick={toggle} className={`rounded-lg border px-2.5 py-1.5 text-sm ${pinned ? "border-gold bg-gold/10 text-gold-deep" : "border-mist text-slate hover:bg-cloud"}`} title={pinned ? "Unpin" : "Pin to nav"}>
+    <button type="button" onClick={toggle} className={`inline-flex items-center whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-medium ${pinned ? "border-gold bg-gold/10 text-gold-deep" : "border-mist text-slate hover:bg-cloud"}`} title={pinned ? "Unpin" : "Pin to nav"}>
       {pinned ? "★ Pinned" : "☆ Pin"}
     </button>
   );

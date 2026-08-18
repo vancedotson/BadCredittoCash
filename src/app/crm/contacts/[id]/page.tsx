@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 import { hydrateStore, getContact } from "@/lib/store";
 import { Card, SegmentBadge, Badge } from "@/components/crm/ui";
 import { Timeline } from "@/components/crm/Timeline";
-import { StageSelect, AddNoteForm, AddTaskForm, TaskItem } from "@/components/crm/mutations";
+import { AddNoteForm, AddTaskForm, TaskItem } from "@/components/crm/mutations";
 import { RecentPin } from "@/components/crm/RecentPin";
 import { ContactPrivacyControls } from "@/components/crm/ContactPrivacyControls";
 import { requireCrmUser } from "@/lib/auth";
 import { getContactPrivacyState } from "@/lib/contact-privacy";
+import { STAGE_LABELS } from "@/lib/stages";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
       {/* Header */}
       <Card>
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight text-heading">{contact.name}</h1>
             <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate">
@@ -48,19 +49,14 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <SegmentBadge segment={contact.segment} />
+              <RecentPin id={contact.id} name={contact.name} />
+              <Link href={`/crm/pipeline?focus=${encodeURIComponent(contact.id)}`} className="inline-flex items-center whitespace-nowrap rounded-md border border-trust/30 bg-sky px-2 py-0.5 text-xs font-medium text-trust transition-colors hover:border-trust hover:bg-card">
+                Pipeline: {STAGE_LABELS[contact.stage]} →
+              </Link>
               {contact.owner ? <Badge tone="info">Owner: {contact.owner}</Badge> : null}
               {(contact.tags ?? []).map((t) => (
                 <Badge key={t} tone="neutral">#{t}</Badge>
               ))}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex items-center gap-2">
-              <RecentPin id={contact.id} name={contact.name} />
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-xs uppercase tracking-wide text-slate">Stage</span>
-                <StageSelect id={contact.id} stage={contact.stage} updatedAt={contact.updatedAt} />
-              </div>
             </div>
           </div>
         </div>

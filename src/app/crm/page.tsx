@@ -52,7 +52,19 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
   const owner = ownerParam === "__all__" ? undefined : ownerParam ?? currentOwner;
   const [data, recent, contacts] = await Promise.all([getOverview(rangeDays, owner), listEvents(8), listContactOptions()]);
   const funnelTop = data.funnel[0]?.count || 1;
-  const trendTop = Math.max(1, ...data.trend.map((t) => Math.max(t.registered, t.booked)));
+  const trend = data.trend.length <= 10
+    ? data.trend
+    : Array.from({ length: 10 }, (_, index) => {
+        const start = Math.floor((index * data.trend.length) / 10);
+        const end = Math.floor(((index + 1) * data.trend.length) / 10);
+        const points = data.trend.slice(start, end);
+        return {
+          label: points.length > 1 ? `${points[0].label}–${points.at(-1)?.label}` : points[0].label,
+          registered: points.reduce((sum, point) => sum + point.registered, 0),
+          booked: points.reduce((sum, point) => sum + point.booked, 0),
+        };
+      });
+  const trendTop = Math.max(1, ...trend.map((t) => Math.max(t.registered, t.booked)));
   const segTotal = data.segments.reduce((n, s) => n + s.count, 0) || 1;
 
   return (
@@ -74,11 +86,11 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
 
       {/* KPIs (drill-through + deltas) */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        {data.kpis.map((k) => (
-          <Link key={k.key} href={k.href} className="rounded-2xl border border-mist bg-card p-5 transition-colors hover:border-trust">
+        {data.kpis.map((k, index) => (
+          <Link key={k.key} href={k.href} className={`rounded-2xl border border-mist bg-card p-5 transition-colors hover:border-trust ${data.kpis.length % 2 === 1 && index === data.kpis.length - 1 ? "col-span-2 sm:col-span-1" : ""}`}>
             <div className="text-2xl font-bold tabular-nums text-heading sm:text-3xl">{k.value}</div>
             <div className="mt-1 flex items-center gap-1.5 text-sm text-slate">{k.label}<Delta delta={k.delta} good={k.deltaGood} /></div>
-            {k.hint ? <div className="mt-1 text-xs text-slate">{k.hint}</div> : null}
+            {k.hint ? <div className="mt-1 text-sm text-slate">{k.hint}</div> : null}
           </Link>
         ))}
       </div>
@@ -100,11 +112,11 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
               <div key={s.l} className="rounded-xl border border-mist bg-cloud px-2 py-3">
                 <div className="text-xl font-bold tabular-nums text-heading">{s.v}</div>
                 <div className="mt-0.5 text-xs text-slate">{s.l}</div>
-                {s.hint ? <div className="mt-1 text-[11px] leading-tight text-slate">{s.hint}</div> : null}
+                {s.hint ? <div className="mt-1 text-xs leading-snug text-slate sm:text-sm">{s.hint}</div> : null}
               </div>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate">Forecast weights each contact by stage: New 5%, Registered 15%, Engaged 35%, Call booked 65%, Client 100%, Lost 0%.</p>
+          <p className="mt-3 text-sm leading-relaxed text-slate">Forecast weights each contact by stage: New 5%, Registered 15%, Engaged 35%, Call booked 65%, Client 100%, Lost 0%.</p>
           {data.pipeline.stalest.length ? (
             <div className="mt-4">
               <div className="mb-2 text-xs font-medium uppercase tracking-wide text-slate">Sitting longest</div>
@@ -126,7 +138,7 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
           <div className="space-y-1">
             {data.funnel.map((s, i) => (
               <div key={s.key}>
-                {i > 0 && s.convPct !== null ? <div className="ml-[108px] text-[11px] text-slate sm:ml-[152px]">↓ {s.convPct}% ({s.count}/{data.funnel[i - 1].count})</div> : null}
+                {i > 0 && s.convPct !== null ? <div className="ml-[108px] text-xs text-slate sm:ml-[152px]">↓ {s.convPct}% ({s.count}/{data.funnel[i - 1].count})</div> : null}
                 <div className="flex items-center gap-3">
                   <div className="w-24 shrink-0 text-sm text-slate sm:w-36">{s.label}</div>
                   <div className="relative h-5 flex-1 overflow-hidden rounded bg-mist/60">
@@ -150,12 +162,16 @@ export default async function CrmOverview({ searchParams }: { searchParams: Prom
           </div>
           <p className="mb-3 text-sm text-slate">Last {Math.min(rangeDays, 30)} days.</p>
           <div className="flex items-end gap-1" style={{ height: 130 }}>
-            {data.trend.map((pt, i) => (
+            {trend.map((pt, i) => (
               <div key={i} className="flex flex-1 items-end justify-center gap-px" style={{ height: 110 }} title={`${pt.label}: ${pt.registered} new, ${pt.booked} booked`}>
                 <div className="w-full rounded-t bg-trust/80" style={{ height: `${(pt.registered / trendTop) * 100}%` }} />
                 <div className="w-full rounded-t bg-gold" style={{ height: `${(pt.booked / trendTop) * 100}%` }} />
               </div>
             ))}
+          </div>
+          <div className="mt-2 flex justify-between text-xs text-slate" aria-hidden="true">
+            <span>{trend[0]?.label}</span>
+            <span>{trend.at(-1)?.label}</span>
           </div>
         </Card>
 

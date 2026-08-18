@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import type { TaskWithContact, ContactOption } from "@/lib/store";
 import {
   PRIORITIES, PRIORITY_LABELS, PRIORITY_RANK, PRIORITY_DOT,
@@ -206,16 +207,16 @@ export function TasksClient({ tasks, contacts, owners, initialOwner }: { tasks: 
   const renderGroup = (title: string, tone: string, items: TaskWithContact[], collapsible = false) => {
     const hidden = collapsible && !showDone;
     return (
-      <div className="rounded-2xl border border-mist bg-card p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className={`text-lg font-semibold ${tone}`}>{title}</h2>
+      <div className="rounded-2xl border border-mist bg-card p-3 sm:p-5">
+        <div className="mb-2 flex items-center gap-2 sm:mb-3">
+          <h2 className={`text-base font-semibold sm:text-lg ${tone}`}>{title}</h2>
           <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.length}</span>
           {collapsible ? (
             <button type="button" onClick={() => setShowDone((v) => !v)} aria-expanded={!hidden} className="ml-auto text-sm text-trust hover:underline">{hidden ? "Show" : "Hide"}</button>
           ) : null}
         </div>
         {hidden ? null : (
-          <ul className="space-y-2">
+          <ul className="space-y-1.5 sm:space-y-2">
             {items.length === 0 ? <li className="text-sm text-slate">Nothing here.</li> : items.map((t) => <li key={t.id}><TaskRow task={t} {...rowProps} /></li>)}
           </ul>
         )}
@@ -314,7 +315,7 @@ function ByContact({ tasks, rowProps }: { tasks: TaskWithContact[]; rowProps: Ro
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {list.length === 0 ? <p className="text-sm text-slate">No open tasks.</p> : list.map((g) => (
-        <div key={g.id} className="rounded-2xl border border-mist bg-card p-5">
+        <div key={g.id} className="rounded-2xl border border-mist bg-card p-3 sm:p-5">
           <Link href={`/crm/contacts/${g.id}`} className="mb-3 block font-heading text-sm font-semibold text-heading hover:text-trust">{g.name}</Link>
           <ul className="space-y-2">{g.items.map((t) => <li key={t.id}><TaskRow task={t} {...rowProps} /></li>)}</ul>
         </div>
@@ -325,9 +326,10 @@ function ByContact({ tasks, rowProps }: { tasks: TaskWithContact[]; rowProps: Ro
 
 function TaskRow({ task, selected, onSelect, onToggle, onEdit, onDelete, onSnooze }: { task: TaskWithContact } & RowProps) {
   const [menu, setMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const due = dueInfo(task.dueDate);
   return (
-    <div className="relative flex items-start gap-2.5 rounded-lg border border-mist bg-card px-3 py-2.5" style={{ borderLeft: `3px solid ${PRIORITY_DOT[task.priority ?? "normal"]}` }}>
+    <div className="relative flex items-start gap-2 rounded-lg border border-mist bg-card px-2 py-2 sm:gap-2.5 sm:px-3 sm:py-2.5" style={{ borderLeft: `3px solid ${PRIORITY_DOT[task.priority ?? "normal"]}` }}>
       <input type="checkbox" checked={selected.has(task.id)} onChange={() => onSelect(task.id)} className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-trust" aria-label={`Select ${task.title}`} />
       <button type="button" onClick={() => onToggle(task.id)} aria-label={task.done ? "Mark not done" : "Mark done"} className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border ${task.done ? "border-green bg-green text-white" : "border-mist bg-card text-transparent hover:border-trust"}`}>
         <CheckIcon className="h-3 w-3" />
@@ -344,21 +346,21 @@ function TaskRow({ task, selected, onSelect, onToggle, onEdit, onDelete, onSnooz
           {task.recurrence && task.recurrence !== "none" ? <span className="inline-flex items-center gap-0.5">· <RefreshIcon className="h-3 w-3" />{RECURRENCE_LABELS[task.recurrence]}</span> : null}
         </div>
       </div>
-      <button type="button" onClick={() => setMenu((m) => !m)} aria-label={`Actions for ${task.title}`} className="shrink-0 px-1 text-slate hover:text-heading">&#8942;</button>
-      {menu ? (
+      <button type="button" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ top: Math.max(16, Math.min(rect.bottom + 8, window.innerHeight - 230)), right: Math.max(16, window.innerWidth - rect.right) }); setMenu((m) => !m); }} aria-label={`Actions for ${task.title}`} className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center text-lg text-slate hover:text-heading">&#8942;</button>
+      {menu && menuPosition ? createPortal(
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
-          <div className="absolute right-2 top-9 z-20 w-44 rounded-xl border border-mist bg-card py-1 text-sm shadow-card">
+          <div className="fixed inset-0 z-[80] bg-navy/25 backdrop-blur-[1px]" onClick={() => setMenu(false)} />
+          <div className="fixed z-[90] w-52 overflow-hidden rounded-xl border border-trust/40 bg-card py-1.5 text-sm shadow-2xl ring-1 ring-navy/10" style={menuPosition}>
             {[
               { label: "Edit", fn: () => onEdit(task) },
               { label: "Snooze → tomorrow", fn: () => onSnooze(task.id, 1) },
               { label: "Snooze → next week", fn: () => onSnooze(task.id, 7) },
             ].map((a) => (
-              <button key={a.label} type="button" onClick={() => { a.fn(); setMenu(false); }} className="block w-full px-3 py-1.5 text-left text-body hover:bg-cloud">{a.label}</button>
+              <button key={a.label} type="button" onClick={() => { a.fn(); setMenu(false); }} className="block min-h-10 w-full px-3 py-2 text-left text-body hover:bg-cloud">{a.label}</button>
             ))}
-            <button type="button" onClick={() => { onDelete(task.id); setMenu(false); }} className="block w-full px-3 py-1.5 text-left text-red hover:bg-cloud">Delete</button>
+            <button type="button" onClick={() => { onDelete(task.id); setMenu(false); }} className="block min-h-10 w-full px-3 py-2 text-left text-red hover:bg-cloud">Delete</button>
           </div>
-        </>
+        </>, document.body
       ) : null}
     </div>
   );

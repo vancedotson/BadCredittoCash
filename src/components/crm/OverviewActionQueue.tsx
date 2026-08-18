@@ -130,20 +130,20 @@ export function OverviewActionQueue({ initialItems, owners }: { initialItems: Ac
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-cloud text-xs font-bold tabular-nums text-slate">{index + 1}</span>
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: toneColor(item.tone) }} />
                   <div className="min-w-0 flex-1">
-                    <Link href={item.href} className="block truncate text-sm font-medium text-body hover:text-trust hover:underline">{item.title}</Link>
-                    <div className="truncate text-xs text-slate">{item.subtitle}</div>
+                    <Link href={item.href} className="block truncate text-sm font-semibold text-body hover:text-trust hover:underline">{item.title}</Link>
+                    <div className="truncate text-sm text-slate">{item.subtitle}</div>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pl-10 sm:pl-0">
                   {item.taskId ? (
                     <>
-                      <button type="button" disabled={busy} onClick={() => complete(item, index)} aria-label={`Complete ${item.title}`} className="rounded-lg bg-green px-2.5 py-1.5 text-xs font-semibold text-white disabled:opacity-50">Complete</button>
-                      <button type="button" disabled={busy} onClick={() => snooze(item, index)} aria-label={`Snooze ${item.title}`} className="rounded-lg border border-mist bg-card px-2.5 py-1.5 text-xs text-body hover:bg-cloud disabled:opacity-50">Snooze</button>
+                      <button type="button" disabled={busy} onClick={() => complete(item, index)} aria-label={`Complete ${item.title}`} className="min-h-10 rounded-lg bg-green px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Complete</button>
+                      <button type="button" disabled={busy} onClick={() => snooze(item, index)} aria-label={`Snooze ${item.title}`} className="min-h-10 rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body hover:bg-cloud disabled:opacity-50">Snooze</button>
                     </>
                   ) : (
-                    <Link href={item.href} className="rounded-lg border border-mist bg-card px-2.5 py-1.5 text-xs text-body hover:bg-cloud">Open contact</Link>
+                    <Link href={item.href} className="flex min-h-10 items-center rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body hover:bg-cloud">Open contact</Link>
                   )}
-                  <select value={item.owner ?? ""} disabled={busy} onChange={(event) => assign(item, event.target.value)} aria-label={`Assign ${item.title}`} className="max-w-32 rounded-lg border border-mist bg-card px-2 py-1.5 text-xs text-body disabled:opacity-50">
+                  <select value={item.owner ?? ""} disabled={busy} onChange={(event) => assign(item, event.target.value)} aria-label={`Assign ${item.title}`} className="min-h-10 max-w-36 rounded-lg border border-mist bg-card px-2 py-2 text-sm text-body disabled:opacity-50">
                     <option value="">Unassigned</option>
                     {owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
                   </select>

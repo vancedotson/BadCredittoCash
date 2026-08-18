@@ -6,6 +6,7 @@ import { STAGES_IN_ORDER, STAGE_LABELS, type Stage } from "@/lib/stages";
 import { SEGMENTS_IN_ORDER, SEGMENT_LABELS } from "@/lib/segments";
 
 const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
+const filterClass = `${inputClass} min-h-10 w-full sm:w-auto`;
 
 const VIEWS: Array<{ key: string; label: string }> = [
   { key: "", label: "All" },
@@ -58,12 +59,12 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
   return (
     <div className="space-y-3">
       {/* Line A: search + actions */}
-      <div className="flex flex-wrap items-center gap-2">
-        <form onSubmit={(e) => { e.preventDefault(); push({ q: String(new FormData(e.currentTarget).get("q") ?? "") }); }} className="min-w-[200px] flex-1">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <form onSubmit={(e) => { e.preventDefault(); push({ q: String(new FormData(e.currentTarget).get("q") ?? "") }); }} className="col-span-2 min-w-[200px] flex-1">
           <input name="q" defaultValue={sp.get("q") ?? ""} placeholder="Search name or email…" className={`${inputClass} w-full`} aria-label="Search" />
         </form>
-        <div className="relative">
-          <button type="button" onClick={() => setViewsOpen((o) => !o)} className={`${inputClass} flex items-center gap-1`}>Saved views ▾</button>
+        <div className="relative col-span-2 sm:col-span-1">
+          <button type="button" onClick={() => setViewsOpen((o) => !o)} className={`${inputClass} flex min-h-10 w-full items-center justify-center gap-1 sm:w-auto`}>Saved views ▾</button>
           {viewsOpen ? (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setViewsOpen(false)} />
@@ -82,15 +83,15 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
             </>
           ) : null}
         </div>
-        <button type="button" onClick={() => setModal("add")} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">+ Add contact</button>
-        <button type="button" onClick={() => setModal("import")} className={inputClass}>Import CSV</button>
+        <button type="button" onClick={() => setModal("add")} className="min-h-10 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">+ Add contact</button>
+        <button type="button" onClick={() => setModal("import")} className={`${inputClass} min-h-10`}>Import CSV</button>
       </div>
 
       {/* Line B: quick views */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
         {VIEWS.map((v) => {
           const active = (sp.get("view") ?? "") === v.key;
-          return <button key={v.key} type="button" onClick={() => push({ view: v.key })} className={`rounded-full px-3 py-1 text-sm ${active ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>{v.label}</button>;
+          return <button key={v.key} type="button" onClick={() => push({ view: v.key })} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${active ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>{v.label}</button>;
         })}
       </div>
 
@@ -101,13 +102,13 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
       </button>
 
       {/* Line C: filters */}
-      <div id="contact-filter-fields" className={`${filtersOpen ? "flex" : "hidden"} flex-wrap gap-2 sm:flex`}>
-        <select value={sp.get("stage") ?? ""} onChange={(e) => push({ stage: e.target.value })} className={inputClass} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
-        <select value={sp.get("segment") ?? ""} onChange={(e) => push({ segment: e.target.value })} className={inputClass} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((s) => <option key={s} value={s}>{SEGMENT_LABELS[s]}</option>)}</select>
-        <select value={sp.get("source") ?? ""} onChange={(e) => push({ source: e.target.value })} className={inputClass} aria-label="Source"><option value="">All sources</option>{sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select>
-        <select value={sp.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} className={inputClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-        {tags.length ? <select value={sp.get("tag") ?? ""} onChange={(e) => push({ tag: e.target.value })} className={inputClass} aria-label="Tag"><option value="">All tags</option>{tags.map((t) => <option key={t} value={t}>#{t}</option>)}</select> : null}
-        <select value={sp.get("pageSize") ?? "25"} onChange={(e) => push({ pageSize: e.target.value })} className={inputClass} aria-label="Page size"><option value="25">25 / page</option><option value="50">50 / page</option><option value="100">100 / page</option></select>
+      <div id="contact-filter-fields" className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-2 sm:flex sm:flex-wrap`}>
+        <select value={sp.get("stage") ?? ""} onChange={(e) => push({ stage: e.target.value })} className={filterClass} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
+        <select value={sp.get("segment") ?? ""} onChange={(e) => push({ segment: e.target.value })} className={filterClass} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((s) => <option key={s} value={s}>{SEGMENT_LABELS[s]}</option>)}</select>
+        <select value={sp.get("source") ?? ""} onChange={(e) => push({ source: e.target.value })} className={filterClass} aria-label="Source"><option value="">All sources</option>{sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select>
+        <select value={sp.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} className={filterClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+        {tags.length ? <select value={sp.get("tag") ?? ""} onChange={(e) => push({ tag: e.target.value })} className={filterClass} aria-label="Tag"><option value="">All tags</option>{tags.map((t) => <option key={t} value={t}>#{t}</option>)}</select> : null}
+        <select value={sp.get("pageSize") ?? "25"} onChange={(e) => push({ pageSize: e.target.value })} className={filterClass} aria-label="Page size"><option value="25">25 / page</option><option value="50">50 / page</option><option value="100">100 / page</option></select>
       </div>
 
       {/* Line D: active filter chips */}
@@ -144,7 +145,7 @@ function AddContactModal({ owners, onClose, onDone }: { owners: string[]; onClos
         <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" aria-label="Name" className={field} />
         <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" aria-label="Email" className={field} />
         <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" aria-label="Phone" className={field} />
-        <div className="flex gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" aria-label="Source" className={field} />
           <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} aria-label="Stage" className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select>
         </div>
@@ -265,7 +266,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="crm-modal-title" className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="crm-modal-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-mist bg-card p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
         <h3 id="crm-modal-title" className="mb-4 text-lg font-semibold text-heading">{title}</h3>
         {children}
       </div>

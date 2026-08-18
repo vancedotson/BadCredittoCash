@@ -53,11 +53,15 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <ContactsToolbar owners={owners} tags={tags} sources={sources} />
 
       {/* Filtered mini-stats */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-mist bg-cloud px-4 py-2.5 text-sm">
-        <span className="text-body"><span className="font-semibold tabular-nums">{summary.total}</span> <span className="text-slate">matching</span></span>
-        <span className="text-body"><span className="font-semibold tabular-nums">{summary.booked}</span> <span className="text-slate">booked</span></span>
-        <span className="text-body"><span className="font-semibold tabular-nums">{summary.avgWatchPct}%</span> <span className="text-slate">avg watch</span></span>
-        <span className="flex flex-wrap gap-x-3 text-xs text-slate">{topStages.map((s) => <span key={s.stage}>{STAGE_LABELS[s.stage]}: <span className="tabular-nums text-body">{s.count}</span></span>)}</span>
+      <div className="grid grid-cols-3 gap-2 rounded-xl border border-mist bg-cloud p-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2 sm:px-4 sm:py-2.5">
+        <span className="text-center text-body sm:text-left"><span className="block text-lg font-semibold tabular-nums sm:inline sm:text-sm">{summary.total}</span> <span className="block text-xs text-slate sm:inline sm:text-sm">matching</span></span>
+        <span className="text-center text-body sm:text-left"><span className="block text-lg font-semibold tabular-nums sm:inline sm:text-sm">{summary.booked}</span> <span className="block text-xs text-slate sm:inline sm:text-sm">booked</span></span>
+        <span className="text-center text-body sm:text-left"><span className="block text-lg font-semibold tabular-nums sm:inline sm:text-sm">{summary.avgWatchPct}%</span> <span className="block text-xs text-slate sm:inline sm:text-sm">avg watch</span></span>
+        <details className="col-span-3 text-sm text-slate sm:hidden">
+          <summary className="cursor-pointer text-center font-medium text-trust">View stage breakdown</summary>
+          <span className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">{topStages.map((s) => <span key={s.stage}>{STAGE_LABELS[s.stage]}: <span className="tabular-nums text-body">{s.count}</span></span>)}</span>
+        </details>
+        <span className="hidden flex-wrap gap-x-3 text-sm text-slate sm:flex">{topStages.map((s) => <span key={s.stage}>{STAGE_LABELS[s.stage]}: <span className="tabular-nums text-body">{s.count}</span></span>)}</span>
       </div>
 
       <ContactsTable rows={rows} allIds={allIds} owners={owners} tags={tags} total={total} />

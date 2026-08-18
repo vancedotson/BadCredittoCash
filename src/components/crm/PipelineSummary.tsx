@@ -1,6 +1,15 @@
 import type { PipelineStats } from "@/lib/store";
 import { STAGE_LABELS, ACTIVE_STAGES } from "@/lib/stages";
-import { KpiTile } from "./ui";
+
+function MetricTile({ label, value, hint }: { label: string; value: React.ReactNode; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-mist bg-card px-3 py-2.5">
+      <div className="text-xs font-medium text-slate">{label}</div>
+      <div className="mt-0.5 text-xl font-bold tabular-nums text-heading">{value}</div>
+      {hint ? <div className="mt-0.5 text-xs leading-snug text-slate">{hint}</div> : null}
+    </div>
+  );
+}
 
 export function PipelineSummary({ stats }: { stats: PipelineStats }) {
   const active = stats.byStage.filter((s) => ACTIVE_STAGES.includes(s.stage));
@@ -8,13 +17,13 @@ export function PipelineSummary({ stats }: { stats: PipelineStats }) {
   const closed = stats.won + stats.lost;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <KpiTile label="Active pipeline" value={stats.active} />
-        <KpiTile label="Booked (7 days)" value={stats.bookedThisWeek} />
-        <KpiTile label="Win rate" value={`${stats.winRatePct}%`} hint={`${stats.won} won / ${closed} closed`} />
-        <KpiTile label="Forecast" value={stats.expectedClients} hint={`stage-weighted estimate from ${total} contacts`} />
-        <KpiTile label="Clients" value={stats.won} />
-        <KpiTile label="Lost" value={stats.lost} />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <MetricTile label="Active pipeline" value={stats.active} />
+        <MetricTile label="Booked (7 days)" value={stats.bookedThisWeek} />
+        <MetricTile label="Win rate" value={`${stats.winRatePct}%`} hint={`${stats.won} won / ${closed} closed`} />
+        <MetricTile label="Forecast" value={stats.expectedClients} hint={`stage-weighted estimate from ${total} contacts`} />
+        <MetricTile label="Clients" value={stats.won} />
+        <MetricTile label="Lost" value={stats.lost} />
       </div>
 
       <details className="rounded-xl border border-mist bg-card px-4 py-3 text-sm text-slate">
