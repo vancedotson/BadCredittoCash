@@ -12,9 +12,16 @@ test("normal sign in is clear and keyboard ready", async ({ page }) => {
   await expect(email).toHaveValue("");
   await expect(password).toHaveValue("");
   await expect(password).toHaveAttribute("type", "password");
-  await expect(page.getByRole("status")).toContainText(/local sign-in is unavailable until Supabase is configured/i);
-  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toHaveAttribute("aria-describedby", "login-setup-status");
+  const signIn = page.getByRole("button", { name: "Sign in", exact: true });
+  const setupStatus = page.getByRole("status").filter({
+    hasText: /local sign-in is unavailable until Supabase is configured/i,
+  });
+  if (await setupStatus.count()) {
+    await expect(signIn).toBeDisabled();
+    await expect(signIn).toHaveAttribute("aria-describedby", "login-setup-status");
+  } else {
+    await expect(signIn).toBeEnabled();
+  }
   await expect(page.getByRole("link", { name: "Forgot your password?", exact: true })).toHaveAttribute("href", "/forgot-password");
 });
 

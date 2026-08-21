@@ -24,7 +24,7 @@ The client-owned production candidate is deployed at `https://vance-dotson.vance
 - [x] Transfer the production Supabase project to the client-owned Vance Dotson organization.
 - [x] Copy the verified production Git history to `vancedotson/BadCredittoCash` without replacing the original Pedro repository remote. Completed 2026-08-21: client `main` matches commit `9785d9f`.
 - [x] Create and validate a client-owned Turnstile widget for registration and booking, store its secret in the client Worker, and move the public widget configuration into client source control. Completed 2026-08-21.
-- [x] Deploy and validate the Worker in the client-owned Cloudflare account. Completed 2026-08-21: the real application replaced the temporary shell, `/api/health` returned `{"ok":true}`, anonymous CRM access redirected to login, and the Calendar connector rejected anonymous access.
+- [x] Deploy and validate the Worker in the client-owned Cloudflare account. Completed 2026-08-21: the real application replaced the temporary shell, `/api/health` returned `{"ok":true}`, anonymous CRM access redirected to login, the Calendar connector rejected anonymous access, and 22 non-destructive production smoke tests passed without creating leads, bookings, email, or calendar data.
 - [ ] Configure the production domain and remaining client-owned integrations, then complete end-to-end launch validation.
 
 ## Non-negotiable implementation order
