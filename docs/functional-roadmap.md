@@ -17,14 +17,14 @@ The following are demonstrations, not production integrations:
 - Calendar synchronization
 - Authentication and authorization
 
-The public site and CRM are currently deployed at `https://vance-dotson.anadias-dev.workers.dev`.
+The client-owned production candidate is deployed at `https://vance-dotson.vancedotson.workers.dev`. The existing public domain remains on the legacy host until final validation and DNS cutover.
 
 ## Client account transfer
 
 - [x] Transfer the production Supabase project to the client-owned Vance Dotson organization.
 - [x] Copy the verified production Git history to `vancedotson/BadCredittoCash` without replacing the original Pedro repository remote. Completed 2026-08-21: client `main` matches commit `9785d9f`.
 - [x] Create and validate a client-owned Turnstile widget for registration and booking, store its secret in the client Worker, and move the public widget configuration into client source control. Completed 2026-08-21.
-- [ ] Deploy and validate the Worker in the client-owned Cloudflare account.
+- [x] Deploy and validate the Worker in the client-owned Cloudflare account. Completed 2026-08-21: the real application replaced the temporary shell, `/api/health` returned `{"ok":true}`, anonymous CRM access redirected to login, and the Calendar connector rejected anonymous access.
 - [ ] Configure the production domain and remaining client-owned integrations, then complete end-to-end launch validation.
 
 ## Non-negotiable implementation order
@@ -126,7 +126,7 @@ Status: `[~] In progress — Resend delivery, durable scheduling, verified deliv
 Problem: sequence enrollment currently records an `email_queued` event only. Nothing schedules or sends.
 
 - [x] Connect Resend in safe testing mode (all messages redirect to Ana's verified Resend inbox).
-- [ ] Verify a sending domain and configure SPF, DKIM, and DMARC.
+- [x] Verify a sending domain and configure SPF, DKIM, and DMARC. Completed 2026-08-21 for `updates.badcredittocash.com`; production sends use `updates@updates.badcredittocash.com` without changing the client's existing Mailgun records.
 - [x] Build branded HTML and plain-text templates.
 - [x] Render configured watch/call link merge fields.
 - [x] Persist sequence enrollment, message schedule, provider message ID, and delivery state.

@@ -66,7 +66,7 @@ function resolveTemplate(templateKey: string): SequenceEmail | null {
 }
 
 function appBaseUrl(): string {
-  return (process.env.APP_BASE_URL ?? "https://vance-dotson.anadias-dev.workers.dev").replace(/\/$/, "");
+  return (process.env.APP_BASE_URL ?? "https://vance-dotson.vancedotson.workers.dev").replace(/\/$/, "");
 }
 
 function appointmentTime(payload: MessagePayload): string {
@@ -191,7 +191,7 @@ async function deliverClaimedMessage(
   const actualRecipient = testMode
     ? process.env.EMAIL_TEST_RECIPIENT
     : intendedRecipient;
-  const from = process.env.EMAIL_FROM ?? "Vance Dotson <onboarding@resend.dev>";
+  const from = process.env.EMAIL_FROM ?? "Bad Credit to Cash <updates@updates.badcredittocash.com>";
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey || !actualRecipient) {

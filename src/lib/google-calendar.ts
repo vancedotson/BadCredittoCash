@@ -9,8 +9,10 @@ export const GOOGLE_CALENDAR_SCOPES = [
   "https://www.googleapis.com/auth/calendar.freebusy",
 ];
 
+const appBaseUrl = (process.env.APP_BASE_URL ?? "https://vance-dotson.vancedotson.workers.dev").replace(/\/$/, "");
+
 export const GOOGLE_CALENDAR_REDIRECT_URI =
-  "https://vance-dotson.anadias-dev.workers.dev/api/integrations/google-calendar/callback";
+  `${appBaseUrl}/api/integrations/google-calendar/callback`;
 
 type GoogleConnectionRow = {
   refresh_token_ciphertext: string;
@@ -52,8 +54,8 @@ export async function saveGoogleCalendarConnection(refreshToken: string): Promis
   const { error } = await createAdminClient().rpc("save_google_calendar_connection", {
     p_refresh_token_ciphertext: ciphertext,
     p_calendar_id: "primary",
-    p_account_email: "anacdias94@gmail.com",
-    p_timezone: "Europe/Lisbon",
+    p_account_email: process.env.GOOGLE_CALENDAR_ACCOUNT_EMAIL ?? null,
+    p_timezone: process.env.GOOGLE_CALENDAR_TIMEZONE ?? "America/Chicago",
   });
   if (error) throw new Error(error.message);
 }

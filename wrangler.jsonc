@@ -21,10 +21,12 @@
     "NEXT_PUBLIC_SUPABASE_URL": "https://gulidnxltrgomjyctjlp.supabase.co",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_kUngQFloolk0SWmgkBRUYw_l44atY4F",
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEXg2qOJgmbI5TSP",
-    "EMAIL_MODE": "test",
-    "EMAIL_TEST_RECIPIENT": "p.burmesterm@gmail.com",
-    "EMAIL_FROM": "Vance Dotson <onboarding@resend.dev>",
-    "APP_BASE_URL": "https://vance-dotson.anadias-dev.workers.dev"
+    "EMAIL_MODE": "production",
+    "EMAIL_FROM": "Bad Credit to Cash <updates@updates.badcredittocash.com>",
+    "APP_BASE_URL": "https://vance-dotson.vancedotson.workers.dev",
+    "GOOGLE_CALENDAR_ACCOUNT_EMAIL": "vancedotson84@gmail.com",
+    "GOOGLE_CALENDAR_TIMEZONE": "America/Chicago",
+    "BUSINESS_TIMEZONE": "America/Chicago"
   },
   "assets": {
     "directory": ".open-next/assets",

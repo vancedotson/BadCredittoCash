@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { createAdminClient } from "./supabase/admin";
 
 const DIGEST_KEY = "daily_overdue_tasks";
-const DIGEST_TIMEZONE = "Europe/Lisbon";
+const DIGEST_TIMEZONE = process.env.BUSINESS_TIMEZONE ?? "America/Chicago";
 
 type OverdueTaskRow = {
   title: string;
@@ -50,11 +50,11 @@ export async function sendDailyOverdueDigest(): Promise<{ sent: boolean; skipped
       const lines = tasks.map((task) => {
         return `• ${task.title} — ${task.contact_name} — due ${new Date(task.due_at).toLocaleString("en-US", { timeZone: DIGEST_TIMEZONE, dateStyle: "medium", timeStyle: "short" })}`;
       });
-      const appUrl = (process.env.APP_BASE_URL ?? "https://vance-dotson.anadias-dev.workers.dev").replace(/\/$/, "");
+      const appUrl = (process.env.APP_BASE_URL ?? "https://vance-dotson.vancedotson.workers.dev").replace(/\/$/, "");
       const text = [`${tasks.length} overdue task${tasks.length === 1 ? "" : "s"} need attention:`, "", ...lines, "", `Open Tasks: ${appUrl}/crm/tasks`].join("\n");
       const list = lines.map((line) => `<li style="margin-bottom:8px">${escapeHtml(line.slice(2))}</li>`).join("");
       const { data: sent, error: sendError } = await new Resend(apiKey).emails.send({
-        from: process.env.EMAIL_FROM ?? "Vance Dotson <onboarding@resend.dev>",
+        from: process.env.EMAIL_FROM ?? "Bad Credit to Cash <updates@updates.badcredittocash.com>",
         to: recipient,
         subject: `Vance CRM: ${tasks.length} overdue task${tasks.length === 1 ? "" : "s"}`,
         text,

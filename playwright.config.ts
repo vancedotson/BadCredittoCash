@@ -5,7 +5,7 @@ export default defineConfig({
   outputDir: ".playwright-output",
   reporter: "list",
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "https://vance-dotson.anadias-dev.workers.dev",
+    baseURL: process.env.E2E_BASE_URL ?? "https://vance-dotson.vancedotson.workers.dev",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

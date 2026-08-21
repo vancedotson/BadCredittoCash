@@ -2,16 +2,16 @@
 
 Use this guide when deploying, backing up, restoring, or responding to a production problem.
 
-Production application: `https://vance-dotson.anadias-dev.workers.dev`
+Production application: `https://vance-dotson.vancedotson.workers.dev`
 
-Public health check: `https://vance-dotson.anadias-dev.workers.dev/api/health`
+Public health check: `https://vance-dotson.vancedotson.workers.dev/api/health`
 
 ## Before any planned deployment or database migration
 
-1. Sign in to the CRM and open `https://vance-dotson.anadias-dev.workers.dev/crm/settings`.
+1. Sign in to the CRM and open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.
 2. In **Backups**, click **Download full backup (JSON)**.
 3. Store the downloaded file somewhere private. It contains client CRM data and must not be committed to Git or shared publicly.
-4. Confirm `https://vance-dotson.anadias-dev.workers.dev/api/health` returns `{"ok":true}`.
+4. Confirm `https://vance-dotson.vancedotson.workers.dev/api/health` returns `{"ok":true}`.
 5. Run the project tests, TypeScript check, lint, and production build.
 6. Apply reviewed database migrations before deploying code that depends on them.
 
@@ -37,7 +37,7 @@ Important: a Worker rollback changes application code only. It does not reverse 
 Only restore when current CRM data must be replaced by a known-good full backup.
 
 1. First download a fresh backup of the current state, even if it may be damaged.
-2. Open `https://vance-dotson.anadias-dev.workers.dev/crm/settings`.
+2. Open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.
 3. Under **Restore a full backup**, choose the private JSON backup file.
 4. Click **Validate backup**. Validation does not change data.
 5. Check the displayed export time and record counts.
@@ -70,7 +70,7 @@ Do not edit or delete an already-applied migration and do not attempt an unrevie
 
 ### The site loads but CRM data fails
 
-1. Open `https://vance-dotson.anadias-dev.workers.dev/crm/health`.
+1. Open `https://vance-dotson.vancedotson.workers.dev/crm/health`.
 2. Run the checks again.
 3. If Database is unhealthy, avoid restores or destructive CRM actions until Supabase is responding.
 4. Preserve the error time and Cloudflare log message without copying secret values.
@@ -94,7 +94,7 @@ Do not edit or delete an already-applied migration and do not attempt an unrevie
 
 For every production incident, record:
 
-- start and recovery times in Europe/Lisbon;
+- start and recovery times in America/Chicago;
 - affected page or operation;
 - Worker version before and after remediation;
 - whether database data or email delivery was affected;
