@@ -197,6 +197,8 @@ Manual verification completed 2026-08-10: an existing Google event disabled the 
 
 External-change reconciliation verified 2026-08-10: moving the event directly in Google Calendar updated the CRM and queued a reschedule email; deleting it directly cancelled the CRM booking and sent the cancellation email. The reconciler runs in bounded batches and isolates calendar failures from the email queue.
 
+Post-launch owner action: Vance must connect his own Google Calendar from CRM Settings. The complete availability, booking, reschedule, cancellation, and direct-change reconciliation lifecycle already passed with Ana's test calendar, so repeating that full test with Vance's account is recommended after connection but is not a launch blocker.
+
 ### 6. CRM production hardening — P1
 
 Status: `[~] In progress — existing contact, pipeline, note, tag, and task controls now persist to Supabase; hardening remains`

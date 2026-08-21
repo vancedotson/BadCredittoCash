@@ -22,6 +22,26 @@ async function api(url: string, method: string, body: unknown) {
   return res.json();
 }
 
+function bulkProgressMessage(action: string, count: number) {
+  const contacts = `${count} contact${count === 1 ? "" : "s"}`;
+  if (action === "delete") return `Moving ${contacts} to Trash…`;
+  if (action === "stage") return `Updating the stage for ${contacts}…`;
+  if (action === "owner") return `Assigning ${contacts}…`;
+  if (action === "tag") return `Adding the tag to ${contacts}…`;
+  if (action === "task") return `Adding the task to ${contacts}…`;
+  return `Updating ${contacts}…`;
+}
+
+function bulkSuccessMessage(action: string, count: number) {
+  const contacts = `${count} contact${count === 1 ? "" : "s"}`;
+  if (action === "delete") return `Moved ${contacts} to Trash.`;
+  if (action === "stage") return `Updated the stage for ${contacts}.`;
+  if (action === "owner") return `Updated the owner for ${contacts}.`;
+  if (action === "tag") return `Added the tag to ${contacts}.`;
+  if (action === "task") return `Added the task to ${contacts}.`;
+  return `Updated ${contacts}.`;
+}
+
 export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Contact[]; allIds: string[]; owners: string[]; tags: string[]; total: number }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -31,8 +51,9 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
   const [menu, setMenu] = useState<string | null>(null);
   const [fly, setFly] = useState<{ c: Contact; x: number; y: number } | null>(null);
   const [bulkInput, setBulkInput] = useState<{ action: "tag" | "task"; value: string } | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{ action: string; count: number } | null>(null);
   const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
   const [tableScroll, setTableScroll] = useState({ left: false, right: true });
 
@@ -83,8 +104,10 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
     if (action === "delete" && !window.confirm(
       `Move ${count} contact${count === 1 ? "" : "s"} to Trash? Their notes, tasks, bookings, and activity history will be preserved and an administrator can restore them.`,
     )) return;
-    setPending(true);
+    const operationCount = count;
+    setPendingAction({ action, count: operationCount });
     setActionError(null);
+    setActionSuccess(null);
     try {
       await api("/api/crm/contacts/bulk", "POST", {
         ids,
@@ -92,6 +115,7 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
         value,
         confirm: action === "delete" ? "DELETE" : undefined,
       });
+      setActionSuccess(bulkSuccessMessage(action, operationCount));
       clearSel();
       router.refresh();
     } catch (error) {
@@ -100,7 +124,7 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
         retry: () => { void bulk(action, value); },
       });
     }
-    finally { setPending(false); }
+    finally { setPendingAction(null); }
   }
   function exportSel() {
     const chosen = rows.filter((r) => selected.has(r.id));
@@ -108,6 +132,7 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
   }
 
   const arrow = (f: string) => (sort === f ? <span className="text-trust">{dir === "asc" ? "▲" : "▼"}</span> : <span className="text-slate/40">↕</span>);
+  const pending = pendingAction !== null;
   const th = "px-4 py-3 font-medium";
   const td = compact ? "px-4 py-1.5" : "px-4 py-3";
 
@@ -119,9 +144,22 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
           <span className="flex gap-3"><button type="button" onClick={actionError.retry} className="font-semibold underline">Try again</button><button type="button" onClick={() => setActionError(null)} aria-label="Dismiss error">×</button></span>
         </div>
       ) : null}
+      {actionSuccess ? (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-green/30 bg-green/10 px-4 py-3 text-sm text-green">
+          <span>{actionSuccess}</span>
+          <button type="button" onClick={() => setActionSuccess(null)} aria-label="Dismiss confirmation" className="px-2 text-lg leading-none">×</button>
+        </div>
+      ) : null}
       {/* Bulk bar */}
       {count > 0 ? (
-        <div className="rounded-xl border border-mist bg-sky px-4 py-2.5 text-sm">
+        <div aria-busy={pending} className="rounded-xl border border-mist bg-sky px-4 py-2.5 text-sm">
+          {pendingAction ? (
+            <div role="status" aria-live="polite" className="flex min-h-10 items-center gap-3 font-medium text-trust">
+              <span aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-trust/30 border-t-trust" />
+              <span>{bulkProgressMessage(pendingAction.action, pendingAction.count)}</span>
+            </div>
+          ) : (
+          <>
           <div className="flex items-center justify-between gap-2 sm:hidden">
             <span className="font-medium text-trust">{count} selected</span>
             <details className="relative">
@@ -168,6 +206,8 @@ export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Con
               <button type="button" onClick={() => setBulkInput(null)} className="min-h-10 text-sm text-slate">Cancel</button>
             </form>
           ) : null}
+          </>
+          )}
         </div>
       ) : null}
 

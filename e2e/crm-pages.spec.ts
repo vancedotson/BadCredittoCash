@@ -117,6 +117,24 @@ test("CRM contacts supports finding, filtering, and import review", async ({ pag
   await expect(dialog).toHaveCount(0);
 });
 
+test("CRM bulk deletion shows progress and completion feedback", async ({ page }) => {
+  let releaseRequest = () => {};
+  const requestHeld = new Promise<void>((resolve) => { releaseRequest = resolve; });
+  await page.route("**/api/crm/contacts/bulk", async (route) => {
+    await requestHeld;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+  });
+  await page.goto("/crm/contacts");
+
+  await page.getByLabel("Select all", { exact: true }).check();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete", exact: true }).click();
+
+  await expect(page.getByRole("status")).toContainText("Moving 17 contacts to Trash");
+  releaseRequest();
+  await expect(page.getByRole("status")).toContainText("Moved 17 contacts to Trash.");
+});
+
 test("CRM contact rows open a complete contact workspace", async ({ page }) => {
   await page.goto("/crm/contacts");
   await page.getByRole("link", { name: "Ana Martins", exact: true }).first().click();
