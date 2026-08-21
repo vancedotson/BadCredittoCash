@@ -1,6 +1,6 @@
 # Vance Dotson Website — Functional Implementation Roadmap
 
-Last updated: 2026-08-12
+Last updated: 2026-08-21
 
 This document is the working backlog for turning the approved website shell into a production system. Check an item only after its acceptance criteria pass in the Cloudflare deployment.
 
@@ -18,6 +18,13 @@ The following are demonstrations, not production integrations:
 - Authentication and authorization
 
 The public site and CRM are currently deployed at `https://vance-dotson.anadias-dev.workers.dev`.
+
+## Client account transfer
+
+- [x] Transfer the production Supabase project to the client-owned Vance Dotson organization.
+- [x] Copy the verified production Git history to `vancedotson/BadCredittoCash` without replacing the original Pedro repository remote. Completed 2026-08-21: client `main` matches commit `9785d9f`.
+- [ ] Deploy and validate the Worker in the client-owned Cloudflare account.
+- [ ] Configure the production domain and remaining client-owned integrations, then complete end-to-end launch validation.
 
 ## Non-negotiable implementation order
 
