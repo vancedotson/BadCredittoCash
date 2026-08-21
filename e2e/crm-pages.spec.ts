@@ -15,7 +15,10 @@ test("CRM overview shows its decision dashboard", async ({ page }) => {
 test("CRM shortcut help is visible and matches working shortcuts", async ({ page }) => {
   await page.goto("/crm");
 
-  await page.getByRole("button", { name: "Keyboard shortcuts", exact: true }).click();
+  await page.getByRole("button", { name: "Open account menu", exact: true }).click({ force: true });
+  const accountMenu = page.getByRole("menu", { name: "Account", exact: true });
+  await expect(accountMenu.getByRole("menuitem", { name: "Sign out", exact: true })).toBeVisible();
+  await accountMenu.getByRole("menuitem", { name: "Keyboard shortcuts", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("Open search", { exact: true })).toBeVisible();
@@ -35,7 +38,8 @@ test("CRM shortcut help can be found on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/crm");
 
-  await page.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("button", { name: "Open CRM menu", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Sign out", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: /Keyboard shortcuts/ }).click();
   await expect(page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true })).toBeVisible();
 });

@@ -1,10 +1,11 @@
 project_id = "vance-dotson"
 
 [auth]
-site_url = "https://vance-dotson.anadias-dev.workers.dev"
+site_url = "https://vance-dotson.vancedotson.workers.dev"
 additional_redirect_urls = [
   "http://localhost:3000/auth/update-password",
-  "https://vance-dotson.anadias-dev.workers.dev/auth/update-password"
+  "https://vance-dotson.vancedotson.workers.dev/auth/update-password",
+  "https://badcredittocash.com/auth/update-password"
 ]
 enable_signup = false
 

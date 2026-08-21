@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { logout } from "@/app/login/actions";
 import type { NavData } from "@/lib/store";
 import { LightbulbIcon, PersonIcon, DollarIcon, CheckIcon, RefreshIcon, DocumentIcon, ShieldIcon, ImageIcon, BellIcon, SunIcon, MoonIcon } from "@/components/marketing-v2/Icons";
 import { CommandPalette } from "./CommandPalette";
@@ -192,19 +193,23 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
 
         {/* Account */}
         <div className="relative border-t border-white/10 px-3 py-3">
-          <button type="button" onClick={() => setAccount((o) => !o)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
+          <button type="button" aria-label="Open account menu" aria-expanded={account} aria-haspopup="menu" aria-controls="crm-account-menu" onClick={() => setAccount((o) => !o)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5">
             <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/15 text-xs font-bold text-white">{owner[0]}</span>
             {!sidebarCollapsed ? <span className="min-w-0 flex-1 truncate text-sm text-white/80">{owner}</span> : null}
           </button>
           {account ? (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setAccount(false)} />
-              <div className="absolute bottom-14 left-3 z-20 w-52 rounded-xl border border-mist bg-card py-1 text-sm shadow-card">
-                <div className="px-3 py-1.5 text-xs text-slate">Signed in as <span className="text-body">{owner}</span></div>
-                <button type="button" onClick={() => { toggleDark(); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-body hover:bg-cloud">{dark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}{dark ? "Light mode" : "Dark mode"}</button>
-                <button type="button" onClick={() => { setHelp(true); setAccount(false); }} className="block w-full px-3 py-1.5 text-left text-body hover:bg-cloud">Keyboard shortcuts</button>
-                <Link href="/crm/settings" onClick={() => setAccount(false)} className="block px-3 py-1.5 text-body hover:bg-cloud">Settings</Link>
-                <Link href="/" className="block px-3 py-1.5 text-body hover:bg-cloud">View site ↗</Link>
+              <div id="crm-account-menu" role="menu" aria-label="Account" className="absolute bottom-14 left-3 z-20 w-52 rounded-xl border border-mist bg-card py-1 text-sm shadow-card">
+                <div role="presentation" className="px-3 py-1.5 text-xs text-slate">Signed in as <span className="text-body">{owner}</span></div>
+                <button type="button" role="menuitem" onClick={() => { toggleDark(); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-body hover:bg-cloud">{dark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}{dark ? "Light mode" : "Dark mode"}</button>
+                <button type="button" role="menuitem" onClick={() => { setHelp(true); setAccount(false); }} className="block w-full px-3 py-1.5 text-left text-body hover:bg-cloud">Keyboard shortcuts</button>
+                <Link href="/crm/settings" role="menuitem" onClick={() => setAccount(false)} className="block px-3 py-1.5 text-body hover:bg-cloud">Settings</Link>
+                <Link href="/" role="menuitem" className="block px-3 py-1.5 text-body hover:bg-cloud">View site ↗</Link>
+                <div className="my-1 border-t border-mist" />
+                <form action={logout}>
+                  <button type="submit" role="menuitem" className="block w-full px-3 py-1.5 text-left font-medium text-red hover:bg-cloud">Sign out</button>
+                </form>
               </div>
             </>
           ) : null}
@@ -257,6 +262,9 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
                     <kbd className="rounded border border-mist bg-cloud px-1.5 py-0.5 text-xs">?</kbd>
                   </button>
                   <Link href="/" role="menuitem" onClick={() => setMobileMore(false)} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-body hover:bg-cloud">View site ↗</Link>
+                  <form action={logout}>
+                    <button type="submit" role="menuitem" className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-red hover:bg-cloud">Sign out</button>
+                  </form>
                 </div>
               </>
             ) : null}
