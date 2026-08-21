@@ -23,6 +23,7 @@ The public site and CRM are currently deployed at `https://vance-dotson.anadias-
 
 - [x] Transfer the production Supabase project to the client-owned Vance Dotson organization.
 - [x] Copy the verified production Git history to `vancedotson/BadCredittoCash` without replacing the original Pedro repository remote. Completed 2026-08-21: client `main` matches commit `9785d9f`.
+- [x] Create and validate a client-owned Turnstile widget for registration and booking, store its secret in the client Worker, and move the public widget configuration into client source control. Completed 2026-08-21.
 - [ ] Deploy and validate the Worker in the client-owned Cloudflare account.
 - [ ] Configure the production domain and remaining client-owned integrations, then complete end-to-end launch validation.
 

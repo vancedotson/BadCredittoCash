@@ -20,7 +20,7 @@
   "vars": {
     "NEXT_PUBLIC_SUPABASE_URL": "https://gulidnxltrgomjyctjlp.supabase.co",
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_kUngQFloolk0SWmgkBRUYw_l44atY4F",
-    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEJgbygCL0OAMxvi",
+    "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEXg2qOJgmbI5TSP",
     "EMAIL_MODE": "test",
     "EMAIL_TEST_RECIPIENT": "p.burmesterm@gmail.com",
     "EMAIL_FROM": "Vance Dotson <onboarding@resend.dev>",
