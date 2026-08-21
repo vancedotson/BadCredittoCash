@@ -1,5 +1,9 @@
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+// Public client configuration must be present while Next.js builds so it can be
+// embedded in browser bundles. Cloudflare's runtime vars remain the override.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ?? "https://gulidnxltrgomjyctjlp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  ?? "sb_publishable_kUngQFloolk0SWmgkBRUYw_l44atY4F";
 
 export function hasSupabaseConfig() {
   return Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);

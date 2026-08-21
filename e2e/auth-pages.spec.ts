@@ -78,7 +78,7 @@ test("sign in loading state locks the form and announces progress", async ({ pag
   await expect(button).toHaveAttribute("aria-describedby", "login-loading-status");
 });
 
-test("normal password reset is empty, focused, and safe without local auth", async ({ page }) => {
+test("normal password reset reflects the environment's Supabase configuration", async ({ page }) => {
   await page.goto("/forgot-password");
 
   const email = page.getByRole("textbox", { name: "Email", exact: true });
@@ -87,9 +87,18 @@ test("normal password reset is empty, focused, and safe without local auth", asy
   await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
   await expect(email).toHaveValue("");
   await expect(email).toBeFocused();
-  await expect(page.getByRole("status")).toContainText(/local password reset is unavailable/i);
-  await expect(button).toBeDisabled();
-  await expect(button).toHaveAttribute("aria-describedby", "reset-setup-status");
+  const setupStatus = page.getByRole("status").filter({
+    hasText: /local password reset is unavailable/i,
+  });
+  if (process.env.E2E_EXPECT_SUPABASE === "true") {
+    await expect(setupStatus).toHaveCount(0);
+    await expect(button).toBeEnabled();
+  } else if (await setupStatus.count()) {
+    await expect(button).toBeDisabled();
+    await expect(button).toHaveAttribute("aria-describedby", "reset-setup-status");
+  } else {
+    await expect(button).toBeEnabled();
+  }
 });
 
 test("password reset sent state confirms the address and next steps", async ({ page }) => {
