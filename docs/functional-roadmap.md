@@ -279,10 +279,10 @@ Status: `[ ] Blocked on business/client inputs`
 
 The repository itself flags these as unresolved:
 
-- [ ] Confirm attorney/advocate status and permitted claims.
+- [~] Approved FCRA deletion disclosure is published; attorney/advocate status and any additional claims still require confirmation.
 - [ ] Reconcile guarantee language and complete CROA/legal review.
-- [ ] Confirm pricing and advance-fee compliance.
-- [ ] Replace placeholder phone, email, address, photos, testimonials, recordings, and result captions.
+- [~] Pricing is confirmed as varying by issue; advance-fee compliance still requires legal review.
+- [~] Real phone, email, and address are published; photos, testimonials, recordings, and result captions still need final assets and approval.
 - [ ] Verify licensing/bonding statements.
 - [ ] Create real Privacy Policy, Terms, contact details, unsubscribe, and data-request paths.
 - [ ] Obtain testimonial/media releases and define retention for sensitive consumer data.

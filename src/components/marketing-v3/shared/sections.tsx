@@ -602,6 +602,17 @@ export function Footer() {
             >
               {site.ev.classification}
             </div>
+            <address
+              className="v3-mono mt-4 grid gap-1 not-italic"
+              style={{ fontSize: 11, lineHeight: 1.6, color: "var(--v3-mut)" }}
+            >
+              <span>{site.contact.officeAddress}</span>
+              <span>
+                <a href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>
+                {" · "}
+                <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
+              </span>
+            </address>
           </div>
           <nav className="flex gap-6">
             {site.footer.links.map((l) => (

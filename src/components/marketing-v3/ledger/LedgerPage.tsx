@@ -62,11 +62,11 @@ function HeroLedger() {
           >
             The calls
             <br />
-            stop. <span className="v3-accent-text">And</span>
+            stop. <span className="v3-accent-text">Challenge</span>
             <br />
-            they owe
+            what&apos;s
             <br />
-            <span className="v3-accent-text">you.</span>
+            <span className="v3-accent-text">inaccurate.</span>
           </h1>
 
           <div

@@ -55,9 +55,9 @@ component comments — nothing should ship publicly until confirmed:
 
 1. **Attorney status** — strengthens/limits the "hold accountable" mechanism wording.
 2. **Guarantee** — the 50% vs 100% contradiction must be reconciled + CROA legal review (currently NOT published).
-3. **Pricing / advance-fee** — never on this page; resolved at the call stage.
+3. **Pricing / advance-fee** — pricing varies by issue and is explained before a client moves forward; advance-fee compliance still requires legal review.
 4. **Real assets** — Vance's photo, recorded-call clips, video testimonials, and result captions are placeholders.
-5. **Real contact** — phone `(405) 555-0123`, email, and OKC address are placeholders.
+5. **Business information** — Vance's phone, email, and Oklahoma City office address are confirmed and published.
 6. **Licensing & disclaimers** — footer/legal notices need CROA/FTC review.
 7. **Meta ad-category compliance** — creative pointing here must meet restricted financial-services rules.
 

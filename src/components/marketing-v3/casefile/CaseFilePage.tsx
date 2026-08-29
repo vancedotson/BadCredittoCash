@@ -64,7 +64,7 @@ function HeroCaseFile() {
             style={{ fontSize: "clamp(48px,8vw,104px)", lineHeight: 0.9 }}
           >
             The calls stop.{" "}
-            <span className="v3-accent-text">Find out if they owe you.</span>
+            <span className="v3-accent-text">Challenge what&apos;s inaccurate.</span>
           </h1>
           <p
             className="mt-7"

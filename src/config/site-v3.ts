@@ -8,33 +8,31 @@
  * only presentation chrome is new.
  *
  * ⚠️  = MUST be confirmed by Vance / legal review before going live (same open
- *       items as v1/v2: attorney status, guarantee %, pricing, real phone /
- *       office / licensing, and real media — photo, calls, testimonials,
- *       results). Written in the compliance-SAFE framing already; flagged so
- *       nothing stronger or unverified ships by accident.
+ *       items as v1/v2: attorney status, guarantee %, licensing, and real media
+ *       (photo, calls, testimonials, results). Contact details, variable pricing,
+ *       and the approved FCRA deletion disclosure are confirmed.
  */
 
 export const site = {
   name: "Vance Dotson",
 
   seo: {
-    title: "Vance Dotson: The calls stop. Find out if they owe you.",
+    title: "Vance Dotson: Challenge inaccurate credit information.",
     description:
       "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. See the evidence, free.",
   },
 
-  // ⚠️ PLACEHOLDER — replace with Vance's real number and address.
   contact: {
-    phoneDisplay: "(405) 555-0123",
-    phoneHref: "tel:+14055550123",
-    email: "help@vancedotson.com",
+    phoneDisplay: "(405) 406-7323",
+    phoneHref: "tel:+14054067323",
+    email: "vance@vancethecreditdoctor.com",
     officeCity: "Oklahoma City, OK",
-    officeAddress: "123 Example St, Oklahoma City, OK 73102",
+    officeAddress: "425 W. Wilshire Blvd Ste E, Oklahoma City, OK 73116",
   },
 
   cta: {
     primary: { label: "See how it works, free", href: "#register" },
-    secondary: { label: "Book my free call", href: "#register" },
+    secondary: { label: "Book my free call", href: "/book" },
   },
 
   nav: [
@@ -55,8 +53,7 @@ export const site = {
   trustBar: [
     "Advocate since 2004",
     "Real cases on tape",
-    // ⚠️ NEEDS CONFIRMATION (credit-services registration, not a bar license)
-    "Licensed & bonded (OK)",
+    "FCRA-focused support",
     "Real OKC office",
   ],
 
@@ -92,14 +89,14 @@ export const site = {
 
   // SECTION 1 — Hero
   hero: {
-    headline: "The calls stop. And you find out if they owe you.",
+    headline: "The calls stop. Challenge what's inaccurate.",
     subhead:
       "I'm Vance. Since 2004 I've gone after the bureaus and collectors who break the law, using the FCRA and FDCPA to challenge the inaccurate information wrecking your credit. Not weak letters. Real action.",
     photoCaption: "Vance Dotson, Oklahoma City",
     bullets: [
       "Stop the collector calls",
       "Challenge the inaccurate items on your report",
-      "Find out if they owe you",
+      "Challenge inaccurate, incomplete, or unverified information",
     ],
     // ⚠️ PLACEHOLDER — real aggregate proof (swap in Vance's true numbers).
     rating: { stars: "4.9", count: "500+ Oklahomans helped" },
@@ -171,11 +168,10 @@ export const site = {
       { value: "FCRA + FDCPA", label: "the laws I use" },
       { value: "OKC", label: "a real office, not a call center" },
     ],
-    // ⚠️ the licensing line needs Vance's confirmation before it ships.
     credentials: [
       "Consumer advocate since 2004",
       "Spoken at national consumer-advocate conferences",
-      "Licensed & bonded in Oklahoma",
+      "FCRA-focused credit-report review",
       "A real office in Oklahoma City",
     ],
   },
@@ -192,14 +188,12 @@ export const site = {
         body: "I review your reports and the collector activity for what's inaccurate, incomplete, or against the law.",
       },
       {
-        // ⚠️ exact wording depends on attorney status.
-        title: "Hold them accountable under the law",
-        body: "I don't stop at a letter. I treat inaccurate reporting and collector misconduct as what they are: violations of federal law.",
+        title: "Challenge what should not be reported",
+        body: "I use the FCRA to challenge information that is inaccurate, incomplete, or unverified.",
       },
       {
-        // ⚠️ compensation tied to "where the law allows".
-        title: "Push for results and compensation where the law allows",
-        body: "We challenge the inaccurate items and, where the law allows, pursue the compensation you may be owed.",
+        title: "Seek deletion under the FCRA",
+        body: "Vance Dotson offers assistance with the deletion of inaccurate, incomplete, or unverified information in accordance with the Fair Credit Reporting Act.",
       },
     ],
     kicker: "Anyone can send a letter. Knowing the law is the difference.",
@@ -297,7 +291,7 @@ export const site = {
     },
     {
       q: "What will it cost me?",
-      a: "The strategy call is free. Its whole job is to see whether you even have a case before you commit to anything.",
+      a: "The strategy call is free. Pricing for services varies depending on the issue and will be explained before you decide whether to move forward.",
     },
     {
       q: "Will I be judged?",
@@ -348,7 +342,7 @@ export const site = {
     // ⚠️ DRAFT titles — pick/confirm one with Vance. Result + mechanism + who.
     titleOptions: [
       "How to stop the collector calls and challenge the errors on your report, using the federal law that's already on your side.",
-      "How to find out if the collectors owe you, without paying a credit-repair mill, using the FCRA and FDCPA.",
+      "How to challenge inaccurate, incomplete, or unverified credit information under the FCRA.",
       "The two federal laws that stop harassment and clean up inaccurate credit reporting, even if your own disputes came back verified.",
     ],
     // The named mechanism — the "new way" the whole training hangs on.
@@ -364,7 +358,7 @@ export const site = {
       "Why your own disputes came back verified, and what the bureaus are actually required to do.",
       "The two federal laws that already protect you, in plain English.",
       "How to spot a violation on a collector call or a credit report.",
-      "What find out if they owe you really means, and when it applies.",
+      "What deletion under the FCRA can mean, and when it applies.",
       "The first move to make this week, whether or not we ever talk.",
     ],
 
@@ -492,13 +486,13 @@ export const site = {
   footer: {
     disclaimers: [
       "Results vary and are not guaranteed. Individual outcomes depend on the specifics of your situation.",
-      "Vance Dotson is a consumer advocate. This website is for general information and is not legal advice.",
-      "Licensed & bonded for credit services in Oklahoma.",
+      "Vance Dotson offers assistance with the deletion of inaccurate, incomplete, or unverified information in accordance with the Fair Credit Reporting Act.",
+      "This website provides general information and is not legal advice.",
     ],
     links: [
       { label: "Privacy", href: "#" },
       { label: "Terms", href: "#" },
-      { label: "Contact", href: "#register" },
+      { label: "Contact", href: "mailto:vance@vancethecreditdoctor.com" },
     ],
   },
 } as const;

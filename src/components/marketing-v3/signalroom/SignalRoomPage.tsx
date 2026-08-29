@@ -79,8 +79,8 @@ function HeroSignalRoom() {
           className="v3-display mx-auto mt-8"
           style={{ fontSize: "clamp(46px,9vw,120px)", lineHeight: 0.88, maxWidth: 1000 }}
         >
-          The calls stop. And you find out if{" "}
-          <span className="v3-accent-text">they owe you.</span>
+          The calls stop.{" "}
+          <span className="v3-accent-text">Challenge what&apos;s inaccurate.</span>
         </h1>
 
         {/* master waveform */}
