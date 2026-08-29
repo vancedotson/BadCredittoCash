@@ -284,7 +284,7 @@ The repository itself flags these as unresolved:
 - [~] Pricing is confirmed as varying by issue; advance-fee compliance still requires legal review.
 - [~] Real phone, email, and address are published; photos, testimonials, recordings, and result captions still need final assets and approval.
 - [ ] Verify licensing/bonding statements.
-- [ ] Create real Privacy Policy, Terms, contact details, unsubscribe, and data-request paths.
+- [x] Publish Privacy Policy and Terms pages, confirmed contact details, signed unsubscribe flow, form consent links, and a public data-request path.
 - [ ] Obtain testimonial/media releases and define retention for sensitive consumer data.
 - [ ] Complete Meta restricted-financial-services review for ads and tracking.
 - [ ] Configure the production domain, redirects, canonical URL, social metadata, and email domain.

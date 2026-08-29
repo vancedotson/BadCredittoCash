@@ -328,8 +328,8 @@ export const site = {
       "This website provides general information and is not legal advice.",
     ],
     links: [
-      { label: "Privacy", href: "#" },
-      { label: "Terms", href: "#" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
       { label: "Contact", href: "mailto:vance@vancethecreditdoctor.com" },
     ],
   },

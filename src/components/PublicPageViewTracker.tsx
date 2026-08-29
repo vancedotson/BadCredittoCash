@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { EVENTS } from "@/lib/events";
 import { getRememberedLead, syncInternalTrafficPreference, track } from "@/lib/tracking";
 
-const EXCLUDED_PREFIXES = ["/crm", "/login", "/auth", "/forgot-password", "/unsubscribe"];
+const EXCLUDED_PREFIXES = ["/crm", "/login", "/auth", "/forgot-password", "/unsubscribe", "/privacy", "/terms"];
 
 export function PublicPageViewTracker() {
   const pathname = usePathname();

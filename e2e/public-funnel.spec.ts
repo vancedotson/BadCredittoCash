@@ -79,3 +79,29 @@ test("registration submitting review state locks the completed form", async ({ p
   await expect(name).toBeDisabled();
   await expect(page.getByRole("button", { name: /sending your link/i })).toBeDisabled();
 });
+
+test("legal pages and consent links are complete", async ({ page }) => {
+  await page.goto("/#register");
+
+  const registration = page.locator("#register form");
+  await expect(registration.getByRole("link", { name: "Terms of Service" })).toHaveAttribute("href", "/terms");
+  await expect(registration.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "/privacy");
+
+  const footer = page.locator("footer");
+  await expect(footer.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+  await expect(footer.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+
+  await page.goto("/privacy");
+  await expect(page).toHaveTitle(/Privacy Policy/i);
+  await expect(page.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your privacy choices" })).toBeVisible();
+  await expect(page.getByText("425 W. Wilshire Blvd Ste E", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(/draft|placeholder|waiting for.*lawyer/i)).toHaveCount(0);
+
+  await page.goto("/terms");
+  await expect(page).toHaveTitle(/Terms of Service/i);
+  await expect(page.getByRole("heading", { level: 1, name: "Terms of Service" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Services and separate agreements" })).toBeVisible();
+  await expect(page.getByText(/Results vary and are not guaranteed/i)).toBeVisible();
+  await expect(page.getByText(/draft|placeholder|waiting for.*lawyer/i)).toHaveCount(0);
+});

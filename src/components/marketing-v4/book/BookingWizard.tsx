@@ -339,6 +339,12 @@ export function BookingWizard() {
             <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
             {STEP1_CTA}
           </button>
+          <p className="text-center" style={{ fontSize: 12.5, color: "var(--v3-faint)", lineHeight: 1.5 }}>
+            By continuing, you agree to the{" "}
+            <a className="underline underline-offset-2" href="/terms">Terms of Service</a>
+            {" "}and acknowledge the{" "}
+            <a className="underline underline-offset-2" href="/privacy">Privacy Policy</a>.
+          </p>
           <p className="text-center" style={{ fontSize: 13.5, color: "var(--v3-mut)" }}>
             Private. No spam. No obligation. I&apos;ll confirm by email.
           </p>

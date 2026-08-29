@@ -334,19 +334,28 @@ export function RegistrationFormV3({
         );
       })}
 
-      <label
-        className="flex items-start gap-2.5"
-        style={{ fontSize: 12, color: "var(--v3-faint)" }}
-      >
+      <div className="flex items-start gap-2.5">
         <input
+          id="v3-marketing-consent"
           name="marketingConsent"
           type="checkbox"
           value="yes"
           disabled={status === "loading"}
           className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--v3-accent)] disabled:cursor-not-allowed disabled:opacity-70"
         />
-        <span>Email me helpful follow-up tips. Optional. Unsubscribe anytime.</span>
-      </label>
+        <label
+          htmlFor="v3-marketing-consent"
+          style={{ fontSize: 12, color: "var(--v3-faint)" }}
+        >
+          Email me helpful follow-up tips. Optional. Unsubscribe anytime.
+        </label>
+      </div>
+      <p style={{ fontSize: 11.5, color: "var(--v3-faint)", lineHeight: 1.5 }}>
+        By submitting, you agree to the{" "}
+        <a className="underline underline-offset-2" href="/terms">Terms of Service</a>
+        {" "}and acknowledge the{" "}
+        <a className="underline underline-offset-2" href="/privacy">Privacy Policy</a>.
+      </p>
 
       {previewState ? (
         <div
