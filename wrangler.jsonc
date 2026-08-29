@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "vance-dotson",
+  "account_id": "705ccc4ff6e1ae75c616d7c6a567d787",
   "main": "custom-worker.ts",
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
