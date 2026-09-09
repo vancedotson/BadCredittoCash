@@ -1,4 +1,17 @@
-.credit-check { --cc-muted: #aba9a4; --cc-soft: #85847f; background: radial-gradient(ellipse at 8% 38%, rgba(242,169,59,.055), transparent 50%), var(--v3-bg); }
+.credit-check {
+  --cc-muted: #aba9a4;
+  --cc-soft: #85847f;
+  background-color: var(--v3-bg);
+  background-image:
+    radial-gradient(ellipse at 8% 38%, rgba(242,169,59,.08), transparent 48%),
+    linear-gradient(180deg, rgba(6,6,7,.76), rgba(6,6,7,.9) 58%, rgba(6,6,7,.97)),
+    linear-gradient(90deg, rgba(6,6,7,.42), rgba(6,6,7,.18) 50%, rgba(6,6,7,.5)),
+    url("/oklahoma-night.png");
+  background-position: center, center, center, center top;
+  background-repeat: no-repeat;
+  background-size: auto, auto, auto, cover;
+  background-attachment: scroll, scroll, scroll, fixed;
+}
 .credit-check * { box-sizing: border-box; }
 .cc-container { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
 .cc-header { border-bottom: 1px solid var(--v3-line); }
@@ -80,6 +93,7 @@
 @media (min-width: 1500px) { .cc-main { padding-top: 50px; } .cc-grid { gap: 95px; } }
 @media (max-width: 1000px) { .cc-grid { gap: 32px; } .cc-title { font-size: 65px; } .cc-intro-copy { font-size: 15px; } .cc-card-body { padding-inline: 23px; } }
 @media (max-width: 760px) {
+  .credit-check { background-position: center, center, center, 62% top; background-attachment: scroll; }
   .cc-container { width: calc(100% - 40px); }
   .cc-header-inner { min-height: 78px; }
   .cc-brand > .v3-display { font-size: 23px; }
