@@ -117,11 +117,10 @@
 .cc-simple-heading h1 span { color: var(--v3-accent); }
 .cc-simple-heading > p:last-child { color: var(--cc-muted); font-size: 16px; line-height: 1.6; margin: 20px 0 30px; }
 .cc-simple-progress ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; margin: 0 0 18px; list-style: none; gap: 8px; }
-.cc-simple-progress button { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; min-height: 52px; padding: 9px; border: 1px solid var(--v3-line); color: var(--cc-muted); background: #ffffff02; font-size: 12px; cursor: pointer; }
-.cc-simple-progress button > span { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #55554e; border-radius: 50%; font-family: var(--v3-mono); font-size: 11px; flex-shrink: 0; }
-.cc-simple-progress button:hover { border-color: #8b754f; }
+.cc-simple-progress li { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 52px; padding: 9px; border: 1px solid var(--v3-line); color: var(--cc-muted); background: #ffffff02; font-size: 12px; }
+.cc-progress-number { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #55554e; border-radius: 50%; font-family: var(--v3-mono); font-size: 11px; flex-shrink: 0; }
 .cc-simple-progress [aria-current] { color: var(--v3-ink); border-color: #f2a93b99; background: #f2a93b0a; }
-.cc-simple-progress [aria-current] > span { color: #141414; background: var(--v3-accent); border-color: var(--v3-accent); }
+.cc-simple-progress [aria-current] .cc-progress-number { color: #141414; background: var(--v3-accent); border-color: var(--v3-accent); }
 .cc-simple-card { padding: 32px 36px; background: #0e0f10; border: 1px solid #f2a93b45; border-top: 3px solid var(--v3-accent); box-shadow: 0 20px 55px #0003; }
 .cc-simple-step { color: var(--v3-accent); font-size: 10px; margin: 0 0 24px; }
 .cc-simple-card h2 { color: var(--v3-ink); font-size: 40px; line-height: 1.05; margin: 0; scroll-margin-top: 24px; }
@@ -214,7 +213,7 @@
   .cc-simple-heading h1 { font-size: 49px; }
   .cc-simple-heading > p:last-child { font-size: 14px; max-width: 275px; margin: 17px auto 24px; }
   .cc-simple-progress ol { gap: 6px; margin-bottom: 12px; }
-  .cc-simple-progress button { flex-direction: column; gap: 7px; font-size: 10px; line-height: 1.5; padding: 10px 4px; }
+  .cc-simple-progress li { flex-direction: column; gap: 7px; font-size: 10px; line-height: 1.5; padding: 10px 4px; }
   .cc-simple-card { padding: 24px 20px; }
   .cc-simple-step { margin-bottom: 20px; font-size: 9px; }
   .cc-simple-card h2 { font-size: 34px; }

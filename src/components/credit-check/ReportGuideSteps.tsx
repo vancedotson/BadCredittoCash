@@ -27,12 +27,11 @@ export function ReportGuideSteps() {
 
   return (
     <>
-      <nav className="cc-simple-progress" aria-label="Report steps">
+      <nav className="cc-simple-progress" aria-label="Your progress">
         <ol>{steps.map((label, index) => (
-          <li key={label}>
-            <button type="button" onClick={() => setStep(index)} aria-current={step === index ? "step" : undefined}>
-              <span>{index + 1}</span>{label}
-            </button>
+          <li key={label} aria-current={step === index ? "step" : undefined}>
+            <span className="cc-progress-number">{index + 1}</span>
+            <span>{label}</span>
           </li>
         ))}</ol>
       </nav>
@@ -47,7 +46,6 @@ export function ReportGuideSteps() {
           <p className="cc-simple-copy">You&apos;ll need to download and send 3 PDF files. Keep your phone nearby for any verification codes.</p>
           <button className="cc-primary cc-guide-button" type="button" onClick={() => setStep(1)}>I&apos;m on a computer <ArrowRightIcon className="h-5 w-5" /></button>
           <div className="cc-simple-handoff"><p>On your phone? Open this page on your computer.</p><DesktopHandoff /></div>
-          <button className="cc-simple-text-button" type="button" onClick={() => setStep(2)}>Already have all 3 PDFs? Go to the sending step →</button>
         </>}
 
         {step === 1 && <>
