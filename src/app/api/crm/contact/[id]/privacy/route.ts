@@ -47,7 +47,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     if (body.confirmation !== "DELETE CONTACT") {
       return NextResponse.json({ error: "Type DELETE CONTACT to confirm permanent deletion." }, { status: 400 });
     }
-    const deleted = await purgeContact(id);
+    let deleted: boolean;
+    try {
+      deleted = await purgeContact(id);
+    } catch {
+      return NextResponse.json({ error: "Permanent deletion could not finish. Please retry; if this continues, contact your administrator." }, { status: 503 });
+    }
     if (!deleted) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
     await recordAdminAudit({
       actorId: String(auth.user.sub),

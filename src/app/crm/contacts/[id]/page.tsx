@@ -6,7 +6,9 @@ import { Timeline } from "@/components/crm/Timeline";
 import { AddNoteForm, AddTaskForm, TaskItem } from "@/components/crm/mutations";
 import { RecentPin } from "@/components/crm/RecentPin";
 import { ContactPrivacyControls } from "@/components/crm/ContactPrivacyControls";
+import { CreditReportsPanel } from "@/components/crm/CreditReportsPanel";
 import { requireCrmUser } from "@/lib/auth";
+import { isCrmDemoMode } from "@/lib/demo";
 import { getContactPrivacyState } from "@/lib/contact-privacy";
 import { STAGE_LABELS } from "@/lib/stages";
 
@@ -74,6 +76,9 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
         {/* Side: metrics + tasks */}
         <div className="space-y-6">
+          <Card>
+            <CreditReportsPanel contactId={contact.id} demo={isCrmDemoMode()} />
+          </Card>
           <Card>
             <h2 className="mb-3 text-lg font-semibold text-heading">Snapshot</h2>
             <dl className="space-y-2.5 text-sm">

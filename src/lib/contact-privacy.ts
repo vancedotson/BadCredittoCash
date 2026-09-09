@@ -2,6 +2,7 @@ import "server-only";
 
 import { isCrmDemoMode } from "./demo";
 import { createAdminClient } from "./supabase/admin";
+import { removeContactCreditReportFiles } from "./credit-report-privacy";
 
 export type ContactPrivacyState = {
   suppressed: boolean;
@@ -43,6 +44,7 @@ export async function setContactSuppression(contactId: string, suppressed: boole
 }
 
 export async function purgeContact(contactId: string): Promise<boolean> {
+  if (!(await removeContactCreditReportFiles(contactId))) return false;
   const { data, error } = await createAdminClient().rpc("purge_crm_contact_v1", { p_contact_id: contactId });
   if (error) throw new Error(`Could not permanently delete contact: ${error.message}`);
   return data === true;

@@ -487,11 +487,11 @@ export function DataManagement({ status }: { status: Status }) {
         ))}
       </dl>
       <div><h3 className="mb-2 text-sm font-semibold text-heading">Export &amp; backup</h3><div className="flex flex-wrap gap-2">
-        <a href="/api/crm/backup" className={BTN_GHOST}>Download full backup (JSON)</a>
+        <a href="/api/crm/backup" className={BTN_GHOST}>Download CRM backup (JSON)</a>
         <a href="/api/crm/export" className={BTN_GHOST}>Export contacts (CSV)</a>
       </div></div>
       <p className="rounded-lg border border-mist bg-cloud/50 p-3 text-xs text-slate">
-        The full backup contains CRM records and settings, but never passwords, API keys, or Google credentials. Download one before planned migrations or cleanup.
+        This backup contains CRM records and settings. Uploaded credit-report PDFs need a separate storage backup. Passwords, API keys, and Google credentials are never included.
       </p>
       <div className="space-y-3 rounded-xl border border-red/30 bg-red/5 p-4">
         <div><div className="mb-1 inline-flex rounded-full bg-red/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red">Danger zone</div><h3 className="text-sm font-semibold text-heading">Restore a full backup</h3><p className="mt-1 text-xs text-slate">Validation is read-only. The final restore replaces current CRM records in one database transaction.</p></div>

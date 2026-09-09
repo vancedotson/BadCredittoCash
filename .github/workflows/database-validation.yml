@@ -6,7 +6,7 @@ on:
       - "supabase/**"
       - ".github/workflows/database-validation.yml"
   push:
-    branches: [master]
+    branches: [main]
     paths:
       - "supabase/**"
       - ".github/workflows/database-validation.yml"

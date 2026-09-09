@@ -45,6 +45,10 @@ yarn-error.log*
 
 # local tooling and service state
 /.claude/
+/.local/
+/.npm-cache/
+/.next-dev*.log
+/debug.log
 /supabase/.temp/
 
 # typescript

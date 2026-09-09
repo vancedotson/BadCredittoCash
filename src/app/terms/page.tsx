@@ -5,14 +5,14 @@ import { site } from "@/config/site-v3";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms governing access to and use of the Vance Dotson website, training, and booking services.",
+  description: "Terms governing access to and use of the Vance Dotson website, training, credit-check and report-upload features, and booking services.",
 };
 
 export default function TermsPage() {
   return (
     <LegalPageShell
       title="Terms of Service"
-      summary="These terms govern your use of this website, its free training, contact forms, and appointment-booking features."
+      summary="These terms govern your use of this website, its free training, contact forms, credit-check and report-upload features, and appointment-booking features."
     >
       <LegalSection title="Acceptance of these terms">
         <p>
