@@ -1,12 +1,30 @@
-import { QUIZ_QUESTIONS } from "./collector-quiz";
+export const CREDIT_REPORT_COMPANIES = [
+  "Midland Credit Management",
+  "Portfolio Recovery Associates",
+  "LVNV Funding LLC (aka Resurgent Receivable LLC)",
+  "Jefferson Capital LLC",
+  "National Credit Adjusters",
+  "Spring Oaks Capital LLC",
+  "Plaza Services LLC",
+  "CK Prime Investment LLC",
+  "NCB Management Services",
+  "Credit Corp Solutions Inc",
+  "RD Case & Associates",
+  "Bounce AI, Inc",
+  "Absolute Resolutions",
+  "Zion Debt Holdings",
+  "Credit One, LLC",
+  "True Accord",
+] as const;
 
-// A focused version of the home-page check; the original quiz stays intact.
-const questionIds = ["how", "recognize", "report", "disputed", "urgency"];
-export const CREDIT_CHECK_QUESTIONS = questionIds.map((id) => {
-  const question = QUIZ_QUESTIONS.find((item) => item.id === id);
-  if (!question) throw new Error(`Missing credit-check question: ${id}`);
-  return question;
-});
+export const CREDIT_CHECK_UNKNOWN_OPTION = "I’m not sure yet—I need to check my reports";
+
+export const CREDIT_CHECK_QUESTIONS = [{
+  id: "companies",
+  title: "Which companies are on your credit reports?",
+  type: "multi" as const,
+  options: [...CREDIT_REPORT_COMPANIES, CREDIT_CHECK_UNKNOWN_OPTION],
+}];
 
 // Original guide supplied by Vance; PDF links use physical page numbers.
 export const CREDIT_CHECK_GUIDE = {

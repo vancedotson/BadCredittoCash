@@ -23,6 +23,22 @@
 .cc-header-note { color: var(--cc-muted); display: flex; align-items: center; gap: 10px; }
 .cc-header-note > span { height: 5px; width: 5px; background: var(--v3-accent); border-radius: 50%; }
 .cc-main { padding-block: 38px 70px; min-height: calc(100svh - 161px); }
+.cc-single-page { max-width: 1080px; }
+.cc-single-intro { max-width: 760px; margin: 0 auto 30px; text-align: center; }
+.cc-single-intro .cc-kicker { margin-bottom: 14px; }
+.cc-single-intro .cc-title { font-size: clamp(45px, 5.4vw, 72px); line-height: .98; }
+.cc-single-intro .cc-intro-copy { max-width: 620px; margin: 20px auto 16px; }
+.cc-single-intro .cc-benefits { justify-content: center; }
+.cc-single-form { background: rgba(14,15,16,.96); }
+.cc-single-form-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, .75fr); gap: 34px; align-items: start; }
+.cc-company-fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+.cc-company-fieldset > legend { padding: 0; }
+.cc-company-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cc-company-options .cc-option { min-height: 44px; padding: 9px 11px; font-size: 12px; }
+.cc-company-options .cc-option:last-child { grid-column: 1 / -1; border-style: dashed; }
+.cc-contact-fields { display: grid; gap: 15px; padding-left: 34px; border-left: 1px solid var(--v3-line); }
+.cc-contact-fields .cc-question-help { margin-bottom: 3px; }
+.cc-contact-fields .cc-use-note { margin: 0; }
 .cc-stages { list-style: none; padding: 0; margin: 0 0 48px; display: flex; align-items: center; gap: 0; color: var(--cc-soft); letter-spacing: .02em; }
 .cc-stages li { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
 .cc-stages li + li::before { content: ''; display: block; height: 1px; width: 38px; margin-inline: 16px; background: var(--v3-line); }
@@ -92,6 +108,10 @@
 .cc-manual-link input { margin-top: 8px; }
 @media (min-width: 1500px) { .cc-main { padding-top: 50px; } .cc-grid { gap: 95px; } }
 @media (max-width: 1000px) { .cc-grid { gap: 32px; } .cc-title { font-size: 65px; } .cc-intro-copy { font-size: 15px; } .cc-card-body { padding-inline: 23px; } }
+@media (max-width: 900px) {
+  .cc-single-form-grid { grid-template-columns: 1fr; }
+  .cc-contact-fields { padding: 28px 0 0; border-left: 0; border-top: 1px solid var(--v3-line); }
+}
 @media (max-width: 760px) {
   .credit-check { background-position: center, center, center, 62% top; background-attachment: scroll; }
   .cc-container { width: calc(100% - 40px); }
@@ -100,6 +120,13 @@
   .cc-brand .cc-eyebrow { font-size: 7px; }
   .cc-header-note { font-size: 8px; letter-spacing: .06em; gap: 6px; max-width: 100px; }
   .cc-main { padding-block: 24px 36px; }
+  .cc-single-intro { margin-bottom: 22px; text-align: left; }
+  .cc-single-intro .cc-title { font-size: 44px; }
+  .cc-single-intro .cc-title br { display: none; }
+  .cc-single-intro .cc-intro-copy { margin-inline: 0; }
+  .cc-single-intro .cc-benefits { justify-content: flex-start; }
+  .cc-company-options { grid-template-columns: 1fr; }
+  .cc-company-options .cc-option:last-child { grid-column: auto; }
   .cc-stages { font-size: 10px; margin-bottom: 29px; justify-content: space-between; }
   .cc-stages li { gap: 6px; }
   .cc-stages li + li::before { display: none; }

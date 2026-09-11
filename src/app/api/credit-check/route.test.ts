@@ -19,7 +19,7 @@ import { POST } from "./route";
 
 const valid = {
   name: "Test Visitor", email: "test@example.com", phone: "2025550100",
-  answers: { how: ["Phone calls"], recognize: "I'm not sure", report: "Haven't checked", disputed: "No", urgency: "As soon as possible" },
+  answers: { companies: ["Midland Credit Management", "True Accord"] },
 };
 
 function request(body: unknown, headers: Record<string, string> = {}) {
@@ -71,7 +71,7 @@ describe("credit-check public API", () => {
   });
 
   it("rejects partial answers before calling persistence", async () => {
-    const response = await POST(request({ ...valid, answers: { how: ["Phone calls"] } }));
+    const response = await POST(request({ ...valid, answers: { companies: [] } }));
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ fieldErrors: { answers: expect.any(String) } });
     expect(mocks.save).not.toHaveBeenCalled();

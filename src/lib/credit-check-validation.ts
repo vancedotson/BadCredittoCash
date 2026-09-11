@@ -1,4 +1,4 @@
-import { CREDIT_CHECK_QUESTIONS } from "@/config/credit-check";
+import { CREDIT_CHECK_QUESTIONS, CREDIT_CHECK_UNKNOWN_OPTION } from "@/config/credit-check";
 import type { QuizAnswers } from "@/config/collector-quiz";
 
 export type CreditCheckFieldErrors = Partial<Record<"name" | "email" | "phone" | "answers", string>>;
@@ -71,20 +71,21 @@ export function validateCreditCheckSubmission(body: unknown): ValidationResult {
   const inputAnswers = body.answers;
   const questionIds = new Set(CREDIT_CHECK_QUESTIONS.map((question) => question.id));
   if (!isRecord(inputAnswers) || Object.keys(inputAnswers).some((key) => !questionIds.has(key))) {
-    fieldErrors.answers = "Please complete all five questions.";
+    fieldErrors.answers = "Select at least one company, or choose “I’m not sure yet.”";
   } else {
     for (const question of CREDIT_CHECK_QUESTIONS) {
       const answer = inputAnswers[question.id];
       if (question.type === "multi") {
         if (!Array.isArray(answer) || answer.length === 0 || answer.length > question.options.length
           || answer.some((option) => typeof option !== "string" || !question.options.includes(option))
-          || new Set(answer).size !== answer.length) {
-          fieldErrors.answers = "Please complete all five questions using the options shown.";
+          || new Set(answer).size !== answer.length
+          || (answer.length > 1 && answer.includes(CREDIT_CHECK_UNKNOWN_OPTION))) {
+          fieldErrors.answers = "Select one or more of the options shown.";
         } else {
           answers[question.id] = [...answer];
         }
       } else if (typeof answer !== "string" || !question.options.includes(answer)) {
-        fieldErrors.answers = "Please complete all five questions using the options shown.";
+        fieldErrors.answers = "Select one or more of the options shown.";
       } else {
         answers[question.id] = answer;
       }

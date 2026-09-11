@@ -11,7 +11,7 @@ import type { CreditCheckSubmission } from "./credit-check-validation";
 
 const submission: CreditCheckSubmission = {
   name: "Test Visitor", email: "test@example.com", phone: "+12025550100",
-  answers: { how: ["Phone calls"], recognize: "I'm not sure", report: "Haven't checked", disputed: "No", urgency: "As soon as possible" },
+  answers: { companies: ["Midland Credit Management", "True Accord"] },
   attribution: { firstTouch: {}, lastTouch: {} }, turnstileToken: "never-save-this-token",
 };
 

@@ -6,16 +6,12 @@ const valid = {
   email: "  TEST@example.com ",
   phone: "(202) 555-0100",
   answers: {
-    how: ["Phone calls", "Letters in the mail"],
-    recognize: "I'm not sure",
-    report: "Haven't checked",
-    disputed: "No",
-    urgency: "Just exploring my options",
+    companies: ["Midland Credit Management", "True Accord"],
   },
 };
 
 describe("credit-check input validation", () => {
-  it("normalizes contact details and preserves all five answers", () => {
+  it("normalizes contact details and preserves selected companies", () => {
     const result = validateCreditCheckSubmission(valid);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -30,15 +26,13 @@ describe("credit-check input validation", () => {
   });
 
   it.each([
-    { ...valid.answers, how: [] },
-    { ...valid.answers, how: ["Phone calls", "Phone calls"] },
-    { ...valid.answers, how: "Phone calls" },
-    { ...valid.answers, how: ["invented option"] },
-    { ...valid.answers, report: ["Yes"] },
-    { ...valid.answers, urgency: undefined },
-    { ...valid.answers, recognize: "made up" },
-    { ...valid.answers, extra: "No" },
-  ])("requires valid complete question answers %j", (answers) => {
+    { companies: [] },
+    { companies: ["Midland Credit Management", "Midland Credit Management"] },
+    { companies: "Midland Credit Management" },
+    { companies: ["invented option"] },
+    { companies: ["Midland Credit Management", "I’m not sure yet—I need to check my reports"] },
+    { companies: ["True Accord"], extra: "No" },
+  ])("requires valid company selections %j", (answers) => {
     const result = validateCreditCheckSubmission({ ...valid, answers });
     expect(result).toMatchObject({ ok: false, fieldErrors: { answers: expect.any(String) } });
   });

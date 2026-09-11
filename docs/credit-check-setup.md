@@ -3,10 +3,10 @@
 Repository: `vancedotson/BadCredittoCash`, branch `main`. Follow `AGENTS.md` for
 workspace-scoped GitHub authentication; no global account switch is needed.
 
-The funnel starts at `/credit-check`, posts its five answers and contact details to
+The funnel starts at `/credit-check`, posts the selected credit-report companies and contact details to
 `/api/credit-check`, then continues to `/credit-check/thank-you` after a confirmed save.
 The thank-you page shows one step at a time: use a computer, get three credit-report
-PDFs, and send them to Vance. Visitors can revisit any step using the three buttons.
+PDFs, and send them to Vance. The three-step row is a progress display, not navigation.
 
 ## Local preview
 
@@ -35,7 +35,8 @@ per local client identity and resets when the process restarts.
 1. Apply the repository migrations, including these in order:
    `supabase/migrations/20260909120000_credit_check_lead_capture.sql`,
    `supabase/migrations/20260909150000_credit_report_uploads.sql`, and
-   `supabase/migrations/20260909160000_credit_report_lifecycle.sql`, to the intended
+   `supabase/migrations/20260909160000_credit_report_lifecycle.sql`, followed by
+   `supabase/migrations/20260911120000_simplify_credit_check_companies.sql`, to the intended
    Supabase project through the normal deployment process. This task does not apply
    that migration or write to a remote database.
 2. Configure `NEXT_PUBLIC_SUPABASE_URL` and server-only `SUPABASE_SECRET_KEY`.
@@ -103,14 +104,14 @@ CRM JSON backups and privacy JSON exports do not contain PDF bytes. Back up priv
 Storage separately with its receipt metadata when designing the live backup plan.
 
 The dedicated `submit_credit_check_v1` RPC atomically adds a new contact when needed,
-an event containing the submitted contact details and all five answers, and a
+an event containing the submitted contact details and selected companies, and a
 readable CRM note. Existing contact fields, owner, stage, suppression, and marketing
 consent are preserved. New contacts use source `credit-check` and the database's
 default false marketing consent. Existing CRM new-contact notifications may appear.
 This flow does not register anyone for the webinar, enroll email sequences, send
 email/SMS, or grant marketing consent.
 
-The public API accepts only the documented fields and quiz options, requires name,
-email, and phone, limits JSON to 16 KiB, rejects cross-origin browser submissions,
+The public API accepts only the documented fields and company options, requires at
+least one selection plus name, email, and phone, limits JSON to 16 KiB, rejects cross-origin browser submissions,
 and returns no contact details in its response. The SQL transaction is pending
 integration verification until its migration is applied to a test database.
