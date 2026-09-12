@@ -319,12 +319,14 @@ test("CRM sequences explains operations and email progression", async ({ page })
   await expect(page.getByRole("heading", { name: "Sequences", exact: true })).toBeVisible();
   await expect(page.getByText("Active enrollments", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "How it works", exact: true })).toBeVisible();
+  await page.getByRole("heading", { name: "How it works", exact: true }).click();
   await expect(page.getByText("Behavior", { exact: true })).toBeVisible();
   await expect(page.getByText("Send", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "What triggers each sequence", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Merge fields", exact: true })).toBeVisible();
-  await expect(page.getByText("{{watch_link}}", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Merge fields", exact: true }).getByText("{{watch_link}}", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pre-webinar (get them to watch)", exact: true })).toBeVisible();
+  await page.getByRole("heading", { name: "Pre-webinar (get them to watch)", exact: true }).click();
   await expect(page.getByText("Your training is ready. Here's the link.", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Started booking, didn't finish", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Enrollment queue", exact: true })).toBeVisible();

@@ -1,0 +1,112 @@
+.libraryWorkspace {
+  --sequence-link: var(--color-trust);
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.library { min-width: 0; scroll-margin-top: 5rem; }
+.sectionHeader { margin-bottom: 1.4rem; }
+.sectionHeader h2, .referenceCard h2 { margin: 0; color: var(--color-heading); font-size: 1.125rem; font-weight: 650; line-height: 1.4; }
+.sectionHeader h2 { font-size: 1.375rem; letter-spacing: -0.025em; }
+.sectionHeader p { margin: 0.4rem 0 0; color: var(--color-slate); font-size: 0.8125rem; }
+.sequenceGroup + .sequenceGroup { margin-top: 1.5rem; }
+.groupHeading { margin: 0 0 0.8rem; color: var(--color-slate); font-size: 0.6875rem; font-weight: 650; letter-spacing: 0.075em; line-height: 1.5; text-transform: uppercase; }
+.sequenceGroup > .groupHeading { color: var(--color-heading); font-size: 0.875rem; letter-spacing: 0; text-transform: none; }
+.sequenceGrid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 1rem; }
+.sequenceCard { min-width: 0; overflow: hidden; border: 1px solid var(--color-mist); border-radius: 0.875rem; background: var(--color-card); scroll-margin-top: 5rem; transition: border-color 140ms, box-shadow 140ms; }
+.sequenceCard:hover, .sequenceCard:target { border-color: color-mix(in srgb, var(--sequence-link) 40%, var(--color-mist)); box-shadow: 0 3px 12px color-mix(in srgb, var(--color-navy) 4%, transparent); }
+.sequenceSummary { display: grid; min-height: 12.5rem; grid-template-columns: 2.25rem minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; gap: 0.4rem 0.75rem; cursor: pointer; list-style: none; padding: 1.125rem; }
+.sequenceSummary::-webkit-details-marker, .automationSummary::-webkit-details-marker { display: none; }
+.cardMetadata { display: flex; grid-column: 2; grid-row: 2; flex-wrap: wrap; align-items: center; gap: 0.35rem; }
+.emailIcon { display: grid; grid-column: 1; grid-row: 1 / 3; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 50%; background: var(--color-sky); color: var(--sequence-link); }
+.emailIcon svg { width: 1.125rem; height: 1.125rem; }
+.emailCount { padding: 0.25rem 0.55rem; border-radius: 99rem; background: var(--color-cloud); color: var(--color-slate); font-size: 0.6875rem; line-height: 1.4; white-space: nowrap; }
+.sequenceSummary h3 { grid-column: 2; grid-row: 1; margin: 0; color: var(--color-heading); font-size: 0.9375rem; font-weight: 650; line-height: 1.45; overflow-wrap: anywhere; }
+.goal { grid-column: 2; grid-row: 3; margin: 0.15rem 0 0.75rem; color: var(--color-slate); font-size: 0.8125rem; line-height: 1.55; }
+.cardBottomline { display: flex; grid-column: 1 / -1; grid-row: 4; align-items: center; gap: 0.5rem; margin-top: auto; }
+.viewEmails { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--sequence-link); font-size: 0.75rem; font-weight: 550; }
+.cardChevron { width: 0.875rem; height: 0.875rem; }
+.whenOpen { display: none; }
+.sequenceCard[open] .whenOpen { display: inline; }
+.sequenceCard[open] .whenClosed { display: none; }
+.sequenceCard[open] .cardChevron { transform: rotate(180deg); }
+.referenceBadge { padding: 0.2rem 0.45rem; border-radius: 0.3rem; background: var(--color-cloud); color: var(--color-slate); font-size: 0.625rem; font-weight: 500; line-height: 1.5; }
+.emailContent { padding: 1.125rem; border-top: 1px solid var(--color-mist); }
+.trigger { display: grid; gap: 0.2rem; margin: 0 0 1.1rem; color: var(--color-body); font-size: 0.75rem; line-height: 1.6; overflow-wrap: anywhere; }
+.trigger > span { color: var(--color-slate); font-size: 0.625rem; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; }
+.emailList { display: grid; gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
+.email { display: flex; align-items: flex-start; gap: 0.625rem; min-width: 0; }
+.emailNumber { display: grid; flex: 0 0 1.25rem; height: 1.25rem; place-items: center; border-radius: 50%; background: var(--color-sky); color: var(--sequence-link); font-size: 0.6875rem; font-weight: 650; }
+.emailDetails { flex: 1; min-width: 0; }
+.emailDelay { margin: 0 0 0.4rem; color: var(--sequence-link); font-size: 0.6875rem; font-weight: 550; line-height: 1.7; }
+.emailCopy { padding: 0.75rem; border: 1px solid var(--color-mist); border-radius: 0.625rem; background: var(--color-cloud); }
+.emailCopy h4 { margin: 0; color: var(--color-heading); font-size: 0.8125rem; font-weight: 650; line-height: 1.55; overflow-wrap: anywhere; }
+.emailCopy p { margin: 0.5rem 0 0; color: var(--color-slate); font-size: 0.75rem; line-height: 1.7; overflow-wrap: anywhere; }
+.token { padding: 0.15rem 0.3rem; border-radius: 0.25rem; background: var(--color-sky); color: var(--sequence-link); font-size: 0.6875rem; line-height: 1.8; overflow-wrap: anywhere; }
+.scopeNote { display: flex; align-items: flex-start; gap: 0.5rem; margin: 1rem 0 0; color: var(--color-slate); font-size: 0.75rem; line-height: 1.6; }
+.scopeNote > svg { flex: 0 0 0.875rem; height: 0.875rem; margin-top: 0.15rem; }
+.scopeNote a, .referenceNote a { color: var(--sequence-link); text-decoration: underline; text-underline-offset: 0.15rem; }
+.automation { min-width: 0; border: 1px solid var(--color-mist); border-radius: 0.875rem; background: var(--color-card); scroll-margin-top: 5rem; }
+.automationSummary { display: grid; grid-template-columns: minmax(0, 1fr) 1rem; min-height: 4.25rem; align-items: center; gap: 0.25rem 0.75rem; padding: 1rem 1.25rem; cursor: pointer; list-style: none; }
+.automationTitle { display: flex; grid-column: 1; grid-row: 1; align-items: center; gap: 0.625rem; }
+.automationTitle > svg { width: 1rem; height: 1rem; color: var(--sequence-link); }
+.automationTitle h2 { margin: 0; color: var(--color-heading); font-size: 0.875rem; font-weight: 650; white-space: nowrap; }
+.processLabel { grid-column: 1; grid-row: 2; margin-left: 1.625rem; color: var(--color-slate); font-size: 0.75rem; line-height: 1.6; }
+.automationChevron { grid-column: 2; grid-row: 1 / 3; width: 1rem; height: 1rem; color: var(--color-slate); }
+.automation[open] .automationChevron { transform: rotate(180deg); }
+.steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; padding: 0 1.25rem 1.25rem; margin: 0; list-style: none; }
+.steps > li { min-width: 0; padding: 0.875rem; border: 1px solid var(--color-mist); border-radius: 0.625rem; background: var(--color-cloud); }
+.stepHeading { display: flex; align-items: center; gap: 0.5rem; }
+.stepHeading > span { display: grid; flex: 0 0 1.25rem; height: 1.25rem; place-items: center; border-radius: 50%; background: var(--color-navy); color: white; font-size: 0.6875rem; font-weight: 650; }
+.stepHeading h3 { margin: 0; color: var(--color-heading); font-size: 0.8125rem; font-weight: 600; }
+.steps p { margin: 0.6rem 0 0; color: var(--color-slate); font-size: 0.75rem; line-height: 1.6; }
+.referenceGrid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 1.5rem; }
+.referenceCard { min-width: 0; padding: 1.25rem; border: 1px solid var(--color-mist); border-radius: 0.875rem; background: var(--color-card); scroll-margin-top: 5rem; }
+.referenceIntro { margin: 0.45rem 0 1.4rem; color: var(--color-slate); font-size: 0.8125rem; line-height: 1.65; }
+.routingList { margin: 0 0 1.4rem; padding: 0; list-style: none; }
+.routingList li { display: grid; min-width: 0; gap: 0.2rem; padding: 0.4rem 0; border-bottom: 1px solid var(--color-mist); }
+.routingList li:last-child { border-bottom: 0; }
+.routingTrigger { align-self: center; color: var(--color-body); font-size: 0.75rem; line-height: 1.5; }
+.routingTrigger :global(.whitespace-nowrap) { white-space: normal; }
+.routingList a { display: flex; min-height: 2.75rem; align-items: center; gap: 0.3rem; color: var(--sequence-link); font-size: 0.75rem; line-height: 1.6; overflow-wrap: anywhere; }
+.routingList a:hover, .settingsLink:hover { text-decoration: underline; text-underline-offset: 0.15rem; }
+.referenceNote { margin: 0 0 1rem; padding: 0.75rem; border: 1px solid var(--color-mist); border-radius: 0.625rem; background: var(--color-cloud); color: var(--color-slate); font-size: 0.75rem; line-height: 1.6; }
+.referenceCard > .referenceNote:last-child { margin-bottom: 0; }
+.mergeFields { display: grid; gap: 0; margin: 0; }
+.mergeFields > div { display: grid; gap: 0.4rem; padding: 0.9rem 0; border-bottom: 1px solid var(--color-mist); }
+.mergeFields > div:first-child { padding-top: 0; }
+.mergeFields > div:last-child { border-bottom: 0; }
+.mergeFields dd { margin: 0; color: var(--color-slate); font-size: 0.75rem; line-height: 1.6; }
+.settingsLink { display: inline-flex; min-height: 2.75rem; align-items: center; gap: 0.4rem; margin-top: 0.5rem; color: var(--sequence-link); font-size: 0.8125rem; font-weight: 550; }
+.libraryWorkspace :is(a, summary):focus-visible { outline: 2px solid var(--sequence-link); outline-offset: 3px; border-radius: 0.25rem; }
+.sequenceSummary:focus-visible { outline-offset: -3px; border-radius: 0.875rem; }
+:global([data-theme="dark"]) .libraryWorkspace { --sequence-link: #a6cefa; }
+:global([data-theme="dark"]) .routingTrigger :global(.text-trust) { color: #a6cefa; }
+
+@media (min-width: 40rem) {
+  .sequenceGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .routingList li { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 0.8rem; }
+  .mergeFields > div { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 0.8rem; }
+}
+
+@media (min-width: 64rem) {
+  .steps { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .referenceGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 68.75rem) {
+  .sequenceGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 39.99rem) {
+  .automationSummary { display: grid; grid-template-columns: minmax(0, 1fr) 1rem; padding: 1rem; gap: 0.4rem 0.5rem; }
+  .processLabel { grid-column: 1; grid-row: 2; margin: 0; font-size: 0.6875rem; }
+  .automationChevron { grid-column: 2; grid-row: 1 / 3; }
+  .steps { padding: 0 1rem 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sequenceCard { transition: none; }
+}
