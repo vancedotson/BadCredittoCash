@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { LiveWebinarSession, LiveWebinarSessionReport } from "@/lib/live-webinar-types";
-import { isTimezone } from "@/lib/live-webinar-types";
-import { validateLiveSessionInput } from "@/lib/live-webinar-validation";
-import { formatLiveDate, liveDateInput, liveDateToIso, liveParticipationLabel, liveBookingLabel } from "@/lib/live-webinar-display";
+import { formatLiveDate, liveParticipationLabel, liveBookingLabel } from "@/lib/live-webinar-display";
 import { Badge, Card } from "./ui";
 import { LiveWebinarMessages } from "./LiveWebinarMessages";
 import { LiveWebinarCalendar } from "./LiveWebinarCalendar";
+import { LiveWebinarSessionEditor } from "./LiveWebinarSessionEditor";
 import { calendarDate } from "@/lib/live-webinar-calendar";
 
 const field = "mt-1 w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust disabled:opacity-60";
@@ -21,80 +20,6 @@ const serverReady = () => false;
 
 function CalendarPlus({ className = "h-7 w-7" }: { className?: string }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 10h18m-9 3v5m-2.5-2.5h5" /></svg>;
-}
-
-type SessionDraft = {
-  id?: string; slug: string; title: string; startsAt: string; endsAt: string; timezone: string;
-  status: LiveWebinarSession["status"]; embedUrl: string; replayUrl: string;
-  replayPublished: boolean; replayAvailableUntil: string; automationEnabled: boolean;
-};
-
-function draftOf(session: LiveWebinarSession | null, date?: string, timezone = "America/Chicago"): SessionDraft {
-  if (!session) return { slug: "", title: "", startsAt: date ? `${date}T12:00` : "", endsAt: date ? `${date}T13:00` : "", timezone, status: "draft", embedUrl: "", replayUrl: "", replayPublished: false, replayAvailableUntil: "", automationEnabled: false };
-  return { id: session.id, slug: session.slug, title: session.title, startsAt: liveDateInput(session.startsAt, session.timezone), endsAt: liveDateInput(session.endsAt, session.timezone), timezone: session.timezone, status: session.status, embedUrl: session.embedUrl ?? "", replayUrl: session.replayUrl ?? "", replayPublished: session.replayPublished, replayAvailableUntil: liveDateInput(session.replayAvailableUntil, session.timezone), automationEnabled: session.automationEnabled };
-}
-
-function SessionEditor({ session, date, timezone, onClose, onSaved }: { session: LiveWebinarSession | null; date?: string; timezone: string; onClose: () => void; onSaved: (session: LiveWebinarSession) => void }) {
-  const [draft, setDraft] = useState(() => draftOf(session, date, timezone));
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const update = <K extends keyof SessionDraft>(key: K, value: SessionDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
-
-  useEffect(() => {
-    const element = dialog.current;
-    element?.showModal();
-    return () => element?.close();
-  }, []);
-
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    try {
-      if (!isTimezone(draft.timezone)) throw new Error("Enter a valid timezone, such as America/New_York or Europe/Lisbon.");
-      const startsAt = liveDateToIso(draft.startsAt, draft.timezone);
-      const endsAt = liveDateToIso(draft.endsAt, draft.timezone);
-      const replayAvailableUntil = draft.replayAvailableUntil ? liveDateToIso(draft.replayAvailableUntil, draft.timezone) : null;
-      const validation = validateLiveSessionInput({ ...draft, startsAt, endsAt, replayAvailableUntil });
-      if (!validation.session) throw new Error(validation.error ?? "Check the session details.");
-      setPending(true);
-      const response = await fetch("/api/crm/live-webinars", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ session: validation.session }) });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.session) throw new Error(typeof result.error === "string" ? result.error : "The session could not be saved. Please try again.");
-      onSaved(result.session);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "The session could not be saved."); }
-    finally { setPending(false); }
-  }
-
-  return <dialog ref={dialog} aria-labelledby="webinar-editor-title" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }} className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/45">
-    <form onSubmit={submit} className="space-y-5 p-5 sm:p-7" aria-label={session ? "Edit live webinar" : "Create live webinar"}>
-      <div className="flex items-start justify-between gap-4"><div><h2 id="webinar-editor-title" className="text-2xl font-semibold tracking-tight text-heading">{session ? "Edit session" : "New live webinar"}</h2><p className="mt-2 max-w-xl text-sm leading-relaxed text-slate">Use a new session for each webinar. Change the dates here to postpone this same session.</p></div><button type="button" aria-label="Close session editor" onClick={onClose} disabled={pending} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-mist text-xl text-slate hover:bg-cloud disabled:opacity-50">×</button></div>
-      <fieldset disabled={pending} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm text-slate">Title<input required minLength={3} maxLength={160} value={draft.title} onChange={(event) => update("title", event.target.value)} className={field} /></label>
-          <label className="text-sm text-slate">Session URL name<input required disabled={Boolean(session)} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" maxLength={80} value={draft.slug} onChange={(event) => update("slug", event.target.value)} placeholder="september-credit-workshop" className={field} /><span className="mt-1 block text-xs">{session ? "The URL name stays fixed so existing links keep working." : "Lowercase letters, numbers, and hyphens."}</span></label>
-          <label className="text-sm text-slate">Timezone<input required list="live-webinar-timezones" value={draft.timezone} onChange={(event) => update("timezone", event.target.value)} className={field} /><datalist id="live-webinar-timezones">{["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/Lisbon", "Europe/London", "UTC"].map((timezone) => <option key={timezone} value={timezone} />)}</datalist></label>
-          <label className="text-sm text-slate">Status<select value={draft.status} onChange={(event) => update("status", event.target.value as SessionDraft["status"])} className={field}><option value="draft">Draft</option><option value="scheduled">Scheduled</option><option value="cancelled">Cancelled</option></select></label>
-          <label className="text-sm text-slate">Starts at<input type="datetime-local" required value={draft.startsAt} onChange={(event) => update("startsAt", event.target.value)} className={field} /></label>
-          <label className="text-sm text-slate">Ends at<input type="datetime-local" required value={draft.endsAt} onChange={(event) => update("endsAt", event.target.value)} className={field} /></label>
-        </div>
-        <p className="text-xs text-slate">All times on this form use the selected timezone.</p>
-        <label className="block text-sm text-slate">Live player URL<input type="url" value={draft.embedUrl} onChange={(event) => update("embedUrl", event.target.value)} placeholder="https://www.youtube.com/embed/…" className={field} /><span className="mt-1 block text-xs">Supports YouTube, YouTube privacy-enhanced, and Vimeo embed URLs.</span></label>
-        <div className="rounded-xl border border-mist bg-cloud p-4">
-          <label className="flex items-start gap-2 text-sm text-body"><input type="checkbox" checked={draft.automationEnabled} onChange={(event) => update("automationEnabled", event.target.checked)} className="mt-1" /><span>Enable session emails<span className="mt-1 block text-xs text-slate">Joining details, reminders, and eligible follow-up use this session&apos;s schedule. Delivery also requires live webinars to be enabled for the site.</span></span></label>
-        </div>
-        <div className="space-y-3 border-t border-mist pt-4">
-          <h3 className="font-medium text-heading">Replay</h3>
-          <label className="block text-sm text-slate">Replay player URL<input type="url" value={draft.replayUrl} onChange={(event) => update("replayUrl", event.target.value)} className={field} /></label>
-          <label className="block text-sm text-slate">Available until (optional)<input type="datetime-local" value={draft.replayAvailableUntil} onChange={(event) => update("replayAvailableUntil", event.target.value)} className={field} /></label>
-          <label className="flex items-center gap-2 text-sm text-body"><input type="checkbox" checked={draft.replayPublished} onChange={(event) => update("replayPublished", event.target.checked)} />Publish replay</label>
-        </div>
-      </fieldset>
-      {session && session.status === "scheduled" ? <p className="rounded-lg border border-mist bg-cloud p-3 text-sm text-slate">Saving schedule changes updates this session for its registrants. Cancelling stops pending reminders and preserves participation history.</p> : null}
-      {error ? <p role="alert" className="text-sm text-red">{error}</p> : null}
-      <div className="flex flex-wrap justify-end gap-2 border-t border-mist pt-5"><button type="button" onClick={onClose} disabled={pending} className={button}>Discard changes</button><button type="submit" disabled={pending} className={primaryButton}>{pending ? "Saving…" : session ? "Save session" : "Create session"}</button></div>
-    </form>
-  </dialog>;
 }
 
 function SessionReport({ report }: { report: LiveWebinarSessionReport }) {
@@ -137,7 +62,9 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, initialN
   const [notice, setNotice] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const selected = sessions.find((session) => session.id === selectedId);
-  const controlsDisabled = !interactive || editing !== null;
+  // The native modal makes its background inert; leaving the opener enabled
+  // lets the browser restore keyboard focus when the editor closes.
+  const controlsDisabled = !interactive;
 
   useEffect(() => {
     if (!selectedId) return;
@@ -211,6 +138,6 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, initialN
       {loading ? <p role="status" className="py-4 text-sm text-slate">Loading session activity…</p> : error ? <p role="alert" className="text-sm text-red">{error}</p> : report && report.session.id === selectedId ? <SessionReport key={report.session.id + refresh} report={report} /> : null}
     </section> : null}
 
-    {editing !== null && canWrite ? <SessionEditor key={editing === "new" ? `new-${draftDate ?? "blank"}` : editing.id} session={editing === "new" ? null : editing} date={draftDate} timezone={calendarTimezone} onClose={() => setEditing(null)} onSaved={(session) => { setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].sort((a, b) => b.startsAt.localeCompare(a.startsAt))); setMonth(calendarDate(session.startsAt, calendarTimezone).slice(0, 7)); setEditing(null); select(session.id); setNotice("Session saved."); setRefresh((value) => value + 1); router.refresh(); }} /> : null}
+    {editing !== null && canWrite ? <LiveWebinarSessionEditor siteEnabled={siteEnabled} key={editing === "new" ? `new-${draftDate ?? "blank"}` : editing.id} session={editing === "new" ? null : editing} date={draftDate} timezone={calendarTimezone} onClose={() => setEditing(null)} onSaved={(session) => { setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].sort((a, b) => b.startsAt.localeCompare(a.startsAt))); setMonth(calendarDate(session.startsAt, calendarTimezone).slice(0, 7)); setEditing(null); select(session.id); setNotice("Session saved."); setRefresh((value) => value + 1); router.refresh(); }} /> : null}
   </div>;
 }

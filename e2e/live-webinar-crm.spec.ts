@@ -47,6 +47,8 @@ test("CRM calendar date prefills a draft and discarding never saves it", async (
   await expect(form.getByLabel("Starts at")).toHaveValue(`${date}T12:00`);
   await expect(form.getByLabel("Ends at")).toHaveValue(`${date}T13:00`);
   await expect(form.getByLabel("Timezone", { exact: true })).toHaveValue("America/Chicago");
+  await expect(form.getByRole("button", { name: "Stream & delivery", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await form.getByRole("button", { name: "Stream & delivery", exact: true }).click();
   await expect(form.getByRole("checkbox", { name: /Enable session emails/ })).not.toBeChecked();
   await form.getByLabel("Title", { exact: true }).fill("Discard this draft");
   await form.getByRole("button", { name: "Discard changes", exact: true }).click();
@@ -80,8 +82,9 @@ test("CRM calendar and monthly sessions list select the correct saved report", a
     await page.getByRole("button", { name: `Create session on ${calendarDateLabel(date)}`, exact: true }).click();
     const form = page.getByRole("form", { name: "Create live webinar" });
     await form.getByLabel("Title", { exact: true }).fill(title);
+    await form.getByRole("button", { name: "Edit session URL name", exact: true }).click();
     await form.getByLabel("Session URL name").fill(`calendar-workshop-${index + 1}`);
-    await form.getByRole("button", { name: "Create session", exact: true }).click();
+    await form.getByRole("button", { name: "Save draft", exact: true }).click();
     await expect(form).not.toBeVisible();
     await expect(page.getByRole("heading", { name: "Registrations for this session", exact: true })).toBeVisible();
   }
@@ -127,20 +130,24 @@ test("CRM creates a disabled draft and edits the same session when postponed", a
   await page.goto("/crm/webinars");
   await page.getByRole("button", { name: "+ New session", exact: true }).click();
   const form = page.getByRole("form", { name: "Create live webinar" });
+  await form.getByRole("button", { name: "Stream & delivery", exact: true }).click();
   await expect(form.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("draft");
   await expect(form.getByRole("checkbox", { name: /Enable session emails/ })).not.toBeChecked();
   await form.getByLabel("Title", { exact: true }).fill("October workshop");
+  await form.getByRole("button", { name: "Edit session URL name", exact: true }).click();
   await form.getByLabel("Session URL name").fill("october-workshop");
   await form.getByLabel("Timezone", { exact: true }).fill("America/New_York");
   await form.getByLabel("Starts at").fill("2026-10-08T12:00");
   await form.getByLabel("Ends at").fill("2026-10-08T13:00");
-  await form.getByRole("button", { name: "Create session", exact: true }).click();
+  await form.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: "Session saved." })).toBeVisible();
   await expect.poll(() => writes.length).toBe(1);
   expect(writes[0]).toMatchObject({ status: "draft", automationEnabled: false, startsAt: "2026-10-08T16:00:00.000Z" });
   await page.getByRole("button", { name: "Edit session", exact: true }).click();
   const edit = page.getByRole("form", { name: "Edit live webinar" });
   await expect(edit.getByLabel("Session URL name")).toBeDisabled();
+  await expect(edit.getByRole("button", { name: "Edit session URL name", exact: true })).toHaveCount(0);
+  await edit.getByRole("button", { name: "Stream & delivery", exact: true }).click();
   await edit.getByRole("combobox", { name: "Status", exact: true }).selectOption("scheduled");
   await edit.getByLabel("Starts at").fill("2026-10-15T12:00");
   await edit.getByLabel("Ends at").fill("2026-10-15T13:00");
@@ -157,12 +164,168 @@ test("CRM keeps draft values when saving fails", async ({ page }) => {
   await page.getByRole("button", { name: "+ New session", exact: true }).click();
   const form = page.getByRole("form", { name: "Create live webinar" });
   await form.getByLabel("Title", { exact: true }).fill("Keep this workshop");
+  await form.getByRole("button", { name: "Edit session URL name", exact: true }).click();
   await form.getByLabel("Session URL name").fill("duplicate-workshop");
   await form.getByLabel("Starts at").fill("2026-10-08T12:00");
   await form.getByLabel("Ends at").fill("2026-10-08T13:00");
-  await form.getByRole("button", { name: "Create session", exact: true }).click();
+  await form.getByRole("button", { name: "Save draft", exact: true }).click();
   await expect(form.getByRole("alert")).toHaveText("That session slug is already in use.");
   await expect(form.getByLabel("Title", { exact: true })).toHaveValue("Keep this workshop");
+});
+
+test("CRM suggests a dated session URL and preserves a manual override", async ({ page }) => {
+  await page.goto("/crm/webinars");
+  await page.getByRole("button", { name: "+ New session", exact: true }).click();
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  const slug = form.getByLabel("Session URL name", { exact: true });
+  await expect(slug).toHaveAttribute("readonly", "");
+  await form.getByLabel("Title", { exact: true }).fill("Credit & Cash Workshop");
+  await form.getByLabel("Starts at").fill("2026-10-08T12:00");
+  await expect(slug).toHaveValue("credit-cash-workshop-2026-10-08");
+  await form.getByLabel("Starts at").fill("2026-10-15T12:00");
+  await expect(slug).toHaveValue("credit-cash-workshop-2026-10-15");
+  await form.getByRole("button", { name: "Edit session URL name", exact: true }).click();
+  await expect(slug).toBeEditable();
+  await slug.fill("my-workshop-link");
+  await form.getByLabel("Title", { exact: true }).fill("Updated workshop title");
+  await form.getByLabel("Starts at").fill("2026-10-22T12:00");
+  await expect(slug).toHaveValue("my-workshop-link");
+});
+
+test("CRM title-only edits preserve scheduled delivery and replay settings while collapsed", async ({ page }) => {
+  let saved: LiveWebinarSession | null = null;
+  const writes: Array<Record<string, unknown>> = [];
+  await page.route("**/api/crm/live-webinars**", async (route) => {
+    if (route.request().method() === "POST") {
+      const data = route.request().postDataJSON().session;
+      writes.push(data);
+      saved = { ...data, id: data.id ?? sessionId, scheduleVersion: writes.length } as LiveWebinarSession;
+      await route.fulfill({ json: { session: saved } });
+      return;
+    }
+    const report: LiveWebinarSessionReport = { session: saved!, registrations: [], stats: { registrations: 0, attended: 0, noAttendance: 0, replayOpened: 0, booked: 0 } };
+    await route.fulfill({ json: report });
+  });
+  await page.goto("/crm/webinars");
+  await page.getByRole("button", { name: "+ New session", exact: true }).click();
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  await form.getByLabel("Title", { exact: true }).fill("Scheduled workshop");
+  await form.getByLabel("Starts at").fill("2026-10-08T12:00");
+  await form.getByLabel("Ends at").fill("2026-10-08T13:00");
+  await form.getByRole("button", { name: "Stream & delivery", exact: true }).click();
+  await form.getByRole("combobox", { name: "Status", exact: true }).selectOption("scheduled");
+  await form.getByLabel("Live player URL", { exact: true }).fill("https://www.youtube.com/embed/workshop");
+  await form.getByRole("checkbox", { name: /Enable session emails/ }).check();
+  await form.getByRole("button", { name: "Replay settings", exact: true }).click();
+  await form.getByLabel("Replay player URL", { exact: true }).fill("https://player.vimeo.com/video/123456");
+  await form.getByLabel("Available until", { exact: false }).fill("2026-10-15T13:00");
+  await form.getByRole("checkbox", { name: "Publish replay", exact: true }).check();
+  await form.getByRole("button", { name: "Create scheduled session", exact: true }).click();
+  await expect(form).not.toBeVisible();
+  await page.getByRole("button", { name: "Edit session", exact: true }).click();
+  const edit = page.getByRole("form", { name: "Edit live webinar" });
+  await expect(edit.getByRole("button", { name: "Stream & delivery", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await expect(edit.getByRole("button", { name: "Replay settings", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await expect(edit.getByRole("combobox", { name: "Status", exact: true })).not.toBeVisible();
+  await expect(edit.getByLabel("Replay player URL", { exact: true })).not.toBeVisible();
+  await edit.getByLabel("Title", { exact: true }).fill("Revised scheduled workshop");
+  await edit.getByRole("button", { name: "Save session", exact: true }).click();
+  await expect.poll(() => writes.length).toBe(2);
+  expect(writes[0]).toMatchObject({ status: "scheduled", automationEnabled: true, replayPublished: true });
+  expect(writes[1]).toEqual({ ...writes[0], id: sessionId, title: "Revised scheduled workshop" });
+});
+
+for (const [section, field] of [["Stream & delivery", "Live player URL"], ["Replay settings", "Replay player URL"]]) {
+  test(`CRM reveals and focuses an invalid ${field.toLowerCase()} after its section is collapsed`, async ({ page }) => {
+    const writes: unknown[] = [];
+    await page.route("**/api/crm/live-webinars**", (route) => {
+      writes.push(route.request().postDataJSON());
+      return route.fulfill({ status: 503, json: { error: "Validation should prevent this request." } });
+    });
+    await page.goto("/crm/webinars");
+    await page.getByRole("button", { name: "+ New session", exact: true }).click();
+    const form = page.getByRole("form", { name: "Create live webinar" });
+    await form.getByLabel("Title", { exact: true }).fill("Invalid player workshop");
+    await form.getByLabel("Starts at").fill("2026-10-08T12:00");
+    await form.getByLabel("Ends at").fill("2026-10-08T13:00");
+    const toggle = form.getByRole("button", { name: section, exact: true });
+    await toggle.click();
+    await form.getByLabel(field, { exact: true }).fill("https://example.test/unsupported-player");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await form.getByRole("button", { name: "Save draft", exact: true }).click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await expect(form.getByLabel(field, { exact: true })).toBeFocused();
+    await expect(form.getByRole("alert")).toContainText("YouTube");
+    expect(writes).toEqual([]);
+  });
+}
+
+test("CRM modal focuses the title and returns keyboard focus when dismissed", async ({ page }) => {
+  await page.goto("/crm/webinars");
+  const trigger = page.getByRole("button", { name: "+ New session", exact: true });
+  await expect(trigger).toBeEnabled();
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  await expect(form.getByLabel("Title", { exact: true })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(form).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
+test("CRM prevents duplicate saves and dismissal while a session save is pending", async ({ page }) => {
+  const writes: unknown[] = [];
+  let releaseSave!: () => void;
+  const saveReady = new Promise<void>((resolve) => { releaseSave = resolve; });
+  await page.route("**/api/crm/live-webinars**", async (route) => {
+    writes.push(route.request().postDataJSON());
+    await saveReady;
+    await route.fulfill({ status: 503, json: { error: "Temporary save failure." } });
+  });
+  await page.goto("/crm/webinars");
+  await page.getByRole("button", { name: "+ New session", exact: true }).click();
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  await form.getByLabel("Title", { exact: true }).fill("One request workshop");
+  await form.getByLabel("Starts at").fill("2026-10-08T12:00");
+  await form.getByLabel("Ends at").fill("2026-10-08T13:00");
+  try {
+    await form.getByRole("button", { name: "Save draft", exact: true }).click();
+    await expect.poll(() => writes.length).toBe(1);
+    await expect(form.locator('button[type="submit"]')).toBeDisabled();
+    await expect(form.getByRole("button", { name: "Discard changes", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Close session editor", exact: true })).toBeDisabled();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Escape");
+    await expect(form).toBeVisible();
+    expect(writes).toHaveLength(1);
+  } finally {
+    releaseSave();
+  }
+  await expect(form.getByRole("alert")).toHaveText("Temporary save failure.");
+  await expect(form.getByLabel("Title", { exact: true })).toHaveValue("One request workshop");
+  await expect(form.getByRole("button", { name: "Save draft", exact: true })).toBeEnabled();
+});
+
+test("CRM rejects an ambiguous daylight-saving time without losing the draft", async ({ page }) => {
+  const writes: unknown[] = [];
+  await page.route("**/api/crm/live-webinars**", (route) => {
+    writes.push(route.request().postDataJSON());
+    return route.fulfill({ status: 503, json: { error: "Validation should prevent this request." } });
+  });
+  await page.goto("/crm/webinars");
+  await page.getByRole("button", { name: "+ New session", exact: true }).click();
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  await form.getByLabel("Title", { exact: true }).fill("Clock change workshop");
+  await form.getByLabel("Timezone", { exact: true }).fill("America/New_York");
+  await form.getByLabel("Starts at").fill("2026-11-01T01:30");
+  await form.getByLabel("Ends at").fill("2026-11-01T03:00");
+  await form.getByRole("button", { name: "Save draft", exact: true }).click();
+  await expect(form.getByRole("alert")).toContainText("occurs twice");
+  await expect(form.getByLabel("Starts at")).toBeFocused();
+  await expect(form.getByLabel("Starts at")).toHaveValue("2026-11-01T01:30");
+  await expect(form.getByLabel("Title", { exact: true })).toHaveValue("Clock change workshop");
+  expect(writes).toEqual([]);
 });
 
 test("CRM activity shows every question and keeps repeat sessions separate", async ({ page }) => {
@@ -196,7 +359,7 @@ test("CRM mobile session editor and contact funnel filter stay usable", async ({
   await expect(dateButton).toBeFocused();
   await page.keyboard.press("Enter");
   const form = page.getByRole("form", { name: "Create live webinar" });
-  await expect(form.getByRole("button", { name: "Create session", exact: true })).toBeVisible();
+  await expect(form.getByRole("button", { name: "Save draft", exact: true })).toBeVisible();
   await expect(form.getByLabel("Starts at")).toHaveValue(`${date}T12:00`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await form.getByRole("button", { name: "Discard changes", exact: true }).click();
