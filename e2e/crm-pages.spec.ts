@@ -3,11 +3,11 @@ import { expect, test } from "@playwright/test";
 test("CRM overview shows its decision dashboard", async ({ page }) => {
   await page.goto("/crm");
 
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(/good (morning|afternoon|evening)/i);
+  await expect(page.getByRole("heading", { level: 1, name: "Overview", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Needs attention", exact: true })).toBeVisible();
   await expect(page.getByText("Total contacts", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pipeline", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Funnel", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Evergreen webinar funnel", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Engagement", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recent activity", exact: true })).toBeVisible();
 });
@@ -64,13 +64,14 @@ test("CRM overview work queue has ranked direct actions", async ({ page }) => {
   await expect.poll(() => updates.some((update) => update.owner === "Team")).toBe(true);
   await snooze.click();
   await expect.poll(() => updates.some((update) => typeof update.dueDate === "string")).toBe(true);
-  await expect(page.getByRole("status")).toContainText("Task snoozed until tomorrow");
+  await expect(page.getByRole("status").filter({ hasText: "Task snoozed until tomorrow" })).toBeVisible();
 });
 
 test("CRM percentages show their sample and forecast method", async ({ page }) => {
   await page.goto("/crm");
   await expect(page.getByText(/\d+ booked \/ \d+ registered/, { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/average across \d+ viewers/, { exact: true })).toBeVisible();
+  await page.getByText("Forecast method", { exact: true }).click();
   await expect(page.getByText(/Forecast weights each contact by stage/)).toBeVisible();
 
   await page.goto("/crm/pipeline");

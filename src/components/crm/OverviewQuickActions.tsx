@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ContactOption } from "@/lib/store";
 import { STAGES_IN_ORDER, STAGE_LABELS, type Stage } from "@/lib/stages";
 import { PRIORITIES, PRIORITY_LABELS, TASK_TYPES, TYPE_LABELS, type TaskPriority, type TaskType } from "@/lib/tasks";
 
-const field = "w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust";
+const field = "mt-2 min-h-11 w-full min-w-0 rounded-lg border border-mist bg-card px-3 py-2.5 text-base font-normal text-body outline-none transition-colors focus:border-trust focus:ring-2 focus:ring-trust/15 disabled:opacity-60 sm:text-sm";
+const label = "block min-w-0 text-sm font-medium text-heading";
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-trust";
+const secondary = `inline-flex min-h-11 items-center justify-center rounded-lg border border-mist bg-card px-4 py-2.5 text-sm font-semibold text-heading transition-colors hover:bg-cloud disabled:opacity-50 ${focus}`;
+const primary = `inline-flex min-h-11 items-center justify-center rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-gold/85 disabled:opacity-50 ${focus}`;
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -14,13 +21,15 @@ async function api(url: string, method: string, body: unknown) {
   return res.json();
 }
 
-export function OverviewQuickActions({ contacts, owners }: { contacts: ContactOption[]; owners: string[] }) {
+export function OverviewQuickActions({ contacts, owners, canWrite = true }: { contacts: ContactOption[]; owners: string[]; canWrite?: boolean }) {
   const [modal, setModal] = useState<"contact" | "task" | null>(null);
+  const interactive = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
+  if (!canWrite) return null;
   return (
     <>
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setModal("contact")} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body transition-colors hover:bg-cloud">+ Contact</button>
-        <button type="button" onClick={() => setModal("task")} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">+ Task</button>
+      <div className="flex shrink-0 gap-2">
+        <button type="button" disabled={!interactive} onClick={() => setModal("contact")} className={secondary}>+ Contact</button>
+        <button type="button" disabled={!interactive} onClick={() => setModal("task")} className={primary}>+ Task</button>
       </div>
       {modal === "contact" ? <AddContact owners={owners} onClose={() => setModal(null)} /> : null}
       {modal === "task" ? <AddTask contacts={contacts} owners={owners} onClose={() => setModal(null)} /> : null}
@@ -28,18 +37,49 @@ export function OverviewQuickActions({ contacts, owners }: { contacts: ContactOp
   );
 }
 
-function Shell({ title, children, onClose, onSubmit, pending, err }: { title: string; children: React.ReactNode; onClose: () => void; onSubmit: (e: React.FormEvent) => void; pending: boolean; err: string | null }) {
+function Shell({ kind, children, onClose, onSubmit, pending, err }: { kind: "contact" | "task"; children: ReactNode; onClose: () => void; onSubmit: (e: FormEvent) => void; pending: boolean; err: string | null }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const errorMessage = useRef<HTMLParagraphElement>(null);
+  const title = kind === "contact" ? "Add contact" : "Add task";
+  useEffect(() => {
+    const element = dialog.current;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    element?.showModal();
+    element?.querySelector<HTMLElement>("[data-initial-focus]")?.focus();
+    return () => {
+      element?.close();
+      requestAnimationFrame(() => { if (opener?.isConnected) opener.focus(); });
+    };
+  }, []);
+  useEffect(() => { if (err) errorMessage.current?.focus(); }, [err]);
+
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl border border-mist bg-card p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-heading">{title}</h3>
-        <div className="mt-4 space-y-3">{children}{err ? <p className="text-sm text-red">{err}</p> : null}</div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Cancel</button>
-          <button type="submit" disabled={pending} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">{pending ? "Saving…" : "Save"}</button>
+    <dialog ref={dialog} aria-labelledby="overview-action-title" aria-describedby="overview-action-description" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }} className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/45 backdrop:backdrop-blur-[3px]">
+      <form aria-label={title} aria-busy={pending} onSubmit={onSubmit} className="flex max-h-[calc(100dvh-2rem)] flex-col">
+        <header className="flex shrink-0 items-start gap-3 border-b border-mist px-5 py-5 sm:px-7 sm:py-6">
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold-deep">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {kind === "contact" ? <><circle cx="9" cy="8" r="3" /><path d="M3 21v-2a6 6 0 0 1 12 0v2m4-14v6m-3-3h6" /></> : <><rect x="4" y="4" width="16" height="17" rx="2" /><path d="M9 4V2h6v2m-7 9 3 3 5-6" /></>}
+            </svg>
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id="overview-action-title" className="text-xl font-semibold tracking-tight text-heading">{title}</h2>
+            <p id="overview-action-description" className="mt-1 text-sm leading-relaxed text-slate">{kind === "contact" ? "Keep their details and next steps in one place." : "Turn your next step into a clear follow-up."}</p>
+          </div>
+          <button type="button" aria-label={`Close ${kind} dialog`} disabled={pending} onClick={onClose} className={`-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate transition-colors hover:bg-cloud hover:text-heading disabled:opacity-50 ${focus}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6" /></svg>
+          </button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-7">
+          <fieldset disabled={pending} className="min-w-0 space-y-6">{children}</fieldset>
+          {err ? <p ref={errorMessage} tabIndex={-1} role="alert" className="mt-5 rounded-lg border border-red/25 bg-red/5 px-4 py-3 text-sm leading-relaxed text-red dark:text-[#ffb4aa] outline-none">{err}</p> : null}
         </div>
+        <footer className="flex shrink-0 items-center justify-end gap-3 border-t border-mist bg-cloud/50 px-5 py-4 sm:px-7">
+          <button type="button" disabled={pending} onClick={onClose} className={secondary}>Cancel</button>
+          <button type="submit" disabled={pending} className={primary}>{pending ? "Creating…" : kind === "contact" ? "Create contact" : "Create task"}</button>
+        </footer>
       </form>
-    </div>
+    </dialog>
   );
 }
 
@@ -48,22 +88,32 @@ function AddContact({ owners, onClose }: { owners: string[]; onClose: () => void
   const [v, setV] = useState({ name: "", email: "", phone: "", source: "manual", stage: "new" as Stage, owner: "" });
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  async function submit(e: React.FormEvent) {
+  const saving = useRef(false);
+  const close = () => { if (!saving.current) onClose(); };
+  async function submit(e: FormEvent) {
     e.preventDefault();
+    if (saving.current) return;
     if (!v.name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) { setErr("Name and a valid email are required."); return; }
+    saving.current = true;
     setPending(true); setErr(null);
-    try { await api("/api/crm/contact", "POST", v); onClose(); router.refresh(); } catch { setErr("Could not create the contact."); setPending(false); }
+    try { await api("/api/crm/contact", "POST", v); onClose(); router.refresh(); }
+    catch { saving.current = false; setErr("Could not create the contact. Your details are still here; please try again."); setPending(false); }
   }
   return (
-    <Shell title="Add contact" onClose={onClose} onSubmit={submit} pending={pending} err={err}>
-      <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" className={field} />
-      <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" className={field} />
-      <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" className={field} />
-      <div className="flex gap-3">
-        <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" className={field} />
-        <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select>
+    <Shell kind="contact" onClose={close} onSubmit={submit} pending={pending} err={err}>
+      <div className="space-y-4">
+        <label className={label}>Name<input name="name" required autoComplete="name" data-initial-focus value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Full name" className={field} /></label>
+        <label className={label}>Email<input name="email" type="email" required autoComplete="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="name@example.com" className={field} /></label>
+        <label className={label}>Phone <span className="font-normal text-slate">(optional)</span><input aria-label="Phone" name="phone" type="tel" autoComplete="tel" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone number" className={field} /></label>
       </div>
-      <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+      <div className="border-t border-mist pt-5">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate">Organization</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className={label}>Source<input name="source" value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} className={field} /></label>
+          <label className={label}>Stage<select aria-label="Stage" name="stage" value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select></label>
+          <label className={`${label} sm:col-span-2`}>Owner<select aria-label="Owner" name="owner" value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>
+        </div>
+      </div>
     </Shell>
   );
 }
@@ -73,26 +123,34 @@ function AddTask({ contacts, owners, onClose }: { contacts: ContactOption[]; own
   const [v, setV] = useState({ email: contacts[0]?.email ?? "", title: "", type: "follow_up" as TaskType, priority: "normal" as TaskPriority, owner: "", date: "" });
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  async function submit(e: React.FormEvent) {
+  const saving = useRef(false);
+  const close = () => { if (!saving.current) onClose(); };
+  async function submit(e: FormEvent) {
     e.preventDefault();
+    if (saving.current) return;
     if (!v.title.trim() || !v.email) { setErr("A contact and a title are required."); return; }
+    saving.current = true;
     setPending(true); setErr(null);
     try {
       await api("/api/crm/task", "POST", { email: v.email, title: v.title.trim(), type: v.type, priority: v.priority, owner: v.owner, dueDate: v.date ? new Date(`${v.date}T00:00:00`).toISOString() : "" });
       onClose(); router.refresh();
-    } catch { setErr("Could not create the task."); setPending(false); }
+    } catch { saving.current = false; setErr("Could not create the task. Your details are still here; please try again."); setPending(false); }
   }
   return (
-    <Shell title="Add task" onClose={onClose} onSubmit={submit} pending={pending} err={err}>
-      <select value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} className={field} aria-label="Contact">{contacts.map((c) => <option key={c.id} value={c.email}>{c.name}</option>)}</select>
-      <input value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} placeholder="Task title" className={field} />
-      <div className="flex gap-3">
-        <select value={v.type} onChange={(e) => setV({ ...v, type: e.target.value as TaskType })} className={field}>{TASK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}</select>
-        <select value={v.priority} onChange={(e) => setV({ ...v, priority: e.target.value as TaskPriority })} className={field}>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}</select>
+    <Shell kind="task" onClose={close} onSubmit={submit} pending={pending} err={err}>
+      <div className="space-y-4">
+        <label className={label}>Contact<select aria-label="Contact" name="contact" required data-initial-focus value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} className={field}>{contacts.length === 0 ? <option value="">No contacts available</option> : null}{contacts.map((c) => <option key={c.id} value={c.email}>{c.name}</option>)}</select></label>
+        {contacts.length === 0 ? <p className="text-sm text-slate">Add a contact before creating a task.</p> : null}
+        <label className={label}>Task title<input name="title" required value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} placeholder="What needs to happen next?" className={field} /></label>
       </div>
-      <div className="flex gap-3">
-        <input type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} className={field} aria-label="Due date" />
-        <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+      <div className="border-t border-mist pt-5">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate">Plan the follow-up</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className={label}>Type<select aria-label="Type" name="type" value={v.type} onChange={(e) => setV({ ...v, type: e.target.value as TaskType })} className={field}>{TASK_TYPES.map((t) => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}</select></label>
+          <label className={label}>Priority<select aria-label="Priority" name="priority" value={v.priority} onChange={(e) => setV({ ...v, priority: e.target.value as TaskPriority })} className={field}>{PRIORITIES.map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}</select></label>
+          <label className={label}>Due date <span className="font-normal text-slate">(optional)</span><input aria-label="Due date" name="date" type="date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} className={field} /></label>
+          <label className={label}>Owner<select aria-label="Owner" name="owner" value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>
+        </div>
       </div>
     </Shell>
   );

@@ -219,7 +219,7 @@ export type TaskStats = {
 };
 
 // ---- Overview (home dashboard) view types ----
-export type OverviewKpi = { key: string; label: string; value: string | number; delta?: number; deltaGood?: boolean; hint?: string; href: string };
+export type OverviewKpi = { key: string; label: string; value: string | number; delta?: number; deltaGood?: boolean; previousValue?: number; hint?: string; href: string };
 export type ActionItem = {
   id: string;
   kind: "overdue" | "hot" | "nofollow";
@@ -1972,8 +1972,8 @@ export async function getOverview(rangeDays = 30, owner?: string): Promise<Overv
   const delta = (cur: number, prev: number) => (prev === 0 ? (cur > 0 ? 100 : 0) : Math.round(((cur - prev) / prev) * 100));
   const kpis: OverviewKpi[] = [
     { key: "total", label: "Total contacts", value: contacts.length, href: "/crm/contacts" },
-    { key: "new", label: `New (${rangeDays}d)`, value: newCur, delta: delta(newCur, newPrev), deltaGood: true, hint: `${newCur} now · ${newPrev} prior period`, href: "/crm/contacts?sort=created" },
-    { key: "booked", label: `Booked (${rangeDays}d)`, value: bookedCur, delta: delta(bookedCur, bookedPrev), deltaGood: true, hint: `${bookedCur} now · ${bookedPrev} prior period`, href: "/crm/contacts?segment=booked" },
+    { key: "new", label: `New (${rangeDays}d)`, value: newCur, delta: delta(newCur, newPrev), deltaGood: true, previousValue: newPrev, hint: `${newCur} now · ${newPrev} prior period`, href: "/crm/contacts?sort=created" },
+    { key: "booked", label: `Booked (${rangeDays}d)`, value: bookedCur, delta: delta(bookedCur, bookedPrev), deltaGood: true, previousValue: bookedPrev, hint: `${bookedCur} now · ${bookedPrev} prior period`, href: "/crm/contacts?segment=booked" },
     { key: "conv", label: "Reg → booked", value: `${regEmails.size ? Math.round((allBooked.size / regEmails.size) * 100) : 0}%`, hint: `${allBooked.size} booked / ${regEmails.size} registered`, href: "/crm/pipeline" },
     { key: "tasks", label: "Open tasks", value: openTasksN, href: "/crm/tasks" },
   ];
