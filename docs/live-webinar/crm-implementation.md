@@ -66,6 +66,10 @@ For rollback, turn off the global flag or the affected session's emails and pres
 
 ## Verification
 
+For implementation commit `e6bc4f9`, **379 unit/API tests and 20 local browser tests passed**. GitHub [application validation](https://github.com/vancedotson/BadCredittoCash/actions/runs/34704243359) and [real Supabase migration/function/regression validation](https://github.com/vancedotson/BadCredittoCash/actions/runs/34704243333) passed, as did the secret scan.
+
+**Separate production prerequisite:** the [dependency audit](https://github.com/vancedotson/BadCredittoCash/actions/runs/34704243358) reported 10 vulnerabilities in the existing locked dependencies (4 moderate, 5 high, 1 critical), including Next.js. This extension does not change `package.json` or `package-lock.json`. Review and validate the relevant dependency patches before production activation; do not treat the application/database test results as a passing security audit.
+
 The implementation has unit/API tests, public and CRM Playwright journeys, and three transactional SQL suites under `supabase/tests/`. They cover repeat registrations, retry identities, attendance boundaries, consent/suppression, schedule changes, replay expiry/late publication, booking attribution, backup compatibility, restore/purge, and staff/read-only/nonmember/anonymous permissions.
 
 Local SQL verification applies all 60 migrations to disposable PostgreSQL through PGlite with Supabase auth/storage stubs. GitHub's database validation workflow also rebuilds a real disposable Supabase database, lints functions, and runs all three suites with `psql`. PGlite alone does not prove independent-connection concurrency or production Supabase configuration.
