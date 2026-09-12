@@ -10,7 +10,7 @@ const session: LiveWebinarSession = { id: "20000000-0000-4000-8000-000000000001"
 
 describe("live webinar CRM role and activation display", () => {
   it("offers read-only users reports without mutation controls", () => {
-    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} canWrite={false} siteEnabled={false} />);
+    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} initialNow="2026-09-12T17:00:00Z" canWrite={false} siteEnabled={false} />);
     expect(html).toContain("Read-only access");
     expect(html).toContain("Refresh activity");
     expect(html).not.toContain("New session</button>");
@@ -18,8 +18,8 @@ describe("live webinar CRM role and activation display", () => {
   });
 
   it("shows that site-wide registration is paused while drafts remain editable", () => {
-    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} canWrite siteEnabled={false} />);
-    expect(html).toContain("Live registration and delivery are paused for the site.");
+    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} initialNow="2026-09-12T17:00:00Z" canWrite siteEnabled={false} />);
+    expect(html).toContain("Registration paused");
     expect(html).toContain("New session</button>");
     expect(html).toContain("Edit session</button>");
     expect(html).toContain("Session emails disabled");

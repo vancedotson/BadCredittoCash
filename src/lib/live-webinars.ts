@@ -76,6 +76,12 @@ export async function getLiveWebinarSessions(): Promise<LiveWebinarSession[]> {
   return rows;
 }
 
+/** Pass one request timestamp to the calendar so server and client agree on today. */
+export async function getLiveWebinarWorkspace() {
+  const sessions = await getLiveWebinarSessions();
+  return { sessions, now: new Date().toISOString() };
+}
+
 async function getRegistrationMessages(registrationIds: string[]): Promise<Map<string, LiveWebinarMessage[]>> {
   const result = new Map<string, LiveWebinarMessage[]>();
   const db = await createClient();

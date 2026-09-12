@@ -1,7 +1,114 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import type { LiveWebinarSession, LiveWebinarSessionReport } from "../src/lib/live-webinar-types";
 
 const sessionId = "20000000-0000-4000-8000-000000000001";
+
+async function calendarToday(page: Page) {
+  const workspace = page.getByTestId("webinar-workspace");
+  await expect(workspace).toHaveAttribute("data-today", /^\d{4}-\d{2}-\d{2}$/);
+  return (await workspace.getAttribute("data-today"))!;
+}
+
+function calendarDateLabel(date: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+}
+
+function calendarMonthLabel(date: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+}
+
+test("CRM calendar navigates across years and Today returns to the current month", async ({ page }) => {
+  await page.goto("/crm/webinars");
+  const today = await calendarToday(page);
+  const year = Number(today.slice(0, 4));
+  const month = Number(today.slice(5, 7));
+  await expect(page.getByRole("button", { name: "Calendar", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("heading", { name: calendarMonthLabel(today), exact: true })).toBeVisible();
+  for (let step = month; step < 12; step++) await page.getByRole("button", { name: "Next month", exact: true }).click();
+  await expect(page.getByRole("heading", { name: `December ${year}`, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next month", exact: true }).click();
+  await expect(page.getByRole("heading", { name: `January ${year + 1}`, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Previous month", exact: true }).click();
+  await expect(page.getByRole("heading", { name: `December ${year}`, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Today", exact: true }).click();
+  await expect(page.getByRole("heading", { name: calendarMonthLabel(today), exact: true })).toBeVisible();
+});
+
+test("CRM calendar date prefills a draft and discarding never saves it", async ({ page }) => {
+  const writes: unknown[] = [];
+  await page.route("**/api/crm/live-webinars**", (route) => {
+    if (route.request().method() === "POST") writes.push(route.request().postDataJSON());
+    return route.fulfill({ status: 503, json: { error: "Unexpected request in a discarded draft." } });
+  });
+  await page.goto("/crm/webinars");
+  const date = `${(await calendarToday(page)).slice(0, 7)}-24`;
+  await page.getByRole("button", { name: `Create session on ${calendarDateLabel(date)}`, exact: true }).click();
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  await expect(form.getByLabel("Starts at")).toHaveValue(`${date}T12:00`);
+  await expect(form.getByLabel("Ends at")).toHaveValue(`${date}T13:00`);
+  await expect(form.getByLabel("Timezone", { exact: true })).toHaveValue("America/Chicago");
+  await expect(form.getByRole("checkbox", { name: /Enable session emails/ })).not.toBeChecked();
+  await form.getByLabel("Title", { exact: true }).fill("Discard this draft");
+  await form.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await expect(form).not.toBeVisible();
+  await page.getByRole("button", { name: "+ New session", exact: true }).click();
+  await expect(form.getByLabel("Title", { exact: true })).toHaveValue("");
+  await form.getByRole("button", { name: "Discard changes", exact: true }).click();
+  expect(writes).toEqual([]);
+});
+
+test("CRM calendar and monthly sessions list select the correct saved report", async ({ page }) => {
+  const saved: LiveWebinarSession[] = [];
+  const reportRequests: string[] = [];
+  await page.route("**/api/crm/live-webinars**", async (route) => {
+    if (route.request().method() === "POST") {
+      const data = route.request().postDataJSON().session;
+      const session = { ...data, id: `20000000-0000-4000-8000-${String(saved.length + 1).padStart(12, "0")}`, scheduleVersion: 1 } as LiveWebinarSession;
+      saved.push(session);
+      await route.fulfill({ json: { session } });
+      return;
+    }
+    const id = new URL(route.request().url()).searchParams.get("sessionId")!;
+    reportRequests.push(id);
+    const report: LiveWebinarSessionReport = { session: saved.find((session) => session.id === id)!, registrations: [], stats: { registrations: 0, attended: 0, noAttendance: 0, replayOpened: 0, booked: 0 } };
+    await route.fulfill({ json: report });
+  });
+  await page.goto("/crm/webinars");
+  const month = (await calendarToday(page)).slice(0, 7);
+  for (const [index, title] of ["First calendar workshop", "Second calendar workshop"].entries()) {
+    const date = `${month}-${24 + index}`;
+    await page.getByRole("button", { name: `Create session on ${calendarDateLabel(date)}`, exact: true }).click();
+    const form = page.getByRole("form", { name: "Create live webinar" });
+    await form.getByLabel("Title", { exact: true }).fill(title);
+    await form.getByLabel("Session URL name").fill(`calendar-workshop-${index + 1}`);
+    await form.getByRole("button", { name: "Create session", exact: true }).click();
+    await expect(form).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "Registrations for this session", exact: true })).toBeVisible();
+  }
+  const calendar = page.getByRole("region", { name: "Webinar calendar", exact: true });
+  await calendar.getByRole("button", { name: "Sessions", exact: true }).click();
+  await expect(calendar.getByRole("button", { name: "Sessions", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await calendar.getByRole("button", { name: /First calendar workshop/ }).click();
+  await expect.poll(() => reportRequests.at(-1)).toBe(saved[0].id);
+  await expect(page).toHaveURL(new RegExp(`sessionId=${saved[0].id}`));
+  await expect(calendar.getByRole("button", { name: /First calendar workshop/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Edit session", exact: true }).click();
+  const edit = page.getByRole("form", { name: "Edit live webinar" });
+  await expect(edit.getByLabel("Title", { exact: true })).toHaveValue("First calendar workshop");
+  await edit.getByRole("button", { name: "Discard changes", exact: true }).click();
+  await calendar.getByRole("button", { name: "Next month", exact: true }).click();
+  await expect(calendar.getByRole("button", { name: /calendar workshop/ })).toHaveCount(0);
+  await expect(calendar.getByText(/^No sessions in /)).toBeVisible();
+  await calendar.getByRole("button", { name: "Previous month", exact: true }).click();
+  await calendar.getByRole("button", { name: "Calendar", exact: true }).click();
+  await expect(calendar.getByRole("button", { name: "Calendar", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await calendar.getByRole("button", { name: /Second calendar workshop/ }).click();
+  await expect.poll(() => reportRequests.at(-1)).toBe(saved[1].id);
+  await expect(page).toHaveURL(new RegExp(`sessionId=${saved[1].id}`));
+  await expect(calendar.getByRole("button", { name: /Second calendar workshop/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Edit session", exact: true }).click();
+  await expect(edit.getByLabel("Title", { exact: true })).toHaveValue("Second calendar workshop");
+});
 
 test("CRM creates a disabled draft and edits the same session when postponed", async ({ page }) => {
   let saved: LiveWebinarSession | null = null;
@@ -81,10 +188,21 @@ test("CRM activity shows every question and keeps repeat sessions separate", asy
 test("CRM mobile session editor and contact funnel filter stay usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/crm/webinars");
-  await page.getByRole("button", { name: "+ New session", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Create session", exact: true })).toBeVisible();
+  const date = `${(await calendarToday(page)).slice(0, 7)}-24`;
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const dateButton = page.getByRole("button", { name: `Create session on ${calendarDateLabel(date)}`, exact: true });
+  await expect(dateButton).toBeEnabled();
+  await dateButton.focus();
+  await expect(dateButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  const form = page.getByRole("form", { name: "Create live webinar" });
+  await expect(form.getByRole("button", { name: "Create session", exact: true })).toBeVisible();
+  await expect(form.getByLabel("Starts at")).toHaveValue(`${date}T12:00`);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await form.getByRole("button", { name: "Discard changes", exact: true }).click();
   await page.goto("/crm/contacts");
+  // The legacy contacts toolbar renders before its client handlers attach.
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /^Filters/ }).click();
   await page.getByRole("combobox", { name: "Funnel", exact: true }).selectOption("live");
   await expect(page).toHaveURL(/funnel=live/);

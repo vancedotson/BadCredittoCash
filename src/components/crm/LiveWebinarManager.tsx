@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { LiveWebinarSession, LiveWebinarSessionReport } from "@/lib/live-webinar-types";
@@ -9,9 +9,19 @@ import { validateLiveSessionInput } from "@/lib/live-webinar-validation";
 import { formatLiveDate, liveDateInput, liveDateToIso, liveParticipationLabel, liveBookingLabel } from "@/lib/live-webinar-display";
 import { Badge, Card } from "./ui";
 import { LiveWebinarMessages } from "./LiveWebinarMessages";
+import { LiveWebinarCalendar } from "./LiveWebinarCalendar";
+import { calendarDate } from "@/lib/live-webinar-calendar";
 
 const field = "mt-1 w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust disabled:opacity-60";
 const button = "rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body hover:bg-cloud disabled:opacity-50";
+const primaryButton = "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gold px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-gold/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-trust disabled:opacity-50";
+const subscribeToHydration = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
+
+function CalendarPlus({ className = "h-7 w-7" }: { className?: string }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 10h18m-9 3v5m-2.5-2.5h5" /></svg>;
+}
 
 type SessionDraft = {
   id?: string; slug: string; title: string; startsAt: string; endsAt: string; timezone: string;
@@ -19,16 +29,23 @@ type SessionDraft = {
   replayPublished: boolean; replayAvailableUntil: string; automationEnabled: boolean;
 };
 
-function draftOf(session: LiveWebinarSession | null): SessionDraft {
-  if (!session) return { slug: "", title: "", startsAt: "", endsAt: "", timezone: "America/New_York", status: "draft", embedUrl: "", replayUrl: "", replayPublished: false, replayAvailableUntil: "", automationEnabled: false };
+function draftOf(session: LiveWebinarSession | null, date?: string, timezone = "America/Chicago"): SessionDraft {
+  if (!session) return { slug: "", title: "", startsAt: date ? `${date}T12:00` : "", endsAt: date ? `${date}T13:00` : "", timezone, status: "draft", embedUrl: "", replayUrl: "", replayPublished: false, replayAvailableUntil: "", automationEnabled: false };
   return { id: session.id, slug: session.slug, title: session.title, startsAt: liveDateInput(session.startsAt, session.timezone), endsAt: liveDateInput(session.endsAt, session.timezone), timezone: session.timezone, status: session.status, embedUrl: session.embedUrl ?? "", replayUrl: session.replayUrl ?? "", replayPublished: session.replayPublished, replayAvailableUntil: liveDateInput(session.replayAvailableUntil, session.timezone), automationEnabled: session.automationEnabled };
 }
 
-function SessionEditor({ session, onClose, onSaved }: { session: LiveWebinarSession | null; onClose: () => void; onSaved: (session: LiveWebinarSession) => void }) {
-  const [draft, setDraft] = useState(() => draftOf(session));
+function SessionEditor({ session, date, timezone, onClose, onSaved }: { session: LiveWebinarSession | null; date?: string; timezone: string; onClose: () => void; onSaved: (session: LiveWebinarSession) => void }) {
+  const [draft, setDraft] = useState(() => draftOf(session, date, timezone));
+  const dialog = useRef<HTMLDialogElement>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const update = <K extends keyof SessionDraft>(key: K, value: SessionDraft[K]) => setDraft((current) => ({ ...current, [key]: value }));
+
+  useEffect(() => {
+    const element = dialog.current;
+    element?.showModal();
+    return () => element?.close();
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -49,9 +66,9 @@ function SessionEditor({ session, onClose, onSaved }: { session: LiveWebinarSess
     finally { setPending(false); }
   }
 
-  return <Card>
-    <form onSubmit={submit} className="space-y-5" aria-label={session ? "Edit live webinar" : "Create live webinar"}>
-      <div><h2 className="text-lg font-semibold text-heading">{session ? "Edit session" : "New live webinar"}</h2><p className="mt-1 text-sm text-slate">Use a new session for each webinar. Change the dates here to postpone this same session.</p></div>
+  return <dialog ref={dialog} aria-labelledby="webinar-editor-title" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }} className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-3xl overflow-y-auto rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/45">
+    <form onSubmit={submit} className="space-y-5 p-5 sm:p-7" aria-label={session ? "Edit live webinar" : "Create live webinar"}>
+      <div className="flex items-start justify-between gap-4"><div><h2 id="webinar-editor-title" className="text-2xl font-semibold tracking-tight text-heading">{session ? "Edit session" : "New live webinar"}</h2><p className="mt-2 max-w-xl text-sm leading-relaxed text-slate">Use a new session for each webinar. Change the dates here to postpone this same session.</p></div><button type="button" aria-label="Close session editor" onClick={onClose} disabled={pending} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-mist text-xl text-slate hover:bg-cloud disabled:opacity-50">×</button></div>
       <fieldset disabled={pending} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-slate">Title<input required minLength={3} maxLength={160} value={draft.title} onChange={(event) => update("title", event.target.value)} className={field} /></label>
@@ -75,9 +92,9 @@ function SessionEditor({ session, onClose, onSaved }: { session: LiveWebinarSess
       </fieldset>
       {session && session.status === "scheduled" ? <p className="rounded-lg border border-mist bg-cloud p-3 text-sm text-slate">Saving schedule changes updates this session for its registrants. Cancelling stops pending reminders and preserves participation history.</p> : null}
       {error ? <p role="alert" className="text-sm text-red">{error}</p> : null}
-      <div className="flex flex-wrap justify-end gap-2"><button type="button" onClick={onClose} disabled={pending} className={button}>Discard changes</button><button type="submit" disabled={pending} className="rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">{pending ? "Saving…" : session ? "Save session" : "Create session"}</button></div>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-mist pt-5"><button type="button" onClick={onClose} disabled={pending} className={button}>Discard changes</button><button type="submit" disabled={pending} className={primaryButton}>{pending ? "Saving…" : session ? "Save session" : "Create session"}</button></div>
     </form>
-  </Card>;
+  </dialog>;
 }
 
 function SessionReport({ report }: { report: LiveWebinarSessionReport }) {
@@ -102,10 +119,17 @@ function SessionReport({ report }: { report: LiveWebinarSessionReport }) {
   </div>;
 }
 
-export function LiveWebinarManager({ initialSessions, initialSessionId, canWrite, siteEnabled }: { initialSessions: LiveWebinarSession[]; initialSessionId?: string; canWrite: boolean; siteEnabled: boolean }) {
+export function LiveWebinarManager({ initialSessions, initialSessionId, initialNow, calendarTimezone = "America/Chicago", canWrite, siteEnabled }: { initialSessions: LiveWebinarSession[]; initialSessionId?: string; initialNow: string; calendarTimezone?: string; canWrite: boolean; siteEnabled: boolean }) {
   const router = useRouter();
+  // Do not accept clicks on server-rendered controls before handlers are attached.
+  const interactive = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
+  const today = calendarDate(initialNow, calendarTimezone);
+  const initialSelected = initialSessions.find((session) => session.id === initialSessionId) ?? initialSessions[0];
   const [sessions, setSessions] = useState(initialSessions);
   const [selectedId, setSelectedId] = useState(initialSessionId ?? initialSessions[0]?.id ?? "");
+  const [month, setMonth] = useState(() => initialSelected ? calendarDate(initialSelected.startsAt, calendarTimezone).slice(0, 7) : today.slice(0, 7));
+  const [view, setView] = useState<"calendar" | "sessions">("calendar");
+  const [draftDate, setDraftDate] = useState<string | undefined>();
   const [editing, setEditing] = useState<LiveWebinarSession | "new" | null>(null);
   const [report, setReport] = useState<LiveWebinarSessionReport | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,6 +137,7 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, canWrite
   const [notice, setNotice] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
   const selected = sessions.find((session) => session.id === selectedId);
+  const controlsDisabled = !interactive || editing !== null;
 
   useEffect(() => {
     if (!selectedId) return;
@@ -136,17 +161,56 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, canWrite
     router.replace(`/crm/webinars?sessionId=${encodeURIComponent(id)}`, { scroll: false });
   }
 
-  return <div className="space-y-5">
-    {!siteEnabled ? <p className="rounded-xl border border-mist bg-cloud p-4 text-sm text-slate">Live registration and delivery are paused for the site. You can prepare sessions here before launch.</p> : null}
-    <div className="flex flex-wrap items-center justify-between gap-3"><p className="max-w-2xl text-sm text-slate">Each session has its own registrations, participation, replay, and emails. Returning registrants keep their existing contact record and sales stage.</p>{canWrite ? <button type="button" onClick={() => setEditing("new")} disabled={editing !== null} className="shrink-0 rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">+ New session</button> : <Badge tone="neutral">Read-only access</Badge>}</div>
-    {notice ? <p role="status" className="rounded-lg border border-mist bg-cloud p-3 text-sm text-green">{notice}</p> : null}
-    {editing !== null && canWrite ? <SessionEditor key={editing === "new" ? "new" : editing.id} session={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={(session) => { setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].sort((a, b) => b.startsAt.localeCompare(a.startsAt))); setEditing(null); select(session.id); setNotice("Session saved."); setRefresh((value) => value + 1); router.refresh(); }} /> : null}
-    {!sessions.length ? <Card><h2 className="font-semibold text-heading">Your first session starts here</h2><p className="mt-2 text-sm text-slate">Create a draft with the event date and timezone. Session emails start disabled.</p></Card> : <>
-      <Card>
-        <div className="flex flex-wrap items-end gap-3"><label className="min-w-0 flex-1 text-sm text-slate">Session<select value={selectedId} disabled={editing !== null} onChange={(event) => select(event.target.value)} className={field}>{!selected ? <option value={selectedId}>Select a session</option> : null}{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {formatLiveDate(session.startsAt, session.timezone)} · {session.status}</option>)}</select></label>{selected && canWrite ? <button type="button" disabled={editing !== null} onClick={() => setEditing(selected)} className={button}>Edit session</button> : null}<button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading} className={button}>Refresh activity</button></div>
-        {selected ? <div className="mt-4 space-y-3"><div className="flex flex-wrap gap-2"><Badge tone={selected.status === "scheduled" ? "info" : selected.status === "cancelled" ? "warn" : "neutral"}>{selected.status}</Badge><Badge tone={selected.automationEnabled ? "success" : "neutral"}>Session emails {selected.automationEnabled ? "enabled" : "disabled"}</Badge><Badge tone={selected.replayPublished ? "info" : "neutral"}>Replay {selected.replayPublished ? "published" : "unpublished"}</Badge></div><p className="text-sm text-slate">{formatLiveDate(selected.startsAt, selected.timezone)} – {formatLiveDate(selected.endsAt, selected.timezone)}</p><div className="flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link href={`/live?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Registration page ↗</Link>{selected.replayPublished ? <Link href={`/live/replay?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Replay page ↗</Link> : null}</div></div> : null}
-      </Card>
-      {loading ? <p role="status" className="py-4 text-sm text-slate">Loading session activity…</p> : error ? <p role="alert" className="text-sm text-red">{error}</p> : report && report.session.id === selectedId ? <SessionReport report={report} /> : null}
-    </>}
+  function create(date?: string) {
+    setDraftDate(date); setEditing("new"); setNotice(null);
+  }
+
+  return <div className="space-y-6" data-testid="webinar-workspace" data-today={today}>
+    <header>
+      <nav aria-label="Breadcrumb" className="mb-4 flex items-center gap-2.5 text-xs text-slate"><Link href="/crm" className="hover:text-trust">CRM</Link><span aria-hidden="true">/</span><span aria-current="page">Live webinars</span></nav>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><h1 className="text-3xl font-bold tracking-tight text-heading sm:text-4xl">Live webinars</h1><p className="mt-2 text-sm text-slate sm:text-base">Plan sessions and follow every participant.</p></div>
+        {canWrite ? <button type="button" onClick={() => create()} disabled={controlsDisabled} className={primaryButton}>+ New session</button> : <Badge tone="neutral">Read-only access</Badge>}
+      </div>
+    </header>
+
+    {!siteEnabled ? <div className="flex items-center gap-3.5 rounded-xl border border-gold/35 bg-gold/8 px-4 py-4 sm:px-5">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold/20 text-gold-deep"><svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true"><rect x="5" y="4" width="3" height="12" rx="1" /><rect x="12" y="4" width="3" height="12" rx="1" /></svg></span>
+      <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-heading sm:text-base">Registration paused</p><p className="mt-0.5 text-xs leading-relaxed text-slate sm:text-sm">Prepare your next session before opening registration.</p></div>
+      <span className="hidden shrink-0 rounded-full border border-gold/40 px-3 py-1 text-xs font-medium text-gold-deep sm:block">Draft mode</span>
+    </div> : null}
+
+    {notice ? <p role="status" className="rounded-lg border border-green/20 bg-green/5 p-3 text-sm text-green">{notice}</p> : null}
+
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <LiveWebinarCalendar sessions={sessions} selectedId={selectedId} month={month} today={today} timezone={calendarTimezone} canWrite={canWrite} disabled={controlsDisabled} view={view} onViewChange={setView} onMonthChange={setMonth} onSelect={select} onCreate={create} />
+
+      <aside className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1" aria-label="Session planning">
+        {selected ? <section className="min-w-0 space-y-5 rounded-xl border border-mist bg-card p-5 sm:p-6" aria-labelledby="selected-webinar-title">
+          <div><p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate">Selected session</p><h2 id="selected-webinar-title" className="break-words text-xl font-semibold leading-snug tracking-tight text-heading">{selected.title}</h2><div className="mt-3"><Badge tone={selected.status === "scheduled" ? "info" : selected.status === "cancelled" ? "warn" : "neutral"}>{selected.status}</Badge></div></div>
+          {sessions.length > 1 ? <label className="block text-xs text-slate">Switch session<select aria-label="Session" value={selectedId} disabled={controlsDisabled} onChange={(event) => { select(event.target.value); const item = sessions.find((session) => session.id === event.target.value); if (item) setMonth(calendarDate(item.startsAt, calendarTimezone).slice(0, 7)); }} className={field}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}</select></label> : null}
+          <div className="space-y-2 text-sm text-slate"><p>{formatLiveDate(selected.startsAt, selected.timezone)}</p><p className="text-xs">Ends {formatLiveDate(selected.endsAt, selected.timezone)}</p><p className="text-xs">{selected.timezone}</p></div>
+          <div className="flex flex-wrap gap-2"><Badge tone={selected.automationEnabled ? "success" : "neutral"}>Session emails {selected.automationEnabled ? "enabled" : "disabled"}</Badge><Badge tone={selected.replayPublished ? "info" : "neutral"}>Replay {selected.replayPublished ? "published" : "unpublished"}</Badge></div>
+          <div className="space-y-3 border-t border-mist pt-5">
+            {canWrite ? <button type="button" disabled={controlsDisabled} onClick={() => setEditing(selected)} className={`${primaryButton} w-full`}>Edit session</button> : null}
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link href={`/live?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Registration page ↗</Link>{selected.replayPublished ? <Link href={`/live/replay?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Replay page ↗</Link> : null}</div>
+          </div>
+        </section> : <section className="rounded-xl border border-mist bg-card p-5 sm:p-6" aria-labelledby="plan-webinar-title">
+          <span className="mb-5 grid h-14 w-14 place-items-center rounded-xl bg-gold/10 text-gold-deep"><CalendarPlus /></span>
+          <h2 id="plan-webinar-title" className="text-2xl font-semibold leading-tight tracking-tight text-heading">Plan your first webinar</h2>
+          <p className="mt-3 text-sm leading-relaxed text-slate">Choose a date, add your stream, and save your session as a draft.</p>
+          <ol className="my-6 space-y-4">{["Set the date and timezone", "Add your live stream", "Open registration when ready"].map((step, index) => <li key={step} className="flex items-center gap-3 text-sm leading-relaxed text-body"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-trust/25 text-xs font-semibold text-heading">{index + 1}</span>{step}</li>)}</ol>
+          <div className="border-t border-mist pt-5">{canWrite ? <button type="button" disabled={controlsDisabled} onClick={() => create()} className={`${primaryButton} w-full`}>Create session</button> : <p className="text-sm text-slate">A team member with edit access can create your first session.</p>}<p className="mt-3 text-center text-xs leading-relaxed text-slate">Emails stay off until you enable them.</p></div>
+        </section>}
+        <section className="self-start rounded-xl border border-mist bg-card p-5 sm:p-6"><h2 className="font-semibold tracking-tight text-heading">Built for returning guests</h2><p className="mt-2 text-sm leading-relaxed text-slate">Each session keeps its own attendance, questions and follow-up.</p></section>
+      </aside>
+    </div>
+
+    {selectedId ? <section className="space-y-4 border-t border-mist pt-6" aria-label="Session activity">
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold tracking-tight text-heading">Session activity</h2><button type="button" onClick={() => setRefresh((value) => value + 1)} disabled={loading || controlsDisabled} className={button}>Refresh activity</button></div>
+      {loading ? <p role="status" className="py-4 text-sm text-slate">Loading session activity…</p> : error ? <p role="alert" className="text-sm text-red">{error}</p> : report && report.session.id === selectedId ? <SessionReport key={report.session.id + refresh} report={report} /> : null}
+    </section> : null}
+
+    {editing !== null && canWrite ? <SessionEditor key={editing === "new" ? `new-${draftDate ?? "blank"}` : editing.id} session={editing === "new" ? null : editing} date={draftDate} timezone={calendarTimezone} onClose={() => setEditing(null)} onSaved={(session) => { setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].sort((a, b) => b.startsAt.localeCompare(a.startsAt))); setMonth(calendarDate(session.startsAt, calendarTimezone).slice(0, 7)); setEditing(null); select(session.id); setNotice("Session saved."); setRefresh((value) => value + 1); router.refresh(); }} /> : null}
   </div>;
 }
