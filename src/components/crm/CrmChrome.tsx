@@ -290,12 +290,13 @@ function NotifDropdown({ items, onClose, onRead, onDismiss, onReadAll }: { items
   return (
     <>
       <div className="fixed inset-0 z-10" onClick={onClose} />
-      <div className="absolute right-0 top-11 z-20 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-mist bg-card text-left shadow-card">
-        <div className="flex items-center justify-between gap-2 border-b border-mist px-3 py-2.5">
+      {/* Open into the workspace from the sidebar; keep mobile aligned to the top bar. */}
+      <div className="absolute right-0 top-2 z-20 flex max-h-[calc(100dvh-5rem)] w-80 max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-mist bg-card text-left shadow-card md:left-0 md:right-auto md:top-11 md:max-h-[calc(100dvh-11rem)]">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-mist px-3 py-2.5">
           <span className="text-sm font-semibold text-heading">Notifications</span>
           <span className="flex items-center gap-2"><button type="button" onClick={onReadAll} className="text-xs text-trust hover:underline">Mark all read</button><span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{items.filter((item) => !item.readAt).length}</span></span>
         </div>
-        <div className="crm-scroll max-h-80 overflow-y-auto p-2">
+        <div className="crm-scroll min-h-0 max-h-80 overflow-y-auto p-2">
           {items.length === 0 ? <p className="px-2 py-6 text-center text-sm text-slate">All clear. Nothing needs attention right now.</p> : items.map((a) => (
             <div key={a.id} className={`flex items-start gap-2 rounded-lg px-2 py-2 hover:bg-cloud ${a.readAt ? "opacity-60" : ""}`}>
               <button type="button" onClick={() => onRead(a.id, a.href)} className="flex min-w-0 flex-1 items-start gap-2.5 text-left">
@@ -306,7 +307,7 @@ function NotifDropdown({ items, onClose, onRead, onDismiss, onReadAll }: { items
             </div>
           ))}
         </div>
-        {items.length ? <Link href="/crm" onClick={onClose} className="block border-t border-mist px-3 py-2.5 text-center text-sm font-medium text-trust hover:bg-cloud">View all in Overview</Link> : null}
+        {items.length ? <Link href="/crm" onClick={onClose} className="block shrink-0 border-t border-mist px-3 py-2.5 text-center text-sm font-medium text-trust hover:bg-cloud">View all in Overview</Link> : null}
       </div>
     </>
   );
