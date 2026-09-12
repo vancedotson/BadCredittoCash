@@ -7,6 +7,7 @@ import type { Contact } from "@/lib/store";
 import { contactsToCsv } from "@/lib/csv";
 import { STAGES_IN_ORDER, STAGE_LABELS, STAGE_TONES, type Stage, type Tone } from "@/lib/stages";
 import { SEGMENT_LABELS } from "@/lib/segments";
+import { ContactQuickEdit } from "./ContactQuickEdit";
 
 const secondaryButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-heading transition-colors hover:bg-cloud focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-50";
 const field = "min-h-11 w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-heading outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 disabled:opacity-60";
@@ -277,69 +278,10 @@ export function ContactsTable({ rows, allIds, owners, tags, total, canWrite, can
         <p className="mt-3 text-[11px] text-slate">Added {fmtDate(contact.createdAt)} · {contact.daysSinceActivity === 0 ? "Active today" : `Active ${contact.daysSinceActivity}d ago`}</p>
       </article>)}
     </div>
-    {activeContact ? <ContactDialog key={activeContact.id} contact={activeContact} owners={owners} tags={tags} canWrite={canWrite} onClose={() => setActiveContact(null)} onDone={() => { setActiveContact(null); router.refresh(); }} onTaskAdded={() => router.refresh()} /> : null}
+    {activeContact ? <ContactQuickEdit key={activeContact.id} contact={activeContact} owners={owners} tags={tags} canWrite={canWrite} onClose={() => setActiveContact(null)} onDone={() => { setActiveContact(null); router.refresh(); }} onRefresh={() => router.refresh()} /> : null}
   </div>;
 }
 
 function EmptyContacts() {
   return <div className="px-5 py-14 text-center"><span aria-hidden="true" className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border border-mist bg-cloud text-slate"><svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg></span><p className="font-semibold text-heading">No contacts match these filters.</p><p className="mt-2 text-sm text-slate">Try a different search or clear your filters to see everyone.</p><Link href="/crm/contacts?view=all" className={`${secondaryButton} mt-5`}>Reset filters</Link></div>;
-}
-
-function ContactDialog({ contact, owners, tags, canWrite, onClose, onDone, onTaskAdded }: {
-  contact: Contact; owners: string[]; tags: string[]; canWrite: boolean; onClose: () => void; onDone: () => void; onTaskAdded: () => void;
-}) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [stage, setStage] = useState(contact.stage);
-  const [owner, setOwner] = useState(contact.owner ?? "");
-  const [contactTags, setContactTags] = useState(contact.tags ?? []);
-  const [task, setTask] = useState("");
-  const [pending, setPending] = useState<"contact" | "task" | null>(null);
-  const pendingRef = useRef(false);
-  const [error, setError] = useState<string | null>(null);
-  const [taskSuccess, setTaskSuccess] = useState<string | null>(null);
-  const changed = stage !== contact.stage || owner !== (contact.owner ?? "") || JSON.stringify(contactTags) !== JSON.stringify(contact.tags ?? []);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialog?.showModal();
-    return () => { dialog?.close(); previousFocus?.focus(); };
-  }, []);
-  async function saveContact() {
-    if (!canWrite || !changed || pendingRef.current) return;
-    pendingRef.current = true;
-    setPending("contact");
-    setError(null);
-    try { await api(`/api/crm/contact/${contact.id}`, "PATCH", { stage, owner, tags: contactTags, expectedUpdatedAt: contact.updatedAt }); onDone(); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Could not save this contact."); }
-    finally { pendingRef.current = false; setPending(null); }
-  }
-  async function addTask() {
-    if (!canWrite || !task.trim() || pendingRef.current) return;
-    pendingRef.current = true;
-    setPending("task");
-    setError(null);
-    setTaskSuccess(null);
-    try { await api("/api/crm/task", "POST", { email: contact.email, title: task.trim() }); setTask(""); setTaskSuccess("Task added. Your contact edits are still here."); onTaskAdded(); }
-    catch (caught) { setError(caught instanceof Error ? caught.message : "Could not add this task."); }
-    finally { pendingRef.current = false; setPending(null); }
-  }
-  return <dialog ref={dialogRef} aria-labelledby="contact-dialog-title" aria-describedby="contact-dialog-description" onCancel={(event) => { event.preventDefault(); if (!pendingRef.current) onClose(); }} onClick={(event) => { if (event.target === event.currentTarget && !pendingRef.current) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose(); } }} className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/50 backdrop:backdrop-blur-sm">
-    <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
-      <header className="flex items-start gap-3 border-b border-mist p-5 sm:p-6"><Avatar name={contact.name} /><div className="min-w-0 flex-1"><h2 id="contact-dialog-title" className="text-xl font-bold text-heading">{contact.name}</h2><p id="contact-dialog-description" className="mt-1 break-all text-sm text-slate">{contact.email}</p></div><button type="button" disabled={!!pending} onClick={onClose} aria-label="Close contact actions" className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl text-slate hover:bg-cloud disabled:opacity-50">×</button></header>
-      <div className="overflow-y-auto p-5 sm:p-6">
-        <dl className="grid grid-cols-2 gap-x-5 gap-y-4 rounded-xl border border-mist bg-cloud/60 p-4 text-xs"><div><dt className="text-slate">Source</dt><dd className="mt-1 font-semibold text-heading">{contact.source || "Not recorded"}</dd></div><div><dt className="text-slate">Last activity</dt><dd className="mt-1 font-semibold text-heading">{contact.daysSinceActivity === 0 ? "Today" : `${contact.daysSinceActivity} days ago`}</dd></div><div><dt className="text-slate">Evergreen watch</dt><dd className="mt-1 font-semibold text-heading">{contact.watchPct}%</dd></div><div><dt className="text-slate">Open tasks</dt><dd className="mt-1 font-semibold text-heading">{contact.openTaskCount}</dd></div>{contact.phone ? <div className="col-span-2"><dt className="text-slate">Phone</dt><dd className="mt-1 font-semibold text-heading">{contact.phone}</dd></div> : null}</dl>
-        {contact.nextTask ? <div className="mt-4 rounded-lg border-l-2 border-gold bg-cloud/50 px-3 py-2"><p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate">Next task</p><NextTask contact={contact} /></div> : null}
-        {canWrite ? <>
-          <form id="contact-quick-edit" onSubmit={(event) => { event.preventDefault(); void saveContact(); }} className="mt-5"><fieldset disabled={!!pending} className="space-y-4"><legend className="mb-3 text-sm font-semibold text-heading">Contact details</legend><div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold text-heading">Stage<select value={stage} onChange={(event) => setStage(event.target.value as Stage)} className={`${field} mt-2`}>{STAGES_IN_ORDER.map((item) => <option key={item} value={item}>{STAGE_LABELS[item]}</option>)}</select></label><label className="block text-xs font-semibold text-heading">Owner<select value={owner} onChange={(event) => setOwner(event.target.value)} className={`${field} mt-2`}><option value="">Unassigned</option>{[...new Set([...owners, ...(contact.owner ? [contact.owner] : [])])].map((item) => <option key={item} value={item}>{item}</option>)}</select></label></div>
-            <div><p className="mb-2 text-xs font-semibold text-heading">Tags</p>{contactTags.length ? <div className="mb-2 flex flex-wrap gap-2">{contactTags.map((tag) => <button type="button" key={tag} aria-label={`Remove tag ${tag}`} onClick={() => setContactTags((previous) => previous.filter((item) => item !== tag))} className="inline-flex min-h-8 items-center gap-2 rounded-md bg-cloud px-2 text-xs font-medium text-heading">#{tag}<span aria-hidden="true">×</span></button>)}</div> : null}<label className="block text-xs text-slate">Add tag<select value="" disabled={!!pending || !tags.some((tag) => !contactTags.includes(tag))} onChange={(event) => { if (event.target.value) setContactTags((previous) => [...new Set([...previous, event.target.value])]); }} className={`${field} mt-2`}><option value="">{tags.some((tag) => !contactTags.includes(tag)) ? "Choose a tag" : "No other tags available"}</option>{tags.filter((tag) => !contactTags.includes(tag)).map((tag) => <option key={tag} value={tag}>#{tag}</option>)}</select></label></div>
-          </fieldset></form>
-          <form onSubmit={(event) => { event.preventDefault(); void addTask(); }} className="mt-5 border-t border-mist pt-5"><label htmlFor="contact-quick-task" className="block text-xs font-semibold text-heading">Quick task</label><div className="mt-2 flex gap-2"><input id="contact-quick-task" disabled={!!pending} value={task} onChange={(event) => setTask(event.target.value)} placeholder="What needs to happen next?" className={`${field} min-w-0 flex-1`} /><button type="submit" disabled={!!pending || !task.trim()} className={`${secondaryButton} shrink-0`}>{pending === "task" ? "Adding…" : "Add task"}</button></div><p className="mt-2 text-[11px] text-slate">Creates an open task without a due date.</p></form>
-        </> : <div className="mt-5 flex flex-wrap gap-3"><StagePill stage={contact.stage} /><span className="text-sm text-slate">{contact.owner || "Unassigned"}</span></div>}
-        {error ? <p role="alert" className="mt-4 rounded-lg border border-red/30 bg-red/5 p-3 text-sm text-red dark:text-[#ffb4aa]">{error} Your changes are still here.</p> : null}
-        {taskSuccess ? <p role="status" className="mt-4 rounded-lg border border-green/30 bg-green/10 p-3 text-sm text-green">{taskSuccess}</p> : null}
-      </div>
-      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-mist bg-card p-4 sm:px-6"><Link href={`/crm/contacts/${contact.id}`} onClick={(event) => { if (pendingRef.current) event.preventDefault(); }} aria-disabled={!!pending} tabIndex={pending ? -1 : undefined} className="inline-flex min-h-11 items-center text-sm font-semibold text-trust hover:underline dark:text-gold-deep">Open full profile <span aria-hidden="true" className="ml-2">↗</span></Link>{canWrite ? <button type="submit" form="contact-quick-edit" disabled={!!pending || !changed} className="min-h-11 rounded-lg bg-gold px-5 py-2 text-sm font-semibold text-ink hover:bg-gold/85 disabled:opacity-50">{pending === "contact" ? "Saving…" : "Save changes"}</button> : <button type="button" onClick={onClose} className={secondaryButton}>Done</button>}</footer>
-    </div>
-  </dialog>;
 }

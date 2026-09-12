@@ -10,6 +10,12 @@ Implemented September 12, 2026. Two image concepts explored a focused contact di
 - Keep the entire list workflow: sorting, density, page size, pagination, saved views, exports, selected/all-matching actions, row management, and add/import dialogs. Full contact profiles continue to use their existing route.
 - Native dialogs provide visible labels, keyboard focus containment, Escape dismissal, and focus restoration. Pending requests disable duplicate submissions and dismissal; failures keep draft values. CSV import results remain visible until Done.
 
+## Contact quick edit
+
+The three-dot contact action uses the selected compact centered dialog from the follow-up design review. Identity leads a four-column summary on desktop and a two-column summary on mobile. Stage and Owner sit together, tags use removable chips with a compact chooser, and task creation starts collapsed. Existing phone and next-task context remain available. The header and save footer stay visible while the body scrolls on short screens.
+
+Contact changes and tasks keep their independent API calls. Save is enabled only when Stage, Owner, or Tags differ from the saved values. Creating a task preserves contact edits and updates the displayed open-task count after confirmation. Saving contact edits while a task is drafted keeps the dialog open and retains that draft; subsequent contact edits use the newly returned concurrency timestamp. Errors focus their local message and retain values. Native focus restoration, pending locks, and both themes are covered by the focused browser suite.
+
 ## Data and behavior
 
 `resolveContactsQuery` provides one normalized state for server data, toolbar controls, pagination, saved views, table sorting, and export links. It applies saved view/page-size preferences, validates enums and numeric ranges, removes unsupported parameters, and excludes malformed session UUIDs before the database call. Out-of-range pages redirect to the last available page.
