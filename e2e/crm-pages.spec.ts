@@ -476,17 +476,17 @@ test("CRM mobile navigation exposes every page through More", async ({ page }) =
   await page.goto("/crm");
 
   const mobileNav = page.getByRole("navigation", { name: "CRM pages" });
-  for (const pageName of ["Overview", "Contacts", "Pipeline", "Tasks"]) {
+  for (const pageName of ["Overview", "Contacts", "Pipeline", "Tasks", "Activity"]) {
     await expect(mobileNav.getByRole("link", { name: pageName, exact: false })).toBeVisible();
   }
 
-  const more = mobileNav.getByRole("button", { name: "More", exact: true });
+  const more = mobileNav.getByRole("button", { name: /^(Open|Close) CRM menu$/ });
   await expect(more).toHaveAttribute("aria-expanded", "false");
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");
 
   const menu = page.getByRole("menu", { name: "More CRM pages" });
-  for (const pageName of ["Activity", "Calendar", "Sequences", "System health", "Settings"]) {
+  for (const pageName of ["Calendar", "Live webinars", "Lead magnet", "Sequences", "System health", "Settings"]) {
     await expect(menu.getByRole("menuitem", { name: pageName, exact: true })).toBeVisible();
   }
 

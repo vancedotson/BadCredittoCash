@@ -8,6 +8,38 @@ The funnel starts at `/credit-check`, posts the selected credit-report companies
 The thank-you page shows one step at a time: use a computer, get three credit-report
 PDFs, and send them to Vance. The three-step row is a progress display, not navigation.
 
+## CRM workspace
+
+**Lead magnet** in the CRM navigation opens `/crm/lead-magnet`. It shows total
+unique signups, first-time signups over the last 30 days, people waiting for PDFs,
+and people with all three bureaus received. Search and report-status filters help
+Vance find people who have sent none, some, or all three reports. Totals remain
+global while the list is filtered and paginated.
+
+Each row includes the latest submitted companies and signup date, links to the
+existing contact, and direct authenticated downloads for the newest retained PDF
+from each bureau. **View reports** opens the existing private report panel with
+all retained uploads and their filenames/dates. Closing it refreshes the list;
+**Refresh** checks for new signups and uploads without changing filters.
+
+People are identified through `credit_check_submitted` events, including existing
+CRM contacts whose original source is a webinar or another channel. Repeated
+submissions count as one person, with their submission count shown separately.
+Report status counts distinct bureaus across that person's retained uploads, not
+only the latest submission. Receiving a PDF does not mean its content was reviewed.
+Trashed contacts and contacts undergoing permanent deletion are excluded.
+
+This view adds the read-only migration
+`supabase/migrations/20260912230000_lead_magnet_workspace.sql`. Its database function
+requires an authenticated CRM member, paginates in the database, and returns only
+contact and receipt metadata. PDF downloads keep the existing contact-level
+authorization, private Storage, and no-store responses. No contact stage, owner,
+email enrollment, upload protocol, or public storage access is changed.
+
+Local CRM demo mode shows explicitly labeled fictional signups and receipt
+metadata. It never reads local intake files or serves real PDFs; demo download
+links are omitted. The local preview is `http://127.0.0.1:3101/crm/lead-magnet`.
+
 ## Local preview
 
 Run `npm run dev`. With no server-side Supabase credentials, development submissions
@@ -36,7 +68,8 @@ per local client identity and resets when the process restarts.
    `supabase/migrations/20260909120000_credit_check_lead_capture.sql`,
    `supabase/migrations/20260909150000_credit_report_uploads.sql`, and
    `supabase/migrations/20260909160000_credit_report_lifecycle.sql`, followed by
-   `supabase/migrations/20260911120000_simplify_credit_check_companies.sql`, to the intended
+   `supabase/migrations/20260911120000_simplify_credit_check_companies.sql` and
+   `supabase/migrations/20260912230000_lead_magnet_workspace.sql`, to the intended
    Supabase project through the normal deployment process. This task does not apply
    that migration or write to a remote database.
 2. Configure `NEXT_PUBLIC_SUPABASE_URL` and server-only `SUPABASE_SECRET_KEY`.
@@ -60,8 +93,9 @@ per local client identity and resets when the process restarts.
    receipt/session tables, and coordinated deletion functions. No public Storage
    policies or public file URLs are used. Vance accesses uploaded files in the
    contact's **Credit reports** section of the authenticated CRM. Demo CRM access
-   is explicitly denied. The migrations and live Storage integration have not been
-   executed or verified in this local task.
+   is explicitly denied. Production migrations and live Storage integration have
+   not been executed or verified in this local task. Disposable SQL tests verify
+   the workspace read model and permissions without accessing customer data.
 
 ## Upload behavior
 
@@ -113,5 +147,27 @@ email/SMS, or grant marketing consent.
 
 The public API accepts only the documented fields and company options, requires at
 least one selection plus name, email, and phone, limits JSON to 16 KiB, rejects cross-origin browser submissions,
-and returns no contact details in its response. The SQL transaction is pending
-integration verification until its migration is applied to a test database.
+and returns no contact details in its response. The signup transaction and CRM
+workspace are exercised in disposable SQL regression tests. Hosted Supabase and
+actual private Storage integration remain deployment verification steps.
+
+## Workspace verification
+
+For this implementation, 465 unit/API tests and 15 focused browser checks pass,
+including existing report storage, authenticated downloads, mobile CRM navigation,
+and pipeline regressions. The new page and report dialog pass automated accessibility
+checks in light and dark themes at desktop and mobile sizes.
+
+All 61 repository migrations and four transactional SQL suites pass in disposable
+PostgreSQL through PGlite with Supabase auth/storage stubs. The lead magnet suite
+checks repeat signups with an existing source, latest retained bureau receipts
+across sessions, older backup/event retention, expired upload capabilities,
+legacy stage values, global counts under filters, pagination beyond 1,000 people,
+Trash/restore, purge exclusion, and anonymous/nonmember/member permissions.
+GitHub's database workflow also runs these suites against disposable Supabase.
+
+TypeScript, lint (apart from two existing generated-worker warnings), the production
+Next build, OpenNext bundling, and the Cloudflare deployment dry-run pass. Local
+screenshots and build logs stay in ignored `.local/`. No production database
+migration, customer upload, email send, or site deployment is performed by these
+checks.

@@ -110,6 +110,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
     { href: "/crm/activity", label: "Activity", Icon: RefreshIcon },
     { href: "/crm/calendar", label: "Calendar", Icon: ImageIcon },
     { href: "/crm/webinars", label: "Live webinars", Icon: PlayIcon },
+    { href: "/crm/lead-magnet", label: "Lead magnet", Icon: DocumentIcon },
     { href: "/crm/sequences", label: "Sequences", Icon: DocumentIcon },
     { href: "/crm/health", label: "System health", Icon: ShieldIcon },
     { href: "/crm/settings", label: "Settings", Icon: ShieldIcon },
@@ -122,7 +123,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   const navItem = (it: { href: string; label: string; Icon: (p: { className?: string }) => React.ReactElement; exact?: boolean; badge?: number; tone?: "red" | "info" }) => {
     const active = isActive(it.href, it.exact);
     return (
-      <Link key={it.href} href={it.href} aria-label={sidebarCollapsed ? it.label : undefined}
+      <Link key={it.href} href={it.href} aria-label={sidebarCollapsed ? it.label : undefined} title={sidebarCollapsed ? it.label : undefined}
         className={`group relative flex min-h-11 items-center rounded-lg text-sm font-semibold transition-[color,background-color,transform] duration-150 ${sidebarCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${active ? "bg-white/15 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"}`}>
         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-[background-color,transform] duration-150 group-hover:scale-105 ${active ? "bg-white/10 text-gold" : "group-hover:bg-white/10"}`}><it.Icon className="h-5 w-5 [stroke-width:2.25]" /></span>
         {!sidebarCollapsed ? <span className="flex-1">{it.label}</span> : null}
@@ -177,7 +178,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
 
         {/* More options replaces this bounded menu region while it is open. */}
         <div className="relative min-h-0 flex-1 px-2">
-          {desktopMoreOpen && !sidebarCollapsed ? <div id="crm-desktop-more" className="crm-sidebar-options crm-sidebar-drawer-enter h-full overflow-y-auto rounded-xl border border-gold/60 bg-[#263d4e] px-1 py-2 shadow-inner">{contactHistory}</div> : <nav aria-label="Secondary CRM pages" className="space-y-1 px-1">{SECONDARY.map(navItem)}{keyboardShortcutNav}</nav>}
+          {desktopMoreOpen && !sidebarCollapsed ? <div id="crm-desktop-more" className="crm-sidebar-options crm-sidebar-drawer-enter h-full overflow-y-auto rounded-xl border border-gold/60 bg-[#263d4e] px-1 py-2 shadow-inner">{contactHistory}</div> : <nav aria-label="Secondary CRM pages" className="crm-sidebar-options h-full space-y-1 overflow-y-auto px-1">{SECONDARY.map(navItem)}{keyboardShortcutNav}</nav>}
           {desktopMoreOpen && sidebarCollapsed ? <div id="crm-desktop-more" role="dialog" aria-label="Pinned and recent contacts" className="crm-sidebar-options crm-sidebar-popup-enter absolute bottom-0 left-full z-50 ml-3 max-h-full w-64 overflow-y-auto rounded-2xl border border-gold/70 bg-[#263d4e] p-2 shadow-2xl ring-1 ring-black/20">
             <div className="mb-1 flex items-center justify-between gap-3 px-2 py-1"><span className="text-sm font-semibold text-white">More options</span><button type="button" onClick={() => setDesktopMoreOpen(false)} aria-label="Close more options" className="grid h-9 w-9 place-items-center rounded-lg bg-white/10 text-lg text-white hover:bg-white/20">×</button></div>
             {contactHistory}
@@ -237,7 +238,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
             {mobileMore ? (
               <>
                 <button type="button" aria-label="Close more pages" className="fixed inset-0 z-10 cursor-default" onClick={() => setMobileMore(false)} />
-                <div id="crm-mobile-more-menu" role="menu" aria-label="More CRM pages" className="absolute right-2 top-full z-20 w-56 overflow-hidden rounded-xl border border-mist bg-card p-1.5 text-body shadow-card">
+                <div id="crm-mobile-more-menu" role="menu" aria-label="More CRM pages" className="crm-scroll absolute right-2 top-full z-20 max-h-[calc(100dvh-4rem)] w-56 overflow-y-auto rounded-xl border border-mist bg-card p-1.5 text-body shadow-card">
                   <button type="button" role="menuitem" onClick={() => { setPalette(true); setMobileMore(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-body hover:bg-cloud"><span className="grid h-4 w-4 place-items-center">⌕</span>Search</button>
                   <button type="button" role="menuitem" onClick={() => { setQuick("contact"); setMobileMore(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-body hover:bg-cloud"><span className="grid h-4 w-4 place-items-center text-lg">+</span>Add contact</button>
                   <button type="button" role="menuitem" onClick={() => { setQuick("task"); setMobileMore(false); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-body hover:bg-cloud"><CheckIcon className="h-4 w-4" />Add task</button>
