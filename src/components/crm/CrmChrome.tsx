@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/app/login/actions";
 import type { NavData } from "@/lib/store";
-import { LightbulbIcon, PersonIcon, DollarIcon, CheckIcon, RefreshIcon, DocumentIcon, ShieldIcon, ImageIcon, BellIcon, SunIcon, MoonIcon } from "@/components/marketing-v2/Icons";
+import { LightbulbIcon, PersonIcon, DollarIcon, CheckIcon, RefreshIcon, DocumentIcon, ShieldIcon, ImageIcon, BellIcon, SunIcon, MoonIcon, PlayIcon } from "@/components/marketing-v2/Icons";
 import { CommandPalette } from "./CommandPalette";
 import { AddContactModal, AddTaskModal } from "./CrmModals";
 
@@ -109,6 +109,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
   const SECONDARY: NavItemT[] = [
     { href: "/crm/activity", label: "Activity", Icon: RefreshIcon },
     { href: "/crm/calendar", label: "Calendar", Icon: ImageIcon },
+    { href: "/crm/webinars", label: "Live webinars", Icon: PlayIcon },
     { href: "/crm/sequences", label: "Sequences", Icon: DocumentIcon },
     { href: "/crm/health", label: "System health", Icon: ShieldIcon },
     { href: "/crm/settings", label: "Settings", Icon: ShieldIcon },

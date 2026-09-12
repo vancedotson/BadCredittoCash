@@ -20,6 +20,7 @@ export function CommandPalette({ contacts, onClose, onNewContact, onNewTask }: {
     { id: "go-pipeline", label: "Pipeline", sub: "Go to", run: go("/crm/pipeline") },
     { id: "go-tasks", label: "Tasks", sub: "Go to", run: go("/crm/tasks") },
     { id: "go-calendar", label: "Calendar", sub: "Go to", run: go("/crm/calendar") },
+    { id: "go-webinars", label: "Live webinars", sub: "Go to", run: go("/crm/webinars") },
     { id: "go-activity", label: "Activity", sub: "Go to", run: go("/crm/activity") },
     { id: "go-sequences", label: "Sequences", sub: "Go to", run: go("/crm/sequences") },
     { id: "go-settings", label: "Settings", sub: "Go to", run: go("/crm/settings") },

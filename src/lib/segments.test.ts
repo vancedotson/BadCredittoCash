@@ -3,6 +3,18 @@ import { EVENTS } from "./events";
 import { deriveSegment } from "./segments";
 
 describe("deriveSegment", () => {
+  it("keeps live attendance and booking attempts out of evergreen follow-up segments", () => {
+    expect(deriveSegment([
+      { event: EVENTS.registered },
+      ...[EVENTS.roomOpened, EVENTS.bookingStarted, EVENTS.livePresence].map((event) => ({ event, props: { funnel: "live" } })),
+    ])).toBe("registered_no_show");
+    expect(deriveSegment([{ event: EVENTS.registered, props: { funnel: "live" } }])).toBe("lead");
+  });
+
+  it("recognizes a confirmed call across funnels", () => {
+    expect(deriveSegment([{ event: EVENTS.booked, props: { funnel: "live" } }])).toBe("booked");
+  });
+
   it.each([
     [[], "lead"],
     [[EVENTS.registered], "registered_no_show"],

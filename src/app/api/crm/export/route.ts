@@ -15,6 +15,8 @@ export async function GET(request: Request) {
 
   const { rows } = await listContacts({
     search: get("q"),
+    funnel: get("funnel"),
+    sessionId: get("sessionId"),
     stage: get("stage"),
     segment: get("segment"),
     source: get("source"),

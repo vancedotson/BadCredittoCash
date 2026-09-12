@@ -1,6 +1,6 @@
 /**
  * Presentation + taxonomy for behaviour events — the single source of truth for
- * how the 19 event names (events.ts) render, which category they belong to, and
+ * how event names (events.ts) render, which category they belong to, and
  * whether they're "important" (high-signal). Pure data (icon is a key string),
  * used by CRM timelines, the activity feed, and its filters.
  */
@@ -27,6 +27,9 @@ const MAP: Record<string, EventDisplay> = {
   webinar_registered: { label: "Registered for the training", icon: "user", tone: "info", category: "registration", important: true },
   webinar_confirmed_view: { label: "Viewed the confirmation page", icon: "check", tone: "neutral", category: "watch", important: false },
   goal_replied: { label: "Shared their #1 goal", icon: "idea", tone: "active", category: "engagement", important: true },
+  live_question_asked: { label: "Asked a question live", icon: "idea", tone: "active", category: "engagement", important: true },
+  live_presence: { label: "Present during the live session", icon: "play", tone: "active", category: "engagement", important: false },
+  live_replay_opened: { label: "Opened the webinar replay", icon: "play", tone: "info", category: "watch", important: false },
   quiz_started: { label: "Started the concern quiz", icon: "idea", tone: "neutral", category: "engagement", important: false },
   quiz_completed: { label: "Completed the concern quiz", icon: "idea", tone: "active", category: "engagement", important: true },
   webinar_room_opened: { label: "Opened the training", icon: "play", tone: "info", category: "watch", important: false },

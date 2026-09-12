@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { buildSequenceMessages, deliverImmediateSequenceMessage } from "@/lib/email";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { consumePublicRateLimit, readLimitedJson } from "@/lib/public-api";
+import { getPublicLiveWebinarSession, liveWebinarsEnabled } from "@/lib/live-webinars";
+import { createLiveParticipantToken, liveParticipantCookie, liveSigningSecret } from "@/lib/live-webinar-token";
+import { hasLiveContext, isTimezone, isUuid } from "@/lib/live-webinar-types";
+import { deliverLiveRegistrationConfirmation } from "@/lib/email";
 
 const CONSENT_VERSION = "registration-marketing-v1";
 const CONSENT_TEXT = "Send me occasional follow-up tips and updates by email. Optional; unsubscribe anytime.";
@@ -47,6 +51,10 @@ export async function POST(request: Request) {
     turnstileToken?: string;
     attribution?: Attribution;
     marketingConsent?: boolean;
+    sessionId?: string;
+    timezone?: string;
+    funnel?: string;
+    preview?: boolean;
   };
   const parsed = await readLimitedJson<LeadRequest>(request);
   if (!parsed.ok) return NextResponse.json(
@@ -54,6 +62,17 @@ export async function POST(request: Request) {
     { status: parsed.status },
   );
   const body = parsed.value;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid registration." }, { status: 400 });
+  const liveRequest = body.source === "vance-live-webinar" || body.funnel === "live" || body.sessionId !== undefined
+    || hasLiveContext({ pagePath: body.attribution?.lastTouch?.landing_page ?? body.utm?.landing_page });
+  if (liveRequest) {
+    const referer = request.headers.get("referer");
+    let preview = body.preview === true;
+    if (referer) { try { const params = new URL(referer).searchParams; preview ||= params.get("preview") === "1" || params.has("state"); } catch { /* Missing referral context does not authorize a placeholder session. */ } }
+    if (preview) return NextResponse.json({ error: "Registration is disabled in preview." }, { status: 409 });
+    if (!liveWebinarsEnabled()) return NextResponse.json({ error: "Live registration is not open yet." }, { status: 503 });
+    if (!isUuid(body.sessionId)) return NextResponse.json({ error: "Choose a scheduled live session." }, { status: 400 });
+  }
 
   try {
     if (!await consumePublicRateLimit(request, "registration", 10, 600)) {
@@ -64,13 +83,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please try again in a moment." }, { status: 503 });
   }
 
-  const name = body.name?.trim();
-  const email = body.email?.trim().toLowerCase();
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
   const phone = normalizePhone(body.phone);
 
   const fieldErrors: Partial<Record<"name" | "email" | "phone", string>> = {};
-  if (!name || name.length < 2) fieldErrors.name = "Please enter your name.";
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  if (!name || name.length < 2 || name.length > 160) fieldErrors.name = "Please enter your name.";
+  if (!email || email.length > 320 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     fieldErrors.email = "Enter a valid email so we can send your link.";
   }
   if (phone === undefined) {
@@ -91,6 +110,28 @@ export async function POST(request: Request) {
     const firstTouch = cleanTouch(body.attribution?.firstTouch ?? body.utm);
     const lastTouch = cleanTouch(body.attribution?.lastTouch ?? body.utm);
     const country = request.headers.get("cf-ipcountry")?.toUpperCase();
+    if (liveRequest) {
+      liveSigningSecret();
+      const session = await getPublicLiveWebinarSession(body.sessionId);
+      if (!session || session.status !== "scheduled" || new Date(session.endsAt).getTime() <= Date.now()) return NextResponse.json({ error: "Registration for this session is closed." }, { status: 409 });
+      const { data, error } = await supabase.rpc("register_live_webinar_v1", {
+        p_session_id: session.id, p_name: name, p_email: email, p_phone: phone,
+        p_visitor_id: typeof body.visitorId === "string" ? body.visitorId.trim() || null : null,
+        p_first_touch: firstTouch, p_last_touch: lastTouch, p_marketing_consent: body.marketingConsent === true,
+        p_consent_version: CONSENT_VERSION, p_consent_text: CONSENT_TEXT,
+        p_consent_country: country && /^[A-Z]{2}$/.test(country) ? country : null,
+        p_timezone: isTimezone(body.timezone) ? body.timezone : session.timezone,
+      });
+      if (error || !data) throw new Error("Live registration could not be saved.");
+      const registration = data as { contact_id: string; registration_id: string; session_id: string; access_version: number };
+      const expiresAt = Math.max(Date.now() + 86_400_000, new Date(session.endsAt).getTime() + 90 * 86_400_000);
+      const token = createLiveParticipantToken({ registrationId: registration.registration_id, sessionId: session.id, accessVersion: registration.access_version, expiresAt });
+      // The transaction already saved the joining message. Delivery may be retried by maintenance.
+      try { await deliverLiveRegistrationConfirmation(registration.registration_id, email); } catch { console.error("[api/lead] live confirmation deferred to queue"); }
+      const response = NextResponse.json({ ok: true, id: registration.contact_id, sessionId: session.id }, { headers: { "Cache-Control": "no-store" } });
+      response.cookies.set(liveParticipantCookie(session.id), token, { httpOnly: true, secure: new URL(request.url).protocol === "https:", sameSite: "lax", path: "/", expires: new Date(expiresAt) });
+      return response;
+    }
     const { data: lead, error } = await supabase.rpc("register_webinar_lead_and_enqueue_v1", {
       p_name: name,
       p_email: email,

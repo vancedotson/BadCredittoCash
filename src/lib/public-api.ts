@@ -56,7 +56,7 @@ async function sha256Hex(value: string): Promise<string> {
 
 export async function consumePublicRateLimit(
   request: Request,
-  bucket: "registration" | "booking" | "tracking",
+  bucket: "registration" | "booking" | "tracking" | "live-question" | "live-activity",
   limit: number,
   windowSeconds: number,
 ): Promise<boolean> {

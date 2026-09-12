@@ -23,6 +23,7 @@
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_kUngQFloolk0SWmgkBRUYw_l44atY4F",
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEXg2qOJgmbI5TSP",
     "EMAIL_MODE": "production",
+    "LIVE_WEBINAR_ENABLED": "false",
     "EMAIL_FROM": "Bad Credit to Cash <updates@updates.badcredittocash.com>",
     "APP_BASE_URL": "https://vance-dotson.vancedotson.workers.dev",
     "GOOGLE_CALENDAR_ACCOUNT_EMAIL": "vancedotson84@gmail.com",
@@ -34,7 +35,7 @@
     "binding": "ASSETS"
   },
   "triggers": {
-    "crons": ["*/5 * * * *"]
+    "crons": ["* * * * *"]
   },
   "observability": {
     "enabled": true

@@ -1,8 +1,38 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { liveWebinar } from "@/config/live-webinar";
+import { LIVE_PLAYER_ORIGINS } from "@/lib/live-webinar-types";
 
 const isDev = process.env.NODE_ENV === "development";
+
+/**
+ * The live room (/live/room) and the replay (/live/replay) embed video in an
+ * iframe. CSP `frame-src` defaults to Turnstile only, so without the player's
+ * origin here the browser blocks the embed silently — an empty rectangle and no
+ * visible error. Deriving it from the configured embed URLs means setting
+ * `room.embedUrl` / `replay.embedUrl` is enough; no one has to remember to edit
+ * the CSP too.
+ */
+function originOf(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+const frameSrc = [
+  ...new Set(
+    [
+      "https://challenges.cloudflare.com",
+      ...LIVE_PLAYER_ORIGINS,
+      originOf(liveWebinar.room.embedUrl),
+      originOf(liveWebinar.replay.embedUrl),
+    ].filter((value): value is string => Boolean(value)),
+  ),
+].join(" ");
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
@@ -10,7 +40,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://gulidnxltrgomjyctjlp.supabase.co wss://gulidnxltrgomjyctjlp.supabase.co https://challenges.cloudflare.com",
-  "frame-src https://challenges.cloudflare.com",
+  `frame-src ${frameSrc}`,
   "media-src 'self' blob: https:",
   "object-src 'none'",
   "base-uri 'self'",
@@ -21,7 +51,7 @@ const contentSecurityPolicy = [
 
 function secure(response: NextResponse, privateData = false) {
   response.headers.set("Content-Security-Policy", contentSecurityPolicy);
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!response.headers.has("Referrer-Policy")) response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()");

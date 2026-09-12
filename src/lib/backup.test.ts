@@ -22,6 +22,7 @@ function validBackup(): CrmBackup {
     tables: {
       contacts: [], events: [], notes: [], tasks: [], tags: [], contact_tags: [],
       bookings: [], sequence_enrollments: [], scheduled_messages: [], settings: [],
+      live_webinar_sessions: [], live_webinar_registrations: [],
     },
   };
 }
@@ -36,7 +37,7 @@ describe("CRM backup repository integration", () => {
 
     await expect(createCrmBackup()).resolves.toEqual(backup);
     expect(mocks.rpc).toHaveBeenCalledOnce();
-    expect(mocks.rpc).toHaveBeenCalledWith("export_crm_backup_v1");
+    expect(mocks.rpc).toHaveBeenCalledWith("export_crm_backup_v2");
   });
 
   it("surfaces database export failures without returning partial data", async () => {
@@ -51,6 +52,23 @@ describe("CRM backup repository integration", () => {
 });
 
 describe("CRM backup validation", () => {
+  it("accepts legacy backups while retaining their version for the SQL upgrade", () => {
+    const tables = { ...validBackup().tables } as Record<string, unknown>;
+    delete tables.live_webinar_sessions;
+    delete tables.live_webinar_registrations;
+    const result = validateCrmBackup({ ...validBackup(), version: 1, tables });
+    expect(result.error).toBeUndefined();
+    expect(result.backup?.version).toBe(1);
+    expect(result.backup?.tables.live_webinar_sessions).toEqual([]);
+    expect(result.counts?.live_webinar_registrations).toBe(0);
+  });
+
+  it("requires webinar tables in version 2 backups", () => {
+    const tables = { ...validBackup().tables } as Record<string, unknown>;
+    delete tables.live_webinar_registrations;
+    expect(validateCrmBackup({ ...validBackup(), tables }).error).toBe("The live_webinar_registrations table is missing or invalid.");
+  });
+
   it("reports table counts for a complete backup", () => {
     const backup = validBackup();
     backup.tables.contacts.push({ id: "contact_1" });

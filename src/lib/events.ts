@@ -43,6 +43,13 @@ export const EVENTS = {
   funnelError: "funnel_error",
   ctaClicked: "cta_clicked",
 
+  // Live funnel (/live/*). Deliberately NOT prefixed "webinar_": tracking.ts
+  // treats webinar_* as once-per-visitor singletons, which would drop every
+  // question after the first.
+  liveQuestionAsked: "live_question_asked",
+  livePresence: "live_presence",
+  liveReplayOpened: "live_replay_opened",
+
   // Email seam (fired by src/lib/email.ts so the dashboard can see the machine)
   emailQueued: "email_queued",
   emailSent: "email_sent",

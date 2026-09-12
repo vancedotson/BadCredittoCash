@@ -1,21 +1,12 @@
 import type { BehaviourEvent, Note } from "@/lib/store";
 import { displayEvent } from "@/lib/event-display";
+import { eventDetail, eventSessionLabel } from "@/lib/event-detail";
 import { EventGlyph, toneClass } from "./ui";
 import { DocumentIcon } from "@/components/marketing-v2/Icons";
 
 type Row =
   | { at: string; kind: "event"; event: BehaviourEvent }
   | { at: string; kind: "note"; note: Note };
-
-function eventDetail(e: BehaviourEvent): string {
-  const p = e.props ?? {};
-  const s = (v: unknown) => (typeof v === "string" ? v : "");
-  if (e.event === "quiz_completed") return [s(p.concern), s(p.tried), s(p.urgency)].filter(Boolean).join(" · ");
-  if (e.event === "goal_replied" && p.goal) return `"${s(p.goal)}"`;
-  if (e.event === "call_booked" && p.preferredTime) return `Preferred: ${s(p.preferredTime)}`;
-  if (e.event === "email_queued" && p.sequence) return `Sequence: ${s(p.sequence)}`;
-  return "";
-}
 
 function fmt(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -38,6 +29,7 @@ export function Timeline({ events, notes }: { events: BehaviourEvent[]; notes: N
         const isNote = row.kind === "note";
         const d = isNote ? null : displayEvent(row.event.event);
         const detail = isNote ? "" : eventDetail(row.event);
+        const sessionLabel = isNote ? "" : eventSessionLabel(row.event);
         return (
           <li key={isNote ? row.note.id : row.event.id} className="flex gap-3">
             <div className="flex flex-col items-center">
@@ -57,7 +49,8 @@ export function Timeline({ events, notes }: { events: BehaviourEvent[]; notes: N
               ) : (
                 <>
                   <div className="text-sm text-body">{d!.label}</div>
-                  {detail ? <div className="text-xs text-slate">{detail}</div> : null}
+                  {detail ? <div className={`whitespace-pre-wrap break-words ${row.event.event === "live_question_asked" ? "mt-1 rounded-lg border border-mist bg-cloud px-3 py-2 text-sm text-body" : "text-xs text-slate"}`}>{detail}</div> : null}
+                  {sessionLabel ? <div className="mt-1 break-words text-xs text-slate">{sessionLabel}</div> : null}
                   <div className="text-xs text-slate">{fmt(row.at)}</div>
                 </>
               )}

@@ -9,6 +9,7 @@
  */
 
 import { EVENTS, type EventName } from "./events";
+import { hasLiveContext } from "./live-webinar-types";
 
 export type Segment =
   | "booked" // converted: booked the call
@@ -43,8 +44,8 @@ export const SEGMENTS_IN_ORDER: Segment[] = [
   "lead",
 ];
 
-export function deriveSegment(events: Array<{ event: string }>): Segment {
-  const has = (e: EventName) => events.some((x) => x.event === e);
+export function deriveSegment(events: Array<{ event: string; props?: Record<string, unknown> }>): Segment {
+  const has = (e: EventName) => events.some((x) => x.event === e && (e === EVENTS.booked || !hasLiveContext(x.props)));
 
   if (has(EVENTS.booked)) return "booked";
   if (has(EVENTS.bookingStarted)) return "booking_abandon";

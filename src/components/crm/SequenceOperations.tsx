@@ -9,6 +9,7 @@ import { Card } from "@/components/crm/ui";
 const sequenceNames: Record<string, string> = Object.fromEntries(
   [...Object.values(SEQUENCES), ...Object.values(SEGMENT_SEQUENCES)].map((sequence) => [sequence.id, sequence.name]),
 );
+sequenceNames.live_webinar = "Live webinar emails";
 
 async function act(body: Record<string, string>) {
   const response = await fetch("/api/crm/sequences", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -32,7 +33,8 @@ export function SequenceOperations({ initialEnrollments, initialFailures }: { in
       await act({ action, enrollmentId: enrollment.id });
       const status = action === "pause" ? "paused" as const : "active" as const;
       setEnrollments((current) => current.map((item) => item.id === enrollment.id ? { ...item, status } : item));
-      setMessage(action === "pause" ? "Sequence paused. Scheduled email is held." : "Sequence resumed. Scheduled email can send again.");
+      const context = enrollment.sessionTitle ? ` for ${enrollment.sessionTitle}` : "";
+      setMessage(action === "pause" ? `Sequence paused${context}. Scheduled email is held.` : `Sequence resumed${context}. Scheduled email can send again.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The sequence could not be changed.");
     } finally { setPending(null); }
@@ -65,7 +67,7 @@ export function SequenceOperations({ initialEnrollments, initialFailures }: { in
             {enrollments.map((enrollment) => (
               <div key={enrollment.id} className="grid gap-2 bg-card px-4 py-3 text-sm md:grid-cols-[1.1fr_1.2fr_auto] md:items-center md:gap-4">
                 <div><Link href={`/crm/contacts/${enrollment.contactId}`} className="font-medium text-heading hover:text-trust hover:underline">{enrollment.contactName}</Link><div className="text-xs text-slate">{enrollment.email}</div></div>
-                <div><div className="text-body">{sequenceNames[enrollment.sequenceKey] ?? enrollment.sequenceKey}</div><div className="mt-0.5 text-xs text-slate">{enrollment.scheduledMessages} scheduled{enrollment.nextScheduledAt ? ` · next ${new Date(enrollment.nextScheduledAt).toLocaleString()}` : ""}</div></div>
+                <div><div className="text-body">{sequenceNames[enrollment.sequenceKey] ?? enrollment.sequenceKey}</div>{enrollment.sessionId ? <Link href={`/crm/webinars?sessionId=${encodeURIComponent(enrollment.sessionId)}`} className="mt-0.5 block text-xs text-trust hover:underline">Session: {enrollment.sessionTitle || enrollment.sessionId}</Link> : null}<div className="mt-0.5 text-xs text-slate">{enrollment.scheduledMessages} scheduled{enrollment.nextScheduledAt ? ` · next ${new Date(enrollment.nextScheduledAt).toLocaleString()}` : ""}</div></div>
                 <div className="flex items-center gap-2"><span className={`rounded-full px-2 py-1 text-xs font-medium ${enrollment.status === "active" ? "bg-green/10 text-green" : "bg-gold/15 text-gold-deep"}`}>{enrollment.status === "active" ? "Active" : "Paused"}</span><button type="button" disabled={pending === enrollment.id} onClick={() => toggle(enrollment)} className="rounded-lg border border-mist px-3 py-1.5 text-xs font-medium text-body hover:bg-cloud disabled:opacity-50">{enrollment.status === "active" ? "Pause" : "Resume"}</button></div>
               </div>
             ))}

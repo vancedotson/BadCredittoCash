@@ -11,6 +11,8 @@ import { requireCrmUser } from "@/lib/auth";
 import { isCrmDemoMode } from "@/lib/demo";
 import { getContactPrivacyState } from "@/lib/contact-privacy";
 import { STAGE_LABELS } from "@/lib/stages";
+import { getContactLiveWebinars } from "@/lib/live-webinars";
+import { LiveWebinarContactHistory } from "@/components/crm/LiveWebinarContactHistory";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   const { contact, events, notes, tasks, sequences } = detail;
   const source = contact.utm?.utm_source ?? contact.source ?? "direct";
   const privacy = user.crmRole === "admin" ? await getContactPrivacyState(contact.id) : null;
+  const liveRegistrations = await getContactLiveWebinars(contact.id);
 
   return (
     <div className="space-y-6">
@@ -76,6 +79,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
 
         {/* Side: metrics + tasks */}
         <div className="space-y-6">
+          <Card><LiveWebinarContactHistory registrations={liveRegistrations} /></Card>
           <Card>
             <CreditReportsPanel contactId={contact.id} demo={isCrmDemoMode()} />
           </Card>

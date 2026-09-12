@@ -9,6 +9,7 @@
 
 import { EVENTS } from "./events";
 import { deriveSegment, SEGMENT_LABELS, SEGMENTS_IN_ORDER, type Segment } from "./segments";
+import { hasLiveContext } from "./live-webinar-types";
 import {
   stageFromEvents,
   ACTIVE_STAGES,
@@ -24,6 +25,7 @@ import { displayEvent, CATEGORY_LABELS, EVENT_CATEGORIES, type EventCategory } f
 import { createClient as createServerSupabaseClient } from "./supabase/server";
 import { createAdminClient } from "./supabase/admin";
 import { isCrmDemoMode } from "./demo";
+import { readAllPages } from "./read-all-pages";
 
 export type Lead = {
   id: string;
@@ -145,11 +147,15 @@ export type SequenceEnrollment = {
   enrolledAt: string;
   scheduledMessages: number;
   nextScheduledAt?: string;
+  sessionId?: string;
+  sessionTitle?: string;
 };
 
 export type ContactSort = "recent" | "created" | "name" | "stage" | "watch";
 export type ContactView = "hot" | "nofollow" | "booked" | "clients" | "week";
 export type ContactFilter = {
+  funnel?: string;
+  sessionId?: string;
   search?: string;
   stage?: string;
   segment?: string;
@@ -188,7 +194,7 @@ export type TrashedContact = {
 };
 
 export type ActivityItem = BehaviourEvent & { contactName?: string; contactId?: string };
-export type ActivityFilter = { search?: string; category?: string; important?: boolean; owner?: string; from?: string; to?: string; limit?: number; offset?: number };
+export type ActivityFilter = { search?: string; category?: string; important?: boolean; owner?: string; from?: string; to?: string; limit?: number; offset?: number; funnel?: string; sessionId?: string };
 export type ActivityPage = { items: ActivityItem[]; total: number };
 export type ActivitySummary = { today: number; thisWeek: number; byCategory: Array<{ category: EventCategory; label: string; count: number }> };
 
@@ -516,7 +522,7 @@ function leadFromContactRow(row: PublicContactRow, owner?: string, tags?: string
     phone: row.phone ?? undefined,
     source: row.source,
     utm: row.utm ?? {},
-    stage: row.stage as Stage,
+    stage: (row.stage === "call_booked" ? "booked" : row.stage) as Stage,
     owner,
     tags,
     lostReason: row.lost_reason ?? undefined,
@@ -565,17 +571,20 @@ async function ownerIdForName(name?: string): Promise<string | null> {
 export async function hydrateStore(): Promise<void> {
   if (isCrmDemoMode()) return;
   const supabase = await createServerSupabaseClient();
-  const [contactsResult, eventsResult, notesResult, tasksResult] = await Promise.all([
-    supabase.from("contacts").select("*, owner:crm_users!contacts_owner_id_fkey(display_name), contact_tags(tags(name))"),
-    supabase.from("events").select("*").order("occurred_at", { ascending: false }),
-    supabase.from("notes").select("*, contact:contacts!notes_contact_id_fkey(email), author:crm_users!notes_author_id_fkey(display_name)").order("created_at", { ascending: false }),
-    supabase.from("tasks").select("*, contact:contacts!tasks_contact_id_fkey(email), owner:crm_users!tasks_owner_id_fkey(display_name)").order("created_at", { ascending: false }),
+  // New activity cannot move earlier rows between pages during this read.
+  const snapshotAt = new Date().toISOString();
+  const [contactRows, eventRows, noteRows, taskRows] = await Promise.all([
+    readAllPages((from, to) => supabase.from("contacts").select("*, owner:crm_users!contacts_owner_id_fkey(display_name), contact_tags(tags(name))")
+      .lte("created_at", snapshotAt).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to)),
+    readAllPages((from, to) => supabase.from("events").select("*")
+      .lte("occurred_at", snapshotAt).order("occurred_at", { ascending: false }).order("id", { ascending: false }).range(from, to)),
+    readAllPages((from, to) => supabase.from("notes").select("*, contact:contacts!notes_contact_id_fkey(email), author:crm_users!notes_author_id_fkey(display_name)")
+      .lte("created_at", snapshotAt).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to)),
+    readAllPages((from, to) => supabase.from("tasks").select("*, contact:contacts!tasks_contact_id_fkey(email), owner:crm_users!tasks_owner_id_fkey(display_name)")
+      .lte("created_at", snapshotAt).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to)),
   ]);
 
-  const firstError = contactsResult.error ?? eventsResult.error ?? notesResult.error ?? tasksResult.error;
-  if (firstError) throw new Error(`Could not load CRM data: ${firstError.message}`);
-
-  const durableLeads: Lead[] = (contactsResult.data ?? []).map((row) => {
+  const durableLeads: Lead[] = contactRows.map((row) => {
     const contactTags = (row.contact_tags ?? []) as Array<{ tags?: { name?: string } | Array<{ name?: string }> | null }>;
     const tagNames = contactTags
       .map((entry) => Array.isArray(entry.tags) ? entry.tags[0]?.name : entry.tags?.name)
@@ -587,7 +596,7 @@ export async function hydrateStore(): Promise<void> {
       phone: row.phone ?? undefined,
       source: row.source ?? undefined,
       utm: (row.utm ?? {}) as Record<string, string>,
-      stage: row.stage as Stage,
+      stage: (row.stage === "call_booked" ? "booked" : row.stage) as Stage,
       owner: row.owner_name ?? relationDisplayName(row.owner as RelationName),
       tags: tagNames,
       lostReason: row.lost_reason ?? undefined,
@@ -597,15 +606,16 @@ export async function hydrateStore(): Promise<void> {
     };
   });
 
-  const durableEvents: BehaviourEvent[] = (eventsResult.data ?? []).map((row) => ({
+  const emailByContactId = new Map(durableLeads.map((lead) => [lead.id, lead.email]));
+  const durableEvents: BehaviourEvent[] = eventRows.map((row) => ({
     id: row.id,
     event: row.event_key,
-    email: row.email ?? undefined,
+    email: row.email ?? emailByContactId.get(row.contact_id),
     props: (row.properties ?? {}) as Record<string, unknown>,
     createdAt: row.occurred_at,
   }));
 
-  const durableNotes: Note[] = (notesResult.data ?? []).map((row) => ({
+  const durableNotes: Note[] = noteRows.map((row) => ({
     id: row.id,
     email: relationEmail(row.contact as RelationEmail) ?? "",
     body: row.body,
@@ -613,7 +623,7 @@ export async function hydrateStore(): Promise<void> {
     createdAt: row.created_at,
   }));
 
-  const durableTasks: Task[] = (tasksResult.data ?? []).map((row) => {
+  const durableTasks: Task[] = taskRows.map((row) => {
     const contact = Array.isArray(row.contact) ? row.contact[0] : row.contact;
     return {
       id: row.id,
@@ -631,10 +641,16 @@ export async function hydrateStore(): Promise<void> {
     };
   });
 
-  leads.splice(0, leads.length, ...durableLeads);
-  events.splice(0, events.length, ...durableEvents);
-  notes.splice(0, notes.length, ...durableNotes);
-  tasks.splice(0, tasks.length, ...durableTasks);
+  // Replace only after every page and mapping succeeds. Iteration avoids the
+  // JavaScript argument limit when an established CRM has many events.
+  function replaceRows<T>(target: T[], rows: T[]) {
+    target.length = 0;
+    for (const row of rows) target.push(row);
+  }
+  replaceRows(leads, durableLeads);
+  replaceRows(events, durableEvents);
+  replaceRows(notes, durableNotes);
+  replaceRows(tasks, durableTasks);
 }
 
 function nextId(prefix: string): string {
@@ -723,7 +739,7 @@ const FUNNEL_STAGES: Array<{ key: string; label: string; event: string }> = [
 export async function getFunnelStats(): Promise<FunnelStats> {
   const byEmail = new Map<string, Set<string>>();
   for (const e of events) {
-    if (!e.email) continue;
+    if (!e.email || hasLiveContext(e.props)) continue;
     const set = byEmail.get(e.email) ?? new Set<string>();
     set.add(e.event);
     byEmail.set(e.email, set);
@@ -754,7 +770,7 @@ async function getDurableFunnelStages(owner?: string): Promise<FunnelStage[]> {
     return FUNNEL_STAGES.map((stage) => ({
       key: stage.key,
       label: stage.label,
-      count: new Set(events.filter((event) => event.event === stage.event && event.email && emails.has(event.email)).map((event) => event.email)).size,
+      count: new Set(events.filter((event) => event.event === stage.event && !hasLiveContext(event.props) && event.email && emails.has(event.email)).map((event) => event.email)).size,
     }));
   }
   const supabase = await createServerSupabaseClient();
@@ -814,7 +830,7 @@ function contactSource(lead: Lead): string {
 
 function enrichContact(lead: Lead, evs: BehaviourEvent[]): Contact {
   const names = evs.map((e) => e.event);
-  const segment = deriveSegment(names.map((event) => ({ event })));
+  const segment = deriveSegment(evs);
   const now = Date.now();
   const openTaskList = tasks
     .filter((t) => t.email === lead.email && !t.done)
@@ -829,7 +845,7 @@ function enrichContact(lead: Lead, evs: BehaviourEvent[]): Contact {
     segment,
     lastActivityAt,
     eventCount: evs.length,
-    watchPct: watchPctFor(names),
+    watchPct: watchPctFor(evs.filter((event) => !hasLiveContext(event.props)).map((event) => event.event)),
     booked: names.includes(EVENTS.booked),
     noteCount: notes.filter((n) => n.email === lead.email).length,
     openTaskCount: openTaskList.length,
@@ -871,6 +887,9 @@ function matchView(c: Contact, view: string): boolean {
 
 function filterAndSortContacts(filter: ContactFilter): Contact[] {
   let rows = allEnrichedContacts();
+  if (filter.funnel || filter.sessionId) rows = rows.filter((contact) => events.some((event) => event.email === contact.email
+    && (!filter.sessionId || event.props?.sessionId === filter.sessionId)
+    && (!filter.funnel || (filter.funnel === "live" ? hasLiveContext(event.props) : !hasLiveContext(event.props) && event.event.startsWith("webinar_")))));
   const q = filter.search?.trim().toLowerCase();
   if (q) rows = rows.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q));
   if (filter.stage) rows = rows.filter((c) => c.stage === filter.stage);
@@ -951,18 +970,19 @@ export async function getContactsPageData(filter: ContactFilter = {}): Promise<C
     };
   }
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("search_crm_contacts", {
+  const { data, error } = await supabase.rpc(filter.funnel || filter.sessionId ? "search_crm_contacts_live_v1" : "search_crm_contacts", {
     p_search: filter.search ?? "", p_stage: filter.stage ?? "", p_segment: filter.segment ?? "",
     p_source: filter.source ?? "", p_owner: filter.owner ?? "", p_tag: filter.tag ?? "",
     p_view: filter.view ?? "", p_sort: filter.sort ?? "recent", p_dir: filter.dir ?? "desc",
     p_page: page, p_page_size: pageSize,
+    ...(filter.funnel || filter.sessionId ? { p_funnel: filter.funnel || null, p_session_id: filter.sessionId || null } : {}),
   });
   if (error) throw new Error(`Could not query contacts: ${error.message}`);
   const result = (data ?? {}) as DatabaseContactSearchResult;
   const now = Date.now();
   const rows: Contact[] = (result.rows ?? []).map((row) => ({
     id: row.id, name: row.name, email: row.email, phone: row.phone ?? undefined,
-    source: row.source, utm: row.utm ?? {}, stage: isStage(row.stage) ? row.stage : "new",
+    source: row.source, utm: row.utm ?? {}, stage: row.stage === "call_booked" ? "booked" : isStage(row.stage) ? row.stage : "new",
     lostReason: row.lost_reason ?? undefined, owner: row.owner ?? undefined, tags: row.tags ?? [],
     createdAt: row.created_at, updatedAt: row.updated_at, stageChangedAt: row.stage_changed_at,
     segment: row.segment as Segment, lastActivityAt: row.last_activity_at,
@@ -1156,7 +1176,7 @@ export async function getSequenceEnrollments(limit = 12): Promise<SequenceEnroll
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("sequence_enrollments")
-    .select("id, sequence_key, status, enrolled_at, contact:contacts!sequence_enrollments_contact_id_fkey(id, name, email), messages:scheduled_messages(status, scheduled_for)")
+    .select("id, sequence_key, status, enrolled_at, contact:contacts!sequence_enrollments_contact_id_fkey(id, name, email), messages:scheduled_messages(status, scheduled_for),registration:live_webinar_registrations(session_id,session:live_webinar_sessions(title))")
     .in("status", ["active", "paused"])
     .order("enrolled_at", { ascending: false })
     .limit(Math.max(1, Math.min(50, Math.trunc(limit))));
@@ -1166,7 +1186,9 @@ export async function getSequenceEnrollments(limit = 12): Promise<SequenceEnroll
     if (!contact) return [];
     const messages = (row.messages ?? []) as Array<{ status: string; scheduled_for: string }>;
     const scheduled = messages.filter((message) => message.status === "scheduled").sort((a, b) => a.scheduled_for.localeCompare(b.scheduled_for));
-    return [{ id: row.id, contactId: contact.id, contactName: contact.name, email: contact.email, sequenceKey: row.sequence_key, status: row.status === "paused" ? "paused" as const : "active" as const, enrolledAt: row.enrolled_at, scheduledMessages: scheduled.length, nextScheduledAt: scheduled[0]?.scheduled_for }];
+    const registration = (Array.isArray(row.registration) ? row.registration[0] : row.registration) as { session_id?: string; session?: { title?: string } | Array<{ title?: string }> } | null;
+    const session = Array.isArray(registration?.session) ? registration.session[0] : registration?.session;
+    return [{ id: row.id, contactId: contact.id, contactName: contact.name, email: contact.email, sequenceKey: row.sequence_key, status: row.status === "paused" ? "paused" as const : "active" as const, enrolledAt: row.enrolled_at, scheduledMessages: scheduled.length, nextScheduledAt: scheduled[0]?.scheduled_for, sessionId: registration?.session_id, sessionTitle: session?.title }];
   });
 }
 
@@ -1216,6 +1238,7 @@ export async function updateLead(
   if (patch.phone !== undefined) update.phone = patch.phone ?? null;
   if (patch.stage !== undefined) {
     update.stage = patch.stage;
+    update.stage_mode = "manual";
     if (patch.stage !== existing.stage) update.stage_changed_at = new Date().toISOString();
   }
   if (patch.lostReason !== undefined) update.lost_reason = patch.lostReason ?? null;
@@ -1622,17 +1645,17 @@ export type SettingsInsights = {
 /** Live counts to make the read-only config cards on Settings informative. */
 export async function getSettingsInsights(): Promise<SettingsInsights> {
   backfillContacts();
-  const evByEmail = new Map<string, string[]>();
-  for (const e of events) if (e.email) { const a = evByEmail.get(e.email) ?? []; a.push(e.event); evByEmail.set(e.email, a); }
+  const evByEmail = new Map<string, BehaviourEvent[]>();
+  for (const e of events) if (e.email) { const a = evByEmail.get(e.email) ?? []; a.push(e); evByEmail.set(e.email, a); }
   const stageCount = new Map<Stage, number>();
   const lostCount = new Map<string, number>();
   const segCount = new Map<Segment, number>();
   for (const l of leads) {
-    const names = evByEmail.get(l.email) ?? [];
-    const stage = l.stage ?? stageFromEvents(names);
+    const contactEvents = evByEmail.get(l.email) ?? [];
+    const stage = l.stage ?? stageFromEvents(contactEvents.map((event) => event.event));
     stageCount.set(stage, (stageCount.get(stage) ?? 0) + 1);
     if (l.lostReason) lostCount.set(l.lostReason, (lostCount.get(l.lostReason) ?? 0) + 1);
-    const seg = deriveSegment(names.map((event) => ({ event })));
+    const seg = deriveSegment(contactEvents);
     segCount.set(seg, (segCount.get(seg) ?? 0) + 1);
   }
   return {
@@ -1651,6 +1674,8 @@ export async function listActivity(f: ActivityFilter = {}): Promise<ActivityPage
     return { ...e, contactName: l?.name, contactId: l?.id };
   });
   const s = f.search?.trim().toLowerCase();
+  if (f.funnel) items = items.filter((item) => f.funnel === "live" ? hasLiveContext(item.props) : !hasLiveContext(item.props));
+  if (f.sessionId) items = items.filter((item) => item.props?.sessionId === f.sessionId);
   if (s) items = items.filter((i) => i.contactName?.toLowerCase().includes(s) || i.email?.toLowerCase().includes(s) || displayEvent(i.event).label.toLowerCase().includes(s));
   if (f.category) items = items.filter((i) => displayEvent(i.event).category === f.category);
   if (f.important) items = items.filter((i) => displayEvent(i.event).important);

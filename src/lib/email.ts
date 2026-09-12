@@ -8,6 +8,8 @@ import { createUnsubscribeToken } from "./email-token";
 import { scheduledFor } from "./email-scheduling";
 import { createAdminClient } from "./supabase/admin";
 import { recordEvent } from "./store";
+import { LIVE_EMAIL_TEMPLATES, isLiveEmailTemplate, isLiveMarketingTemplate } from "@/config/live-sequences";
+import { mergeLiveEmailFields, type LiveMessagePayload } from "./live-email-fields";
 
 type ClaimedMessage = {
   id: string;
@@ -22,7 +24,7 @@ type DueMessage = {
   payload: MessagePayload;
 };
 
-export type MessagePayload = {
+export type MessagePayload = LiveMessagePayload & {
   bookingId?: string;
   startsAt?: string;
   timezone?: string;
@@ -34,13 +36,14 @@ type FailureOutcome = {
   retry_at: string | null;
 };
 
-type DeliveryOutcome = "sent" | "retrying" | "failed";
+type DeliveryOutcome = "sent" | "retrying" | "failed" | "skipped";
 
 function resolveSequence(sequenceId: string) {
   return SEQUENCES[sequenceId] ?? SEGMENT_SEQUENCES[sequenceId];
 }
 
 function resolveTemplate(templateKey: string): SequenceEmail | null {
+  if (isLiveEmailTemplate(templateKey)) return LIVE_EMAIL_TEMPLATES[templateKey];
   if (templateKey.startsWith("booking_rescheduled:")) return {
     delay: "immediately",
     subject: "Your call has been rescheduled.",
@@ -87,9 +90,9 @@ function appointmentTime(payload: MessagePayload): string {
   }
 }
 
-function mergeFields(value: string, payload: MessagePayload = {}): string {
+function mergeFields(value: string, payload: MessagePayload = {}, templateKey = ""): string {
   const baseUrl = appBaseUrl();
-  return value
+  return (isLiveEmailTemplate(templateKey) ? mergeLiveEmailFields(value, payload, baseUrl) : value)
     .replaceAll("{{watch_link}}", `${baseUrl}/webinar/room`)
     .replaceAll("{{call_link}}", `${baseUrl}/book`)
     .replaceAll("{{appointment_time}}", appointmentTime(payload))
@@ -107,10 +110,11 @@ function escapeHtml(value: string): string {
 
 function emailHtml(body: string, unsubscribeLink?: string): string {
   const escaped = escapeHtml(body);
-  const linked = escaped.replace(
-    /(https:\/\/[^\s.]+(?:\.[^\s.]+)*(?:\/[^\s]*)?)/g,
-    '<a href="$1" style="color:#b56f00">$1</a>',
-  );
+  const linked = escaped.replace(/https:\/\/[^\s<>]+/g, (match) => {
+    // Sentence punctuation is not part of a signed joining URL.
+    const url = match.replace(/[.,!?)]+$/, "");
+    return `<a href="${url}" style="color:#b56f00">${url}</a>${match.slice(url.length)}`;
+  });
   return `<div style="background:#f4f6f8;padding:32px 16px;font-family:Arial,sans-serif;color:#102d4f">
     <div style="max-width:600px;margin:auto;background:#fff;border:1px solid #dfe5eb;border-radius:12px;padding:32px">
       <p style="margin:0 0 24px;font-size:13px;font-weight:700;letter-spacing:2px;color:#15549a">VANCE DOTSON</p>
@@ -121,6 +125,7 @@ function emailHtml(body: string, unsubscribeLink?: string): string {
 }
 
 function isMarketingTemplate(templateKey: string): boolean {
+  if (isLiveEmailTemplate(templateKey)) return isLiveMarketingTemplate(templateKey);
   return templateKey !== "pre_webinar:1"
     && !templateKey.startsWith("onboarding:")
     && !templateKey.startsWith("booking_rescheduled:")
@@ -187,6 +192,16 @@ async function deliverClaimedMessage(
   message: SequenceEmail,
   payload: MessagePayload = {},
 ): Promise<DeliveryOutcome> {
+  if (isLiveEmailTemplate(templateKey)) {
+    const db = createAdminClient();
+    const { data: eligible, error } = await db.rpc("email_message_is_eligible_v2", { p_message_id: claimed.id });
+    if (error) throw new Error("Could not recheck live email eligibility.");
+    if (process.env.LIVE_WEBINAR_ENABLED !== "true" || eligible !== true) {
+      const { error: releaseError } = await db.rpc("release_scheduled_email_claim_v1", { p_message_id: claimed.id });
+      if (releaseError) throw new Error("Could not release an ineligible live email.");
+      return "skipped";
+    }
+  }
   const testMode = (process.env.EMAIL_MODE ?? "test") !== "production";
   const actualRecipient = testMode
     ? process.env.EMAIL_TEST_RECIPIENT
@@ -201,12 +216,19 @@ async function deliverClaimedMessage(
     return "failed";
   }
 
-  const subject = mergeFields(message.subject, payload);
-  const marketing = isMarketingTemplate(templateKey);
-  const unsubscribeLink = marketing
-    ? `${appBaseUrl()}/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(claimed.id))}`
-    : undefined;
-  const content = mergeFields(message.body, payload);
+  let subject: string;
+  let content: string;
+  let unsubscribeLink: string | undefined;
+  try {
+    subject = mergeFields(message.subject, payload, templateKey);
+    content = mergeFields(message.body, payload, templateKey);
+    unsubscribeLink = isMarketingTemplate(templateKey)
+      ? `${appBaseUrl()}/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(claimed.id))}` : undefined;
+  } catch {
+    // A malformed row must not strand later messages in the claimed batch.
+    await failMessage(claimed.id, "Email template or session context could not be rendered", false);
+    return "failed";
+  }
   const body = unsubscribeLink
     ? `${content}\n\nUnsubscribe: ${unsubscribeLink}`
     : content;
@@ -259,7 +281,8 @@ async function deliverClaimedMessage(
     await recordEvent({
       event: EVENTS.emailSent,
       email: intendedRecipient,
-      props: { subject, templateKey, provider: "resend", testMode },
+      props: { subject, templateKey, provider: "resend", testMode,
+        ...(isLiveEmailTemplate(templateKey) ? { funnel: "live", sessionId: payload.sessionId, registrationId: payload.registrationId, sessionTitle: payload.title } : {}) },
     });
   } catch (error) {
     console.warn("[email] delivery succeeded but event recording failed", {
@@ -276,10 +299,13 @@ export async function processDueEmails(limit = 10): Promise<{
   sent: number;
   retrying: number;
   failed: number;
+  skipped: number;
 }> {
   const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
-  const { data, error } = await createAdminClient().rpc("claim_due_scheduled_emails", {
+  const includeLive = process.env.LIVE_WEBINAR_ENABLED === "true";
+  const { data, error } = await createAdminClient().rpc(includeLive ? "claim_due_scheduled_emails_v2" : "claim_due_scheduled_emails", {
     p_limit: safeLimit,
+    ...(includeLive ? { p_include_live: true } : {}),
   });
   if (error) throw new Error(error.message);
 
@@ -288,28 +314,73 @@ export async function processDueEmails(limit = 10): Promise<{
   let sent = 0;
   let retrying = 0;
   let failed = 0;
+  let skipped = 0;
   for (const claimed of due) {
-    const message = resolveTemplate(claimed.template_key);
-    if (!message) {
-      await failMessage(claimed.message_id, `Unknown template: ${claimed.template_key}`, false);
-      failed += 1;
+    if (processed > 0) await new Promise((resolve) => setTimeout(resolve, 550));
+    try {
+      const message = resolveTemplate(claimed.template_key);
+      if (!message) {
+        await failMessage(claimed.message_id, `Unknown template: ${claimed.template_key}`, false);
+        failed += 1;
+        processed += 1;
+        continue;
+      }
+      const outcome = await deliverClaimedMessage(
+        { id: claimed.message_id, template_key: claimed.template_key, payload: claimed.payload ?? {} },
+        claimed.email,
+        claimed.template_key,
+        message,
+        claimed.payload ?? {},
+      );
+      if (outcome === "sent") sent += 1;
+      else if (outcome === "retrying") retrying += 1;
+      else if (outcome === "skipped") skipped += 1;
+      else failed += 1;
       processed += 1;
-      continue;
+    } catch {
+      // A live eligibility/storage problem must not stop unrelated booking or evergreen mail.
+      try {
+        const failure = await failMessage(claimed.message_id, "Email processing was interrupted before confirmed delivery", true);
+        if (failure.outcome === "failed") failed += 1;
+        else retrying += 1;
+      } catch {
+        // Keep the unacknowledged claim for the existing stale-claim recovery job.
+        console.error("[email] message processing and retry recording failed", { messageId: claimed.message_id, templateKey: claimed.template_key });
+        retrying += 1;
+      }
+      processed += 1;
     }
-    const outcome = await deliverClaimedMessage(
-      { id: claimed.message_id, template_key: claimed.template_key, payload: claimed.payload ?? {} },
-      claimed.email,
-      claimed.template_key,
-      message,
-      claimed.payload ?? {},
-    );
-    if (outcome === "sent") sent += 1;
-    else if (outcome === "retrying") retrying += 1;
-    else failed += 1;
-    processed += 1;
   }
 
-  return { claimed: due.length, processed, sent, retrying, failed };
+  return { claimed: due.length, processed, sent, retrying, failed, skipped };
+}
+
+/** Claims the exact registration's joining message; repeat registration cannot replay a sent row. */
+export async function deliverLiveRegistrationConfirmation(registrationId: string, email: string): Promise<void> {
+  if (process.env.LIVE_WEBINAR_ENABLED !== "true") return;
+  const { data, error } = await createAdminClient().rpc("claim_live_webinar_email_v1", { p_registration_id: registrationId, p_template_key: "live_confirmation:1" });
+  if (error) throw new Error("Could not claim the live joining email.");
+  const claimed = (data as ClaimedMessage[] | null)?.[0];
+  if (claimed) await deliverClaimedMessage(claimed, email, claimed.template_key, LIVE_EMAIL_TEMPLATES[claimed.template_key], claimed.payload);
+}
+
+/** Drain small atomic batches with pacing and a wall-time budget for synchronized reminders. */
+export async function processEmailBacklog(maxBatches = 12, maxMs = 45_000) {
+  const started = Date.now();
+  let estimatedBatchMs = 9 * 550;
+  const total = { claimed: 0, processed: 0, sent: 0, retrying: 0, failed: 0, skipped: 0 };
+  for (let i = 0; i < maxBatches && Date.now() - started < maxMs; i++) {
+    if (Date.now() - started + estimatedBatchMs > maxMs) break;
+    const batchStarted = Date.now();
+    const batch = await processDueEmails(10);
+    estimatedBatchMs = Math.max(estimatedBatchMs, Date.now() - batchStarted);
+    for (const key of Object.keys(total) as Array<keyof typeof total>) total[key] += batch[key];
+    if (batch.claimed < 10 || batch.skipped > 0) break;
+    if (i + 1 >= maxBatches || Date.now() - started + 500 + estimatedBatchMs > maxMs) break;
+    // Keep a bounded drain and leave time for the other maintenance work.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return total;
 }
 
 export async function enqueueSequence(

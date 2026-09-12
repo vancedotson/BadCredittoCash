@@ -1,0 +1,27 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
+import { LiveWebinarManager } from "./LiveWebinarManager";
+import type { LiveWebinarSession } from "@/lib/live-webinar-types";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }) }));
+
+const session: LiveWebinarSession = { id: "20000000-0000-4000-8000-000000000001", slug: "september-workshop", title: "September workshop", startsAt: "2026-09-12T16:00:00Z", endsAt: "2026-09-12T17:00:00Z", timezone: "America/New_York", status: "draft", embedUrl: null, replayUrl: null, replayPublished: false, replayAvailableUntil: null, automationEnabled: false, scheduleVersion: 1 };
+
+describe("live webinar CRM role and activation display", () => {
+  it("offers read-only users reports without mutation controls", () => {
+    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} canWrite={false} siteEnabled={false} />);
+    expect(html).toContain("Read-only access");
+    expect(html).toContain("Refresh activity");
+    expect(html).not.toContain("New session</button>");
+    expect(html).not.toContain("Edit session</button>");
+  });
+
+  it("shows that site-wide registration is paused while drafts remain editable", () => {
+    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} canWrite siteEnabled={false} />);
+    expect(html).toContain("Live registration and delivery are paused for the site.");
+    expect(html).toContain("New session</button>");
+    expect(html).toContain("Edit session</button>");
+    expect(html).toContain("Session emails disabled");
+  });
+});

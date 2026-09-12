@@ -4,6 +4,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { onBooked } from "@/lib/automations";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { consumePublicRateLimit, readLimitedJson } from "@/lib/public-api";
+import { getPublicLiveWebinarSession, resolveLiveParticipant } from "@/lib/live-webinars";
+import { isUuid } from "@/lib/live-webinar-types";
+import { isLivePreviewRequest } from "@/lib/live-webinar-validation";
 import {
   assertGoogleCalendarAvailable,
   attachGoogleEventToBooking,
@@ -55,6 +58,8 @@ export async function POST(request: Request) {
     answers?: Record<string, string>;
     utm?: Record<string, string>;
     turnstileToken?: string;
+    funnel?: "live";
+    sessionId?: string;
   };
   const parsed = await readLimitedJson<BookingBody>(request);
   if (!parsed.ok) return NextResponse.json(
@@ -62,6 +67,22 @@ export async function POST(request: Request) {
     { status: parsed.status },
   );
   const body = parsed.value;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid booking." }, { status: 400 });
+  if (isLivePreviewRequest(request, body)) return NextResponse.json({ error: "Booking is disabled in preview." }, { status: 409 });
+  if (body.sessionId !== undefined) body.funnel = "live";
+  if (body.sessionId !== undefined && !isUuid(body.sessionId)) return NextResponse.json({ error: "Invalid webinar session." }, { status: 400 });
+  let liveSessionId: string | null = null;
+  let liveRegistrationId: string | null = null;
+  if (body.funnel === "live" && body.sessionId) {
+    try {
+      const session = await getPublicLiveWebinarSession(body.sessionId);
+      if (!session) return NextResponse.json({ error: "This webinar session is not available. Please reload the booking page." }, { status: 409 });
+      liveSessionId = session.id;
+      const participant = await resolveLiveParticipant(session.id);
+      liveRegistrationId = participant && typeof body.email === "string" && participant.email.toLowerCase() === body.email.trim().toLowerCase()
+        ? participant.registrationId : null;
+    } catch { return NextResponse.json({ error: "Could not verify the webinar session. Please try again." }, { status: 503 }); }
+  }
 
   try {
     if (!await consumePublicRateLimit(request, "booking", 10, 600)) {
@@ -101,7 +122,7 @@ export async function POST(request: Request) {
       timezone,
     });
     const supabase = createAdminClient();
-    const { data, error } = await supabase.rpc("book_funnel_call_v2", {
+    const { data, error } = await supabase.rpc(body.funnel === "live" ? "book_live_funnel_call_v1" : "book_funnel_call_v2", {
       p_name: name,
       p_email: email,
       p_phone: body.phone?.trim() || null,
@@ -111,6 +132,7 @@ export async function POST(request: Request) {
       p_intake_answers: body.answers && typeof body.answers === "object" ? body.answers : {},
       p_utm: body.utm && typeof body.utm === "object" ? body.utm : {},
       p_visitor_id: body.visitorId?.trim() || null,
+      ...(body.funnel === "live" ? { p_session_id: liveSessionId, p_registration_id: liveRegistrationId } : {}),
     });
     if (error || !data) {
       await deleteGoogleCalendarEvent(googleEventId).catch((cleanupError) =>

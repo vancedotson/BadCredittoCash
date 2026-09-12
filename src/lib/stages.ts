@@ -80,6 +80,8 @@ export function stageFromEvents(eventNames: string[]): Stage {
   if (
     hasPrefix("webinar_watch") ||
     has("webinar_room_opened") ||
+    has("live_question_asked") ||
+    has("live_presence") ||
     has("webinar_completed") ||
     has("quiz_started") ||
     has("quiz_completed") ||

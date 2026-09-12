@@ -26,7 +26,7 @@ async function api(url: string, method: string, body: unknown) {
 
 type SavedView = { name: string; query: string };
 
-export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; tags: string[]; sources: string[] }) {
+export function ContactsToolbar({ owners, tags, sources, sessions = [] }: { owners: string[]; tags: string[]; sources: string[]; sessions?: Array<{ id: string; title: string; startsAt: string }> }) {
   const router = useRouter();
   const sp = useSearchParams();
   const [modal, setModal] = useState<"add" | "import" | null>(null);
@@ -53,6 +53,8 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
   const activeChips: Array<{ k: string; label: string }> = [];
   const add = (k: string, label: string) => { const v = sp.get(k); if (v) activeChips.push({ k, label: `${label}: ${v}` }); };
   add("q", "Search"); add("stage", "Stage"); add("segment", "Segment"); add("source", "Source"); add("owner", "Owner"); add("tag", "Tag");
+  add("funnel", "Funnel");
+  if (sp.get("sessionId")) activeChips.push({ k: "sessionId", label: `Session: ${sessions.find((session) => session.id === sp.get("sessionId"))?.title ?? sp.get("sessionId")}` });
   const viewLabel = VIEWS.find((v) => v.key === sp.get("view"))?.label;
   if (sp.get("view")) activeChips.push({ k: "view", label: `View: ${viewLabel}` });
 
@@ -106,6 +108,8 @@ export function ContactsToolbar({ owners, tags, sources }: { owners: string[]; t
         <select value={sp.get("stage") ?? ""} onChange={(e) => push({ stage: e.target.value })} className={filterClass} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
         <select value={sp.get("segment") ?? ""} onChange={(e) => push({ segment: e.target.value })} className={filterClass} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((s) => <option key={s} value={s}>{SEGMENT_LABELS[s]}</option>)}</select>
         <select value={sp.get("source") ?? ""} onChange={(e) => push({ source: e.target.value })} className={filterClass} aria-label="Source"><option value="">All sources</option>{sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select>
+        <select value={sp.get("funnel") ?? ""} onChange={(e) => push(e.target.value === "evergreen" ? { funnel: e.target.value, sessionId: "" } : { funnel: e.target.value })} className={filterClass} aria-label="Funnel"><option value="">All funnels</option><option value="evergreen">Evergreen</option><option value="live">Live webinar</option></select>
+        <select value={sp.get("sessionId") ?? ""} onChange={(e) => push(e.target.value ? { sessionId: e.target.value, funnel: "live" } : { sessionId: "" })} className={`${filterClass} sm:max-w-64`} aria-label="Session"><option value="">All sessions</option>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {new Date(session.startsAt).toLocaleDateString("en-US")}</option>)}</select>
         <select value={sp.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} className={filterClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
         {tags.length ? <select value={sp.get("tag") ?? ""} onChange={(e) => push({ tag: e.target.value })} className={filterClass} aria-label="Tag"><option value="">All tags</option>{tags.map((t) => <option key={t} value={t}>#{t}</option>)}</select> : null}
         <select value={sp.get("pageSize") ?? "25"} onChange={(e) => push({ pageSize: e.target.value })} className={filterClass} aria-label="Page size"><option value="25">25 / page</option><option value="50">50 / page</option><option value="100">100 / page</option></select>

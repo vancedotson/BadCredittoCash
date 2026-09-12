@@ -41,6 +41,10 @@ export function RegistrationFormV3({
   loadingLabel = "Opening your case...",
   reassurance = "Free. No judgment. We'll email you the link. No spam, ever.",
   previewState,
+  sessionId,
+  timezone,
+  disabledPreview = false,
+  idPrefix = "v3",
 }: {
   redirectTo?: string;
   source?: string;
@@ -49,6 +53,16 @@ export function RegistrationFormV3({
   loadingLabel?: string;
   reassurance?: string;
   previewState?: RegistrationPreviewState;
+  sessionId?: string;
+  timezone?: string;
+  disabledPreview?: boolean;
+  /**
+   * Namespace for this instance's DOM ids. Only needs setting when a page
+   * renders MORE THAN ONE form — without it both copies emit `v3-email` etc.,
+   * and a label click focuses whichever input comes first. Defaults to the
+   * original `v3` so every single-form page is byte-identical.
+   */
+  idPrefix?: string;
 } = {}) {
   const router = useRouter();
   const firstFieldRef = useRef<HTMLInputElement>(null);
@@ -118,6 +132,12 @@ export function RegistrationFormV3({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (disabledPreview || previewState || status === "loading") return;
+    if (source === "vance-live-webinar" && !sessionId) {
+      setStatus("error");
+      setError("This session is not accepting registrations. Please refresh the page.");
+      return;
+    }
     setStatus("idle");
     setError(null);
     const form = e.currentTarget;
@@ -136,7 +156,7 @@ export function RegistrationFormV3({
     });
     if (firstInvalid) {
       track(EVENTS.funnelError, { action: "registration", reason: `invalid_${firstInvalid}` });
-      form.querySelector<HTMLInputElement>(`#v3-${firstInvalid}`)?.focus();
+      form.querySelector<HTMLInputElement>(`#${idPrefix}-${firstInvalid}`)?.focus();
       return;
     }
     if (!turnstileToken) {
@@ -155,6 +175,10 @@ export function RegistrationFormV3({
         body: JSON.stringify({
           ...values,
           source,
+          ...(source === "vance-live-webinar" ? {
+            sessionId,
+            timezone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+          } : {}),
           attribution: getAttribution(),
           marketingConsent: data.get("marketingConsent") === "yes",
           visitorId: getVisitorId(),
@@ -182,14 +206,16 @@ export function RegistrationFormV3({
           const invalidField = firstServerInvalid;
           if (invalidField) {
             requestAnimationFrame(() => {
-              form.querySelector<HTMLInputElement>(`#v3-${invalidField}`)?.focus();
+              form.querySelector<HTMLInputElement>(`#${idPrefix}-${invalidField}`)?.focus();
             });
           }
         }
         throw new Error(body.error ?? "Registration failed.");
       }
       rememberLead({ email: values.email.trim(), name: values.name.trim() });
-      router.push(redirectTo);
+      const destination = new URL(redirectTo, window.location.origin);
+      if (source === "vance-live-webinar" && sessionId) destination.searchParams.set("session", sessionId);
+      router.push(`${destination.pathname}${destination.search}${destination.hash}`);
     } catch (err) {
       track(EVENTS.funnelError, { action: "registration", reason: "request_failed" });
       setStatus("error");
@@ -253,7 +279,7 @@ export function RegistrationFormV3({
         return (
           <div key={f.key}>
             <label
-              htmlFor={`v3-${f.key}`}
+              htmlFor={`${idPrefix}-${f.key}`}
               className="v3-mono mb-1.5 block"
               style={{
                 fontSize: 11.5,
@@ -266,7 +292,7 @@ export function RegistrationFormV3({
             </label>
             <div className="relative">
               <input
-                id={`v3-${f.key}`}
+                id={`${idPrefix}-${f.key}`}
                 ref={f.key === "email" ? firstFieldRef : undefined}
                 name={f.key}
                 type={f.type}
@@ -287,9 +313,9 @@ export function RegistrationFormV3({
                 aria-invalid={state.status === "invalid"}
                 aria-describedby={
                   state.message
-                    ? `v3-${f.key}-msg`
+                    ? `${idPrefix}-${f.key}-msg`
                     : f.hint
-                      ? `v3-${f.key}-hint`
+                      ? `${idPrefix}-${f.key}-hint`
                       : undefined
                 }
                 onBlur={(e) => setField(f.key, e.currentTarget.value)}
@@ -315,7 +341,7 @@ export function RegistrationFormV3({
             </div>
             {state.status === "invalid" && state.message ? (
               <p
-                id={`v3-${f.key}-msg`}
+                id={`${idPrefix}-${f.key}-msg`}
                 className="mt-1.5"
                 style={{ fontSize: 13, color: "var(--v3-danger)" }}
               >
@@ -323,7 +349,7 @@ export function RegistrationFormV3({
               </p>
             ) : f.hint ? (
               <p
-                id={`v3-${f.key}-hint`}
+                id={`${idPrefix}-${f.key}-hint`}
                 className="mt-1.5"
                 style={{ fontSize: 12, color: "var(--v3-faint)" }}
               >
@@ -336,7 +362,7 @@ export function RegistrationFormV3({
 
       <div className="flex items-start gap-2.5">
         <input
-          id="v3-marketing-consent"
+          id={`${idPrefix}-marketing-consent`}
           name="marketingConsent"
           type="checkbox"
           value="yes"
@@ -344,7 +370,7 @@ export function RegistrationFormV3({
           className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--v3-accent)] disabled:cursor-not-allowed disabled:opacity-70"
         />
         <label
-          htmlFor="v3-marketing-consent"
+          htmlFor={`${idPrefix}-marketing-consent`}
           style={{ fontSize: 12, color: "var(--v3-faint)" }}
         >
           Email me helpful follow-up tips. Optional. Unsubscribe anytime.
@@ -357,7 +383,7 @@ export function RegistrationFormV3({
         <a className="underline underline-offset-2" href="/privacy">Privacy Policy</a>.
       </p>
 
-      {previewState ? (
+      {previewState || disabledPreview ? (
         <div
           className="flex min-h-[65px] items-center rounded-sm border border-[var(--v3-line)] px-4"
           role="group"
@@ -395,7 +421,7 @@ export function RegistrationFormV3({
           style={{ background: "color-mix(in srgb, var(--v3-accent) 8%, transparent)" }}
         >
           <p className="font-semibold" style={{ fontSize: 14, color: "var(--v3-ink)" }}>
-            Sending your private training link.
+            {source === "vance-live-webinar" ? "Saving your seat and joining details." : "Sending your private training link."}
           </p>
           <p className="mt-1" style={{ fontSize: 13, color: "var(--v3-mut)" }}>
             Please wait. Keep this page open.
@@ -405,7 +431,7 @@ export function RegistrationFormV3({
 
       <button
         type="submit"
-        disabled={status === "loading"}
+        disabled={status === "loading" || disabledPreview || Boolean(previewState)}
         className="v3-btn v3-btn-primary v3-clip mt-1 w-full disabled:opacity-60"
         style={{ paddingLeft: 12 }}
       >

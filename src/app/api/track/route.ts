@@ -10,6 +10,7 @@ import {
 } from "@/lib/events";
 import type { Segment } from "@/lib/segments";
 import { consumePublicRateLimit, readLimitedJson } from "@/lib/public-api";
+import { hasLiveContext } from "@/lib/live-webinar-types";
 
 const SEGMENT_EVENT: Partial<Record<string, Segment>> = {
   [EVENTS.roomOpened]: "low_watch",
@@ -76,6 +77,11 @@ export async function POST(request: Request) {
   if (!props || typeof props !== "object" || Array.isArray(props)) {
     return NextResponse.json({ error: "Invalid event properties." }, { status: 400 });
   }
+  // Live participation is acknowledged and verified against a session cookie.
+  // Generic page analytics can be kept, but never enroll a live visit into an evergreen sequence.
+  if (hasLiveContext(props) && event !== EVENTS.pageViewed && event !== EVENTS.funnelError && event !== EVENTS.ctaClicked) {
+    return NextResponse.json({ ok: false, error: "Use session activity tracking." }, { status: 400 });
+  }
   const visitorId = props.visitorId;
   if (typeof visitorId !== "string" || visitorId.length < 8 || visitorId.length > 160) {
     return NextResponse.json({ error: "Invalid visitor identity." }, { status: 400 });
@@ -98,7 +104,7 @@ export async function POST(request: Request) {
       props: { ...props, eventVersion: EVENT_SCHEMA_VERSION },
       clientEventId: body.clientEventId,
     });
-    const segment = SEGMENT_EVENT[event];
+    const segment = hasLiveContext(props) ? undefined : SEGMENT_EVENT[event];
     if (segment && email) await routeBySegment(email, segment);
     return NextResponse.json({ ok: true });
   } catch (err) {

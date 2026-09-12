@@ -17,6 +17,8 @@ export async function GET(request: Request) {
   const [page, summary] = await Promise.all([
     listActivity({
       search: get("search"),
+      funnel: get("funnel"),
+      sessionId: get("sessionId"),
       category: get("category"),
       important: sp.get("important") === "1",
       owner: get("owner"),

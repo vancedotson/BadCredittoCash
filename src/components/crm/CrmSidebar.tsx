@@ -7,6 +7,7 @@ import {
   PersonIcon,
   DollarIcon,
   CheckIcon,
+  PlayIcon,
 } from "@/components/marketing-v2/Icons";
 
 const NAV = [
@@ -14,6 +15,7 @@ const NAV = [
   { href: "/crm/contacts", label: "Contacts", Icon: PersonIcon },
   { href: "/crm/pipeline", label: "Pipeline", Icon: DollarIcon },
   { href: "/crm/tasks", label: "Tasks", Icon: CheckIcon },
+  { href: "/crm/webinars", label: "Live webinars", Icon: PlayIcon },
 ];
 
 function useIsActive() {

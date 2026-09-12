@@ -4,6 +4,7 @@ import { STAGE_LABELS } from "@/lib/stages";
 import { PageTitle } from "@/components/crm/ui";
 import { ContactsToolbar } from "@/components/crm/ContactsToolbar";
 import { ContactsTable } from "@/components/crm/ContactsTable";
+import { getLiveWebinarSessions } from "@/lib/live-webinars";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +21,19 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const filter: ContactFilter = {
     search: str(sp.q), stage: str(sp.stage), segment: str(sp.segment), source: str(sp.source),
     owner: str(sp.owner), tag: str(sp.tag), view: str(sp.view) ?? defaultView,
+    funnel: sp.funnel === "live" || sp.funnel === "evergreen" ? sp.funnel : undefined, sessionId: str(sp.sessionId),
     sort: (str(sp.sort) as ContactSort) ?? "recent", dir: (str(sp.dir) as "asc" | "desc") ?? "desc",
     page, pageSize,
   };
 
-  const [contactData, owners, tags] = await Promise.all([
-    getContactsPageData(filter), listOwners(), listTags(),
+  const [contactData, owners, tags, sessions] = await Promise.all([
+    getContactsPageData(filter), listOwners(), listTags(), getLiveWebinarSessions(),
   ]);
   const { rows, total, summary, matchingIds: allIds, sources } = contactData;
 
   const filterParams = () => {
     const p = new URLSearchParams();
-    for (const k of ["q", "stage", "segment", "source", "owner", "tag", "view", "sort", "dir", "pageSize"]) {
+    for (const k of ["q", "stage", "segment", "source", "owner", "tag", "funnel", "sessionId", "view", "sort", "dir", "pageSize"]) {
       const v = str(sp[k]); if (v) p.set(k, v);
     }
     return p;
@@ -50,7 +52,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         <a href={exportAllHref} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body transition-colors hover:bg-cloud">Export all CSV</a>
       </div>
 
-      <ContactsToolbar owners={owners} tags={tags} sources={sources} />
+      <ContactsToolbar owners={owners} tags={tags} sources={sources} sessions={sessions} />
 
       {/* Filtered mini-stats */}
       <div className="grid grid-cols-3 gap-2 rounded-xl border border-mist bg-cloud p-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2 sm:px-4 sm:py-2.5">

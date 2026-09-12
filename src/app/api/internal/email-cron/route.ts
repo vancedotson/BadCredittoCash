@@ -2,7 +2,8 @@ import { timingSafeEqual } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { processDueEmails } from "@/lib/email";
+import { processEmailBacklog } from "@/lib/email";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { reconcileGoogleCalendarBookings } from "@/lib/google-calendar";
 import { syncCrmNotifications } from "@/lib/store";
 import { cleanupAnonymousAnalytics } from "@/lib/analytics-retention";
@@ -24,12 +25,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [emailResult, calendarResult, notificationResult, retentionResult, digestResult] = await Promise.allSettled([
-      processDueEmails(10),
+    const [emailResult, calendarResult, notificationResult, retentionResult, digestResult, liveResult] = await Promise.allSettled([
+      processEmailBacklog(),
       reconcileGoogleCalendarBookings(25),
       syncCrmNotifications(),
       cleanupAnonymousAnalytics(500),
       sendDailyOverdueDigest(),
+      (async () => {
+        if (process.env.LIVE_WEBINAR_ENABLED !== "true") return { enabled: false };
+        const { data, error } = await createAdminClient().rpc("sync_live_webinar_messages_v1", { p_limit: 500 });
+        if (error) throw new Error("Live webinar scheduling failed.");
+        return { enabled: true, ...(data as Record<string, unknown>) };
+      })(),
     ]);
     const email = emailResult.status === "fulfilled"
       ? emailResult.value
@@ -47,12 +54,14 @@ export async function POST(request: Request) {
       ? digestResult.value
       : { error: digestResult.reason instanceof Error ? digestResult.reason.message : "unknown_error" };
     const ok = emailResult.status === "fulfilled"
+      && liveResult.status === "fulfilled"
       && calendarResult.status === "fulfilled"
       && notificationResult.status === "fulfilled"
       && retentionResult.status === "fulfilled"
       && digestResult.status === "fulfilled";
-    console.log("[maintenance-cron] completed", { ok, email, calendar, notifications, retention, digest });
-    return NextResponse.json({ ok, email, calendar, notifications, retention, digest });
+    const live = liveResult.status === "fulfilled" ? liveResult.value : { error: "Live webinar scheduling failed." };
+    console.log("[maintenance-cron] completed", { ok, email, calendar, notifications, retention, digest, live });
+    return NextResponse.json({ ok, email, calendar, notifications, retention, digest, live });
   } catch (error) {
     console.error("[maintenance-cron] failed", {
       error: error instanceof Error ? error.message : "unknown_error",

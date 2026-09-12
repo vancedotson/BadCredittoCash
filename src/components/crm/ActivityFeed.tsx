@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ActivityItem, ActivitySummary } from "@/lib/store";
 import { displayEvent, EVENT_CATEGORIES, CATEGORY_LABELS } from "@/lib/event-display";
+import { activityGroupKey, eventDetail, eventSessionLabel } from "@/lib/event-detail";
+import { csvCell } from "@/lib/csv-cell";
 import { EventGlyph, toneClass } from "./ui";
 
 const DAY = 86400000;
@@ -27,17 +29,6 @@ function relTime(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 function absTime(iso: string) { return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
-function detailOf(e: ActivityItem): string {
-  const p = e.props ?? {};
-  const s = (v: unknown) => (typeof v === "string" ? v : "");
-  if (e.event === "quiz_completed") return [s(p.concern), s(p.tried), s(p.urgency)].filter(Boolean).join(" · ");
-  if (e.event === "goal_replied" && p.goal) return `"${s(p.goal)}"`;
-  if (e.event === "call_booked" && p.preferredTime) return `Preferred: ${s(p.preferredTime)}`;
-  if (e.event === "email_queued" && p.sequence) return `Sequence: ${s(p.sequence)}`;
-  if (e.event === "webinar_registered" && p.source) return `Source: ${s(p.source)}`;
-  return "";
-}
-function csvEscape(v: unknown) { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 
 type ActivityCluster = { key: string; eventKey: string; items: ActivityItem[] };
 
@@ -49,9 +40,7 @@ function clusterRows(rows: ActivityItem[]): ActivityCluster[] {
   const clusters = new Map<string, ActivityCluster>();
   for (const item of rows) {
     const eventKey = eventGroupKey(item.event);
-    const contactKey = item.contactId ?? item.email ?? "anonymous";
-    const dayKey = item.createdAt.slice(0, 10);
-    const key = `${contactKey}:${dayKey}:${eventKey}`;
+    const key = activityGroupKey(item);
     const cluster = clusters.get(key) ?? { key, eventKey, items: [] };
     cluster.items.push(item);
     clusters.set(key, cluster);
@@ -59,11 +48,13 @@ function clusterRows(rows: ActivityItem[]): ActivityCluster[] {
   return [...clusters.values()];
 }
 
-export function ActivityFeed({ owners }: { owners: string[] }) {
+export function ActivityFeed({ owners, sessions = [] }: { owners: string[]; sessions?: Array<{ id: string; title: string; startsAt: string }> }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [important, setImportant] = useState(false);
   const [owner, setOwner] = useState("");
+  const [funnel, setFunnel] = useState("");
+  const [sessionId, setSessionId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [group, setGroup] = useState<"date" | "contact">("date");
@@ -79,8 +70,8 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       try {
-        const saved = JSON.parse(localStorage.getItem("crm-activity-filters") ?? "null") as { category?: string; important?: boolean; owner?: string; group?: "date" | "contact" } | null;
-        if (saved) { setCategory(saved.category ?? ""); setImportant(Boolean(saved.important)); setOwner(saved.owner ?? ""); if (saved.group) setGroup(saved.group); }
+        const saved = JSON.parse(localStorage.getItem("crm-activity-filters") ?? "null") as { category?: string; important?: boolean; owner?: string; funnel?: string; sessionId?: string; group?: "date" | "contact" } | null;
+        if (saved) { setCategory(saved.category ?? ""); setImportant(Boolean(saved.important)); setOwner(saved.owner ?? ""); setFunnel(saved.funnel ?? ""); setSessionId(saved.sessionId ?? ""); if (saved.group) setGroup(saved.group); }
       } catch { /* ignore invalid saved filters */ }
       setFiltersReady(true);
     });
@@ -89,8 +80,8 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
 
   useEffect(() => {
     if (!filtersReady) return;
-    localStorage.setItem("crm-activity-filters", JSON.stringify({ category, important, owner, group }));
-  }, [filtersReady, category, important, owner, group]);
+    localStorage.setItem("crm-activity-filters", JSON.stringify({ category, important, owner, funnel, sessionId, group }));
+  }, [filtersReady, category, important, owner, funnel, sessionId, group]);
 
   const PAGE = 40;
   async function fetchActivity(offset: number) {
@@ -104,6 +95,8 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
     if (category) p.set("category", category);
     if (important) p.set("important", "1");
     if (owner) p.set("owner", owner);
+    if (funnel) p.set("funnel", funnel);
+    if (sessionId) p.set("sessionId", sessionId);
     if (from) p.set("from", from);
     if (to) p.set("to", to);
     p.set("limit", String(PAGE));
@@ -127,7 +120,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
     }, 200);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, important, owner, from, to]);
+  }, [search, category, important, owner, funnel, sessionId, from, to]);
 
   // live poll
   useEffect(() => {
@@ -138,7 +131,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
     }, 8000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, search, category, important, owner, from, to]);
+  }, [live, search, category, important, owner, funnel, sessionId, from, to]);
 
   async function loadMore() {
     const res = await fetch(`/api/crm/activity?${qs(items.length)}`).then((r) => r.json());
@@ -156,11 +149,11 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
       setLoading(false);
     }
   }
-  function resetFilters() { setSearch(""); setCategory(""); setImportant(false); setOwner(""); setFrom(""); setTo(""); }
+  function resetFilters() { setSearch(""); setCategory(""); setImportant(false); setOwner(""); setFunnel(""); setSessionId(""); setFrom(""); setTo(""); }
   async function exportCsv() {
     const res = await fetch(`/api/crm/activity?${qs(0).replace(/limit=\d+/, "limit=100000")}`).then((r) => r.json());
-    const rows = (res.items as ActivityItem[]).map((e) => [absTime(e.createdAt), e.contactName ?? "", e.email ?? "", displayEvent(e.event).label, displayEvent(e.event).category].map(csvEscape).join(","));
-    const csv = ["Time,Contact,Email,Event,Category", ...rows].join("\n");
+    const rows = (res.items as ActivityItem[]).map((e) => [absTime(e.createdAt), e.contactName ?? "", e.email ?? "", displayEvent(e.event).label, displayEvent(e.event).category, eventSessionLabel(e), eventDetail(e)].map(csvCell).join(","));
+    const csv = ["Time,Contact,Email,Event,Category,Session,Detail", ...rows].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a"); a.href = url; a.download = "vance-activity.csv"; a.click(); URL.revokeObjectURL(url);
   }
@@ -188,6 +181,8 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
       <div className="flex flex-wrap items-center gap-2">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search contact or event…" aria-label="Search activity" className={`${inputClass} min-w-[180px] flex-1`} />
         <select value={owner} onChange={(e) => setOwner(e.target.value)} className={inputClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+        <select value={funnel} onChange={(e) => { setFunnel(e.target.value); if (e.target.value === "evergreen") setSessionId(""); }} className={inputClass} aria-label="Funnel"><option value="">All funnels</option><option value="evergreen">Evergreen</option><option value="live">Live webinar</option></select>
+        <select value={sessionId} onChange={(e) => { setSessionId(e.target.value); if (e.target.value) setFunnel("live"); }} className={`${inputClass} max-w-full sm:max-w-64`} aria-label="Session"><option value="">All sessions</option>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {new Date(session.startsAt).toLocaleDateString("en-US")}</option>)}</select>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputClass} aria-label="From" />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputClass} aria-label="To" />
         <div className="flex rounded-lg border border-mist bg-card p-0.5 text-sm">
@@ -207,7 +202,7 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
 
       {/* Feed */}
       <div className="rounded-2xl border border-mist bg-card p-5">
-        <p className="mb-4 text-xs text-slate">Repeated activity from the same contact on the same day is grouped.</p>
+        <p className="mb-4 text-xs text-slate">Repeated activity is grouped by contact, day, and webinar session.</p>
         {loading && items.length === 0 ? (
           <p role="status" className="py-6 text-center text-sm text-slate">Loading activity…</p>
         ) : error ? (
@@ -226,7 +221,8 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
                   {clusterRows(rows).map((cluster) => {
                     const e = cluster.items[0];
                     const d = displayEvent(e.event);
-                    const det = detailOf(e);
+                    const det = eventDetail(e);
+                    const sessionLabel = eventSessionLabel(e);
                     const open = expanded.has(cluster.key);
                     const repeated = cluster.items.length > 1;
                     const label = cluster.eventKey === "webinar_watch_progress" ? "Training watch progress" : d.label;
@@ -239,16 +235,17 @@ export function ActivityFeed({ owners }: { owners: string[] }) {
                             {e.contactId ? <> · <Link href={`/crm/contacts/${e.contactId}`} className="text-trust underline underline-offset-2">{e.contactName}</Link></> : e.email ? <span className="text-slate"> · {e.email}</span> : <span className="text-slate"> · anonymous</span>}
                           </span>
                           {repeated ? <span className="shrink-0 rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{cluster.items.length} {cluster.eventKey === "webinar_watch_progress" ? "milestones" : "times"}</span> : null}
-                          {det || repeated ? <button type="button" onClick={() => toggle(cluster.key)} aria-expanded={open} className="shrink-0 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
+                          {det || repeated || sessionLabel ? <button type="button" onClick={() => toggle(cluster.key)} aria-expanded={open} className="shrink-0 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
                           <span className="shrink-0 text-xs text-slate" title={absTime(e.createdAt)}>{relTime(e.createdAt)}</span>
                         </div>
                         {open ? (
-                          <div className="mb-1 ml-12 text-xs text-slate">
+                          <div className="mb-1 ml-12 break-words text-xs text-slate">
+                            {sessionLabel ? <p className="mb-2">{sessionLabel}</p> : null}
                             {repeated ? (
                               <ul className="space-y-1">
-                                {cluster.items.map((item) => <li key={item.id}>{displayEvent(item.event).label} · {absTime(item.createdAt)}</li>)}
+                                {cluster.items.map((item) => <li key={item.id} className="rounded-lg border border-mist bg-cloud p-2"><div>{displayEvent(item.event).label} · {absTime(item.createdAt)}</div>{eventDetail(item) ? <p className="mt-1 whitespace-pre-wrap text-sm text-body">{eventDetail(item)}</p> : null}</li>)}
                               </ul>
-                            ) : det}
+                            ) : <p className="whitespace-pre-wrap text-sm text-body">{det}</p>}
                           </div>
                         ) : null}
                       </li>

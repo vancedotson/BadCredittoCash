@@ -8,6 +8,7 @@ import { ArrowRightIcon } from "@/components/marketing-v2/Icons";
 import { buildDays, slotLabelOf, slotStart, type Day } from "./slots";
 import { SlotPicker } from "./SlotPicker";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
+import { trackLiveEvent } from "@/lib/live-tracking";
 
 /**
  * Two-step strategy-call booking card, shared by /webinar/call and /book so both
@@ -44,7 +45,22 @@ const QUESTIONS: Array<{ id: string; label: string; type: "radio" | "select"; op
 ];
 const EMPTY_ANSWERS: Record<string, string> = Object.fromEntries(QUESTIONS.map((q) => [q.id, ""]));
 
-export function BookingWizard() {
+export function BookingWizard({
+  redirectTo = "/webinar/booked",
+  funnel,
+  sessionId,
+  disabledPreview = false,
+}: {
+  /**
+   * Where to route after a successful booking. Defaults to the evergreen
+   * funnel's booked page so /webinar/call and /book are unchanged; the live
+   * funnel passes "/live/booked".
+   */
+  redirectTo?: string;
+  funnel?: "live";
+  sessionId?: string;
+  disabledPreview?: boolean;
+} = {}) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [values, setValues] = useState({ name: "", email: "", phone: "" });
@@ -53,7 +69,7 @@ export function BookingWizard() {
   const [time, setTime] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>(EMPTY_ANSWERS);
   const [timezoneLabel, setTimezoneLabel] = useState("");
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(disabledPreview);
   const [contactErrors, setContactErrors] = useState<{ email?: string; name?: string }>({});
   const [unavailableStarts, setUnavailableStarts] = useState<Set<string>>(new Set());
   const [busyIntervals, setBusyIntervals] = useState<Array<{ start: string; end: string }>>([]);
@@ -131,6 +147,11 @@ export function BookingWizard() {
         );
         return;
       }
+      if (disabledPreview || new URLSearchParams(window.location.search).get("preview") === "1") {
+        setPreviewMode(true);
+        setAvailability("ready");
+        return;
+      }
       fetch("/api/book")
         .then((response) => response.ok ? response.json() : Promise.reject())
         .then((payload: { startsAt?: string[]; busy?: Array<{ start: string; end: string }> }) => {
@@ -145,12 +166,16 @@ export function BookingWizard() {
       if (lead) setValues((v) => ({ ...v, email: lead.email, name: lead.name ?? "" }));
     });
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [disabledPreview]);
 
   function markStarted() {
     if (startedRef.current) return;
     startedRef.current = true;
-    if (previewMode) return;
+    if (previewMode || disabledPreview) return;
+    if (funnel === "live") {
+      if (sessionId) void trackLiveEvent("call_booking_started", sessionId);
+      return;
+    }
     track(EVENTS.bookingStarted, {}, getRememberedLead()?.email || values.email || undefined);
   }
   function set(key: keyof typeof values, val: string) {
@@ -192,6 +217,7 @@ export function BookingWizard() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (previewMode || disabledPreview || status === "loading") return;
     if (availability !== "ready") {
       track(EVENTS.funnelError, { action: "booking", reason: `availability_${availability}` }, values.email || undefined);
       setStatus("error");
@@ -220,11 +246,6 @@ export function BookingWizard() {
       setError("Please complete the security check.");
       return;
     }
-    if (previewMode) {
-      setStatus("error");
-      setError("This preview cannot create a booking. Use Back to enter your details.");
-      return;
-    }
     setStatus("loading");
     setError(null);
     const name = values.name.trim();
@@ -243,6 +264,7 @@ export function BookingWizard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
+          ...(funnel === "live" ? { funnel, ...(sessionId ? { sessionId } : {}) } : {}),
           name,
           email,
           preferredTime: slotLabel,
@@ -263,12 +285,15 @@ export function BookingWizard() {
         booking?: { id: string; startsAt: string; endsAt: string; timezone: string };
       };
       if (result.booking) {
-        sessionStorage.setItem("vance:last-booking", JSON.stringify({
-          ...result.booking,
-          name,
-        }));
+        try {
+          sessionStorage.setItem(funnel === "live" ? `vance:live-booking:${sessionId ?? "direct"}` : "vance:last-booking", JSON.stringify({
+            ...result.booking, name, ...(funnel === "live" ? { sessionId, funnel } : {}),
+          }));
+        } catch { /* Booking succeeded even when browser storage is unavailable. */ }
       }
-      router.push("/webinar/booked");
+      const destination = new URL(redirectTo, window.location.origin);
+      if (funnel === "live" && sessionId) destination.searchParams.set("session", sessionId);
+      router.push(`${destination.pathname}${destination.search}${destination.hash}`);
     } catch (err) {
       track(EVENTS.funnelError, { action: "booking", reason: "request_failed" }, email);
       setStatus("error");
@@ -470,7 +495,7 @@ export function BookingWizard() {
             </p>
           ) : previewMode ? (
             <p id="booking-preview-note" role="status" style={{ fontSize: 13.5, color: "var(--v3-mut)", lineHeight: 1.5 }}>
-              Preview only. Use Back to enter your details and make a real booking.
+              {funnel === "live" || disabledPreview ? "Preview only. No appointment will be created." : "Preview only. Use Back to enter your details and make a real booking."}
             </p>
           ) : (
             <div>
