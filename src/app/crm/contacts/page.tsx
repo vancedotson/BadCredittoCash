@@ -1,81 +1,66 @@
 import Link from "next/link";
-import { getContactsPageData, listOwners, listTags, getSettings, type ContactFilter, type ContactSort } from "@/lib/store";
+import { redirect } from "next/navigation";
+import { getContactsPageData, listOwners, listTags, getSettings } from "@/lib/store";
+import { requireCrmUser } from "@/lib/auth";
 import { STAGE_LABELS } from "@/lib/stages";
-import { PageTitle } from "@/components/crm/ui";
-import { ContactsToolbar } from "@/components/crm/ContactsToolbar";
+import { contactExportHref, contactPageHref, resolveContactsQuery } from "@/lib/contacts-display";
+import { ContactsToolbar, ContactsPageSize } from "@/components/crm/ContactsToolbar";
+import { ContactsActions } from "@/components/crm/ContactsActions";
 import { ContactsTable } from "@/components/crm/ContactsTable";
 import { getLiveWebinarSessions } from "@/lib/live-webinars";
 
 export const dynamic = "force-dynamic";
 
-function str(v: string | string[] | undefined): string | undefined {
-  return typeof v === "string" && v.length ? v : undefined;
-}
-
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const sp = await searchParams;
-  const { prefs } = await getSettings();
-  const page = Number(str(sp.page)) || 1;
-  const pageSize = Number(str(sp.pageSize)) || prefs.defaultContactsPageSize;
-  const defaultView = prefs.defaultContactsView !== "all" ? prefs.defaultContactsView : undefined;
-  const filter: ContactFilter = {
-    search: str(sp.q), stage: str(sp.stage), segment: str(sp.segment), source: str(sp.source),
-    owner: str(sp.owner), tag: str(sp.tag), view: str(sp.view) ?? defaultView,
-    funnel: sp.funnel === "live" || sp.funnel === "evergreen" ? sp.funnel : undefined, sessionId: str(sp.sessionId),
-    sort: (str(sp.sort) as ContactSort) ?? "recent", dir: (str(sp.dir) as "asc" | "desc") ?? "desc",
-    page, pageSize,
-  };
-
+  const [sp, { prefs }, user] = await Promise.all([searchParams, getSettings(), requireCrmUser()]);
+  const { query, filter } = resolveContactsQuery(sp, { view: prefs.defaultContactsView, pageSize: prefs.defaultContactsPageSize });
   const [contactData, owners, tags, sessions] = await Promise.all([
     getContactsPageData(filter), listOwners(), listTags(), getLiveWebinarSessions(),
   ]);
-  const { rows, total, summary, matchingIds: allIds, sources } = contactData;
-
-  const filterParams = () => {
-    const p = new URLSearchParams();
-    for (const k of ["q", "stage", "segment", "source", "owner", "tag", "funnel", "sessionId", "view", "sort", "dir", "pageSize"]) {
-      const v = str(sp[k]); if (v) p.set(k, v);
-    }
-    return p;
-  };
-  const pageHref = (n: number) => { const p = filterParams(); p.set("page", String(n)); return `/crm/contacts?${p.toString()}`; };
-  const exportAllHref = `/api/crm/export?${filterParams().toString()}`;
-
+  const { rows, total, summary, matchingIds: allIds, sources, page, pageSize } = contactData;
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  if (page > lastPage) redirect(contactPageHref(query, lastPage));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
-  const topStages = summary.byStage.filter((s) => s.count > 0).slice(0, 5);
+  const canWrite = user.crmRole !== "readonly";
+  const canAdmin = user.crmRole === "admin";
+  const pageButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-heading transition-colors hover:bg-cloud focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-trust";
 
-  return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <PageTitle title="Contacts" subtitle={`${total} contact${total === 1 ? "" : "s"}`} />
-        <a href={exportAllHref} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body transition-colors hover:bg-cloud">Export all CSV</a>
+  return <div data-testid="contacts-workspace" className="min-w-0 space-y-5">
+    <header>
+      <p className="mb-3 flex items-center gap-2 text-xs text-slate"><span>CRM</span><span aria-hidden="true">/</span><span>Contacts</span></p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-bold tracking-tight text-heading sm:text-4xl">Contacts</h1><span className="rounded-full border border-mist bg-card px-3 py-1 text-xs font-medium tabular-nums text-slate">{total} contact{total === 1 ? "" : "s"}</span></div><p className="mt-2 text-sm text-slate">Find the right people. Keep the next step in sight.</p></div>
+        <ContactsActions owners={owners} canWrite={canWrite} canAdmin={canAdmin} exportHref={contactExportHref(query)} />
+        {!canWrite ? <span className="rounded-full border border-mist bg-card px-3 py-1.5 text-xs text-slate">Read-only access</span> : null}
       </div>
+    </header>
 
-      <ContactsToolbar owners={owners} tags={tags} sources={sources} sessions={sessions} />
-
-      {/* Filtered mini-stats */}
-      <div className="grid grid-cols-3 gap-2 rounded-xl border border-mist bg-cloud p-3 sm:flex sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-2 sm:px-4 sm:py-2.5">
-        <span className="text-center text-body sm:text-left"><span className="block text-lg font-semibold tabular-nums sm:inline sm:text-sm">{summary.total}</span> <span className="block text-xs text-slate sm:inline sm:text-sm">matching</span></span>
-        <span className="text-center text-body sm:text-left"><span className="block text-lg font-semibold tabular-nums sm:inline sm:text-sm">{summary.booked}</span> <span className="block text-xs text-slate sm:inline sm:text-sm">booked</span></span>
-        <span className="text-center text-body sm:text-left"><span className="block text-lg font-semibold tabular-nums sm:inline sm:text-sm">{summary.avgWatchPct}%</span> <span className="block text-xs text-slate sm:inline sm:text-sm">avg watch</span></span>
-        <details className="col-span-3 text-sm text-slate sm:hidden">
-          <summary className="cursor-pointer text-center font-medium text-trust">View stage breakdown</summary>
-          <span className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">{topStages.map((s) => <span key={s.stage}>{STAGE_LABELS[s.stage]}: <span className="tabular-nums text-body">{s.count}</span></span>)}</span>
-        </details>
-        <span className="hidden flex-wrap gap-x-3 text-sm text-slate sm:flex">{topStages.map((s) => <span key={s.stage}>{STAGE_LABELS[s.stage]}: <span className="tabular-nums text-body">{s.count}</span></span>)}</span>
-      </div>
-
-      <ContactsTable rows={rows} allIds={allIds} owners={owners} tags={tags} total={total} />
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-slate">
-        <span>{from}–{to} of {total}</span>
-        <div className="flex gap-2">
-          <Link href={page > 1 ? pageHref(page - 1) : "#"} aria-disabled={page <= 1} className={`rounded-lg border border-mist px-3 py-1.5 ${page > 1 ? "text-body hover:bg-cloud" : "pointer-events-none opacity-40"}`}>Prev</Link>
-          <Link href={to < total ? pageHref(page + 1) : "#"} aria-disabled={to >= total} className={`rounded-lg border border-mist px-3 py-1.5 ${to < total ? "text-body hover:bg-cloud" : "pointer-events-none opacity-40"}`}>Next</Link>
+    <section aria-label="Contact directory" className="min-w-0 rounded-2xl border border-mist bg-card shadow-[0_2px_5px_rgba(15,44,76,0.025)]">
+      <ContactsToolbar query={query} owners={owners} tags={tags} sources={sources} sessions={sessions} />
+      <div className="border-y border-mist bg-cloud/50 px-4 py-3 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate sm:text-sm">
+            <span><strong className="font-semibold tabular-nums text-heading">{summary.total}</strong> matching</span>
+            <span><strong className="font-semibold tabular-nums text-heading">{summary.booked}</strong> booked</span>
+            <span><strong className="font-semibold tabular-nums text-heading">{summary.avgWatchPct}%</strong> average evergreen watch</span>
+          </div>
+          <span className="text-[11px] text-slate">Across all matching contacts</span>
         </div>
+        <details className="mt-2 text-xs text-slate">
+          <summary className="w-fit cursor-pointer rounded py-1 underline decoration-mist underline-offset-4 hover:text-heading focus-visible:outline-2 focus-visible:outline-trust">Stage breakdown &amp; metric definitions</summary>
+          <div className="mt-2 flex flex-wrap gap-2">{summary.byStage.map((item) => <span key={item.stage} className="rounded-md border border-mist bg-card px-2.5 py-1.5">{STAGE_LABELS[item.stage]} <strong className="ml-1 font-semibold tabular-nums text-heading">{item.count}</strong></span>)}</div>
+          <p className="mt-3 max-w-4xl leading-relaxed">Booked counts contacts with a recorded booking, regardless of their pipeline stage. Watch progress comes from the evergreen webinar. Live webinar and session filters select contacts; they do not change these evergreen watch metrics. “This week” covers contacts added in the last seven days.</p>
+        </details>
       </div>
-    </div>
-  );
+      <ContactsTable key={query} query={query} rows={rows} allIds={allIds} owners={owners} tags={tags} total={total} canWrite={canWrite} canAdmin={canAdmin} />
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-mist px-4 py-4 sm:px-5">
+        <p className="text-sm tabular-nums text-slate"><span className="font-medium text-heading">{from}–{to}</span> of {total}</p>
+        <div className="flex flex-wrap items-center gap-3 sm:gap-5"><ContactsPageSize query={query} pageSize={pageSize} /><nav aria-label="Contacts pagination" className="flex gap-2">
+          {page > 1 ? <Link href={contactPageHref(query, page - 1)} className={pageButton}>‹ <span>Previous</span></Link> : <button type="button" disabled className={`${pageButton} cursor-default opacity-40`}>‹ <span>Previous</span></button>}
+          {page < lastPage ? <Link href={contactPageHref(query, page + 1)} className={pageButton}><span>Next</span> ›</Link> : <button type="button" disabled className={`${pageButton} cursor-default opacity-40`}><span>Next</span> ›</button>}
+        </nav></div>
+      </footer>
+    </section>
+  </div>;
 }

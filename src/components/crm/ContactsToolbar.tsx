@@ -1,287 +1,140 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { STAGES_IN_ORDER, STAGE_LABELS, type Stage } from "@/lib/stages";
-import { SEGMENTS_IN_ORDER, SEGMENT_LABELS } from "@/lib/segments";
+import { SEGMENTS_IN_ORDER, SEGMENT_LABELS, type Segment } from "@/lib/segments";
+import { CONTACT_VIEWS, readContactViews, type SavedContactView } from "@/lib/contacts-display";
 
-const inputClass = "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
-const filterClass = `${inputClass} min-h-10 w-full sm:w-auto`;
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-trust";
+const button = `inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-mist bg-card px-4 py-2 text-sm font-medium text-heading transition-colors hover:bg-cloud disabled:opacity-50 ${focus}`;
+const field = "min-h-11 w-full min-w-0 rounded-lg border border-mist bg-card px-3 py-2 text-base text-body outline-none focus:border-trust focus:ring-2 focus:ring-trust/15 disabled:opacity-50 sm:text-sm";
+const subscribe = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 
-const VIEWS: Array<{ key: string; label: string }> = [
-  { key: "", label: "All" },
-  { key: "hot", label: "Hot leads" },
-  { key: "nofollow", label: "No follow-up" },
-  { key: "booked", label: "Booked" },
-  { key: "clients", label: "Clients" },
-  { key: "week", label: "This week" },
-];
-
-async function api(url: string, method: string, body: unknown) {
-  const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Request failed");
-  return data;
+function ToolbarIcon({ kind }: { kind: "search" | "filter" | "bookmark" | "close" }) {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{kind === "search" ? <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></> : kind === "filter" ? <><path d="M4 6h16M7 12h10M10 18h4" /><circle cx="8" cy="6" r="1.5" fill="currentColor" /><circle cx="15" cy="12" r="1.5" fill="currentColor" /></> : kind === "bookmark" ? <path d="M6 3h12v18l-6-4-6 4V3Z" /> : <path d="m6 6 12 12M6 18 18 6" />}</svg>;
 }
 
-type SavedView = { name: string; query: string };
-
-export function ContactsToolbar({ owners, tags, sources, sessions = [] }: { owners: string[]; tags: string[]; sources: string[]; sessions?: Array<{ id: string; title: string; startsAt: string }> }) {
+export function ContactsToolbar({ query, owners, tags, sources, sessions = [] }: { query: string; owners: string[]; tags: string[]; sources: string[]; sessions?: Array<{ id: string; title: string; startsAt: string; timezone?: string }> }) {
   const router = useRouter();
-  const sp = useSearchParams();
-  const [modal, setModal] = useState<"add" | "import" | null>(null);
-  const [viewsOpen, setViewsOpen] = useState(false);
+  const params = new URLSearchParams(query);
+  const [pending, startTransition] = useTransition();
+  const interactive = useSyncExternalStore(subscribe, clientReady, serverReady);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [saved, setSaved] = useState<SavedView[]>([]);
+  const [viewsOpen, setViewsOpen] = useState(false);
+  const [saved, setSaved] = useState<SavedContactView[]>([]);
   const [newViewName, setNewViewName] = useState("");
+  const [storageMessage, setStorageMessage] = useState("");
+  const viewsContainer = useRef<HTMLDivElement>(null);
+  const viewsTrigger = useRef<HTMLButtonElement>(null);
+  const viewNameInput = useRef<HTMLInputElement>(null);
+  const disabled = pending || !interactive;
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      try { setSaved(JSON.parse(localStorage.getItem("crm-contact-views") || "[]")); } catch { /* ignore */ }
-    });
-    return () => cancelAnimationFrame(raf);
+    const frame = requestAnimationFrame(() => { try { setSaved(readContactViews(localStorage.getItem("crm-contact-views"))); } catch { /* Storage may be unavailable. */ } });
+    return () => cancelAnimationFrame(frame);
   }, []);
-  function persist(next: SavedView[]) { setSaved(next); try { localStorage.setItem("crm-contact-views", JSON.stringify(next)); } catch { /* ignore */ } }
+  useEffect(() => {
+    if (!viewsOpen) return;
+    viewNameInput.current?.focus();
+    const pointer = (event: PointerEvent) => { if (!viewsContainer.current?.contains(event.target as Node)) setViewsOpen(false); };
+    const key = (event: KeyboardEvent) => { if (event.key === "Escape") { setViewsOpen(false); viewsTrigger.current?.focus(); } };
+    document.addEventListener("pointerdown", pointer); document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("pointerdown", pointer); document.removeEventListener("keydown", key); };
+  }, [viewsOpen]);
 
+  function navigate(next: URLSearchParams) {
+    if (disabled) return;
+    next.delete("page");
+    startTransition(() => router.push(`/crm/contacts?${next.toString()}`, { scroll: false }));
+  }
   function push(next: Record<string, string>) {
-    const params = new URLSearchParams(sp.toString());
-    for (const [k, v] of Object.entries(next)) { if (v) params.set(k, v); else params.delete(k); }
-    params.delete("page");
-    router.push(`/crm/contacts?${params.toString()}`);
+    const updated = new URLSearchParams(query);
+    for (const [key, value] of Object.entries(next)) { if (value) updated.set(key, value); else updated.delete(key); }
+    navigate(updated);
   }
+  function persist(next: SavedContactView[]) {
+    setSaved(next);
+    try { localStorage.setItem("crm-contact-views", JSON.stringify(next)); setStorageMessage("Saved on this browser."); }
+    catch { setStorageMessage("Browser storage is unavailable. This view is available until you leave this page."); }
+  }
+  function reset() {
+    const next = new URLSearchParams(query);
+    for (const key of ["q", "stage", "segment", "source", "owner", "tag", "funnel", "sessionId"]) next.delete(key);
+    next.set("view", "all"); navigate(next);
+  }
+  const value = (key: string) => params.get(key) ?? "";
+  const view = value("view") || "all";
+  const activeChips: { key: string; label: string }[] = [];
+  const addChip = (key: string, label: string, display = value(key)) => { if (value(key)) activeChips.push({ key, label: `${label}: ${display}` }); };
+  addChip("q", "Search"); addChip("stage", "Stage", STAGE_LABELS[value("stage") as Stage]);
+  addChip("segment", "Segment", SEGMENT_LABELS[value("segment") as Segment]);
+  addChip("source", "Source"); addChip("owner", "Owner", value("owner") === "__none__" ? "Unassigned" : value("owner")); addChip("tag", "Tag", `#${value("tag")}`);
+  addChip("funnel", "Funnel", value("funnel") === "live" ? "Live webinar" : "Evergreen");
+  addChip("sessionId", "Session", sessions.find((session) => session.id === value("sessionId"))?.title ?? value("sessionId"));
+  if (view !== "all") activeChips.push({ key: "view", label: `View: ${CONTACT_VIEWS.find((item) => item.key === view)?.label}` });
+  const filterCount = activeChips.filter((chip) => !["q", "view"].includes(chip.key)).length;
+  const extras = (key: string, options: string[]) => value(key) && !options.includes(value(key)) ? <option value={value(key)}>{value(key)}</option> : null;
 
-  const activeChips: Array<{ k: string; label: string }> = [];
-  const add = (k: string, label: string) => { const v = sp.get(k); if (v) activeChips.push({ k, label: `${label}: ${v}` }); };
-  add("q", "Search"); add("stage", "Stage"); add("segment", "Segment"); add("source", "Source"); add("owner", "Owner"); add("tag", "Tag");
-  add("funnel", "Funnel");
-  if (sp.get("sessionId")) activeChips.push({ k: "sessionId", label: `Session: ${sessions.find((session) => session.id === sp.get("sessionId"))?.title ?? sp.get("sessionId")}` });
-  const viewLabel = VIEWS.find((v) => v.key === sp.get("view"))?.label;
-  if (sp.get("view")) activeChips.push({ k: "view", label: `View: ${viewLabel}` });
-
-  return (
-    <div className="space-y-3">
-      {/* Line A: search + actions */}
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-        <form onSubmit={(e) => { e.preventDefault(); push({ q: String(new FormData(e.currentTarget).get("q") ?? "") }); }} className="col-span-2 min-w-[200px] flex-1">
-          <input name="q" defaultValue={sp.get("q") ?? ""} placeholder="Search name or email…" className={`${inputClass} w-full`} aria-label="Search" />
+  return <div aria-busy={pending}>
+    <div className="px-4 pt-4 sm:px-5 sm:pt-5">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+        <form onSubmit={(event) => { event.preventDefault(); push({ q: String(new FormData(event.currentTarget).get("q") ?? "").trim() }); }} className="relative col-span-2 flex min-w-0 flex-1 items-center">
+          <span className="pointer-events-none absolute left-3.5 text-slate"><ToolbarIcon kind="search" /></span>
+          <input key={value("q")} name="q" defaultValue={value("q")} placeholder="Search name or email…" aria-label="Search" disabled={disabled} className={`${field} bg-cloud/45 pr-12 pl-11`} />
+          <button type="submit" disabled={disabled} aria-label="Search contacts" className={`absolute right-1 flex h-9 w-9 items-center justify-center rounded-md text-slate hover:bg-mist/50 hover:text-heading disabled:opacity-50 ${focus}`}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 12h15m-5-5 5 5-5 5" /></svg></button>
         </form>
-        <div className="relative col-span-2 sm:col-span-1">
-          <button type="button" onClick={() => setViewsOpen((o) => !o)} className={`${inputClass} flex min-h-10 w-full items-center justify-center gap-1 sm:w-auto`}>Saved views ▾</button>
-          {viewsOpen ? (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setViewsOpen(false)} />
-              <div className="absolute right-0 z-20 mt-1 w-60 rounded-xl border border-mist bg-card p-2 shadow-card">
-                {saved.length === 0 ? <p className="px-2 py-1.5 text-xs text-slate">No saved views yet.</p> : saved.map((v) => (
-                  <div key={v.name} className="flex items-center justify-between gap-2">
-                    <button type="button" onClick={() => { router.push(`/crm/contacts?${v.query}`); setViewsOpen(false); }} className="flex-1 truncate rounded px-2 py-1.5 text-left text-sm text-body hover:bg-cloud">{v.name}</button>
-                    <button type="button" onClick={() => persist(saved.filter((s) => s.name !== v.name))} className="px-1 text-slate hover:text-red" aria-label="Delete view">×</button>
-                  </div>
-                ))}
-                <div className="mt-1 flex gap-1 border-t border-mist pt-2">
-                  <input value={newViewName} onChange={(e) => setNewViewName(e.target.value)} placeholder="Save current as…" className="min-w-0 flex-1 rounded-lg border border-mist px-2 py-1.5 text-sm outline-none focus:border-trust" />
-                  <button type="button" onClick={() => { const n = newViewName.trim(); if (n) { persist([...saved.filter((s) => s.name !== n), { name: n, query: sp.toString() }]); setNewViewName(""); } }} className="rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep">Save</button>
-                </div>
-              </div>
-            </>
-          ) : null}
+        <button type="button" disabled={!interactive} onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen} aria-controls="contact-filter-fields" className={`${button} ${filtersOpen ? "border-trust/40 bg-cloud" : ""}`}><ToolbarIcon kind="filter" />Filters{filterCount ? <span className="rounded-full bg-mist/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums">{filterCount}</span> : null}</button>
+        <div ref={viewsContainer} className="relative min-w-0">
+          <button ref={viewsTrigger} type="button" disabled={!interactive} aria-expanded={viewsOpen} aria-controls="contact-saved-views" onClick={() => setViewsOpen((open) => !open)} className={`${button} w-full whitespace-nowrap`}><ToolbarIcon kind="bookmark" />Saved views<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m5 7 5 5 5-5" /></svg></button>
+          {viewsOpen ? <div id="contact-saved-views" role="region" aria-label="Saved contact views" className="absolute right-0 z-30 mt-2 w-80 max-w-[calc(100vw-4rem)] rounded-xl border border-mist bg-card p-4 shadow-xl">
+            <h2 className="text-sm font-semibold text-heading">Your saved views</h2><p className="mt-1 text-xs leading-relaxed text-slate">Keep useful filters together. Saved in this browser.</p>
+            <div className="my-3 max-h-48 space-y-1 overflow-y-auto">
+              {saved.length === 0 ? <p className="rounded-lg bg-cloud p-3 text-xs text-slate">No saved views yet.</p> : saved.map((item) => <div key={item.name} className="flex min-w-0 items-center gap-1 rounded-lg hover:bg-cloud">
+                <button type="button" disabled={disabled} onClick={() => { navigate(new URLSearchParams(item.query)); setViewsOpen(false); viewsTrigger.current?.focus(); }} className={`min-h-11 min-w-0 flex-1 truncate rounded-lg px-2 text-left text-sm text-heading ${focus}`}>{item.name}</button>
+                <button type="button" aria-label={`Delete view ${item.name}`} onClick={() => persist(saved.filter((candidate) => candidate.name !== item.name))} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate hover:bg-mist/50 ${focus}`}><ToolbarIcon kind="close" /></button>
+              </div>)}
+            </div>
+            <form onSubmit={(event) => { event.preventDefault(); const name = newViewName.trim(); if (!name) return; const next = new URLSearchParams(query); next.delete("page"); persist([...saved.filter((item) => item.name !== name), { name, query: next.toString() }].slice(-50)); setNewViewName(""); }} className="border-t border-mist pt-3">
+              <label className="text-xs font-medium text-heading" htmlFor="contact-view-name">View name</label>
+              <input ref={viewNameInput} id="contact-view-name" value={newViewName} onChange={(event) => setNewViewName(event.target.value)} maxLength={60} required placeholder="e.g. Leads to follow up" className={`${field} mt-2`} />
+              <button type="submit" disabled={disabled || !newViewName.trim()} className={`mt-2 min-h-10 w-full rounded-lg bg-gold px-3 text-sm font-semibold text-ink hover:bg-gold/85 disabled:opacity-50 ${focus}`}>Save view</button>
+              <p role="status" className="mt-2 text-xs leading-relaxed text-slate">{storageMessage}</p>
+            </form>
+          </div> : null}
         </div>
-        <button type="button" onClick={() => setModal("add")} className="min-h-10 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">+ Add contact</button>
-        <button type="button" onClick={() => setModal("import")} className={`${inputClass} min-h-10`}>Import CSV</button>
       </div>
 
-      {/* Line B: quick views */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
-        {VIEWS.map((v) => {
-          const active = (sp.get("view") ?? "") === v.key;
-          return <button key={v.key} type="button" onClick={() => push({ view: v.key })} className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm ${active ? "bg-navy text-white" : "border border-mist bg-card text-slate hover:bg-cloud"}`}>{v.label}</button>;
-        })}
-      </div>
-
-      {/* Mobile: collapse the filter dropdowns behind a toggle (active filters still show as chips below) */}
-      <button type="button" onClick={() => setFiltersOpen((o) => !o)} aria-expanded={filtersOpen} aria-controls="contact-filter-fields" className={`${inputClass} flex w-full items-center justify-between sm:hidden`}>
-        <span>Filters{activeChips.length ? ` · ${activeChips.length}` : ""}</span>
-        <span className="text-slate">{filtersOpen ? "▲" : "▾"}</span>
-      </button>
-
-      {/* Line C: filters */}
-      <div id="contact-filter-fields" className={`${filtersOpen ? "grid" : "hidden"} grid-cols-1 gap-2 sm:flex sm:flex-wrap`}>
-        <select value={sp.get("stage") ?? ""} onChange={(e) => push({ stage: e.target.value })} className={filterClass} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
-        <select value={sp.get("segment") ?? ""} onChange={(e) => push({ segment: e.target.value })} className={filterClass} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((s) => <option key={s} value={s}>{SEGMENT_LABELS[s]}</option>)}</select>
-        <select value={sp.get("source") ?? ""} onChange={(e) => push({ source: e.target.value })} className={filterClass} aria-label="Source"><option value="">All sources</option>{sources.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}</select>
-        <select value={sp.get("funnel") ?? ""} onChange={(e) => push(e.target.value === "evergreen" ? { funnel: e.target.value, sessionId: "" } : { funnel: e.target.value })} className={filterClass} aria-label="Funnel"><option value="">All funnels</option><option value="evergreen">Evergreen</option><option value="live">Live webinar</option></select>
-        <select value={sp.get("sessionId") ?? ""} onChange={(e) => push(e.target.value ? { sessionId: e.target.value, funnel: "live" } : { sessionId: "" })} className={`${filterClass} sm:max-w-64`} aria-label="Session"><option value="">All sessions</option>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {new Date(session.startsAt).toLocaleDateString("en-US")}</option>)}</select>
-        <select value={sp.get("owner") ?? ""} onChange={(e) => push({ owner: e.target.value })} className={filterClass} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-        {tags.length ? <select value={sp.get("tag") ?? ""} onChange={(e) => push({ tag: e.target.value })} className={filterClass} aria-label="Tag"><option value="">All tags</option>{tags.map((t) => <option key={t} value={t}>#{t}</option>)}</select> : null}
-        <select value={sp.get("pageSize") ?? "25"} onChange={(e) => push({ pageSize: e.target.value })} className={filterClass} aria-label="Page size"><option value="25">25 / page</option><option value="50">50 / page</option><option value="100">100 / page</option></select>
-      </div>
-
-      {/* Line D: active filter chips */}
-      {activeChips.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {activeChips.map((c) => (
-            <button key={c.k} type="button" onClick={() => push({ [c.k]: "" })} className="inline-flex items-center gap-1 rounded-full bg-sky px-2.5 py-1 text-xs text-trust hover:opacity-80">{c.label}<span className="text-trust/70">×</span></button>
-          ))}
-          <button type="button" onClick={() => router.push("/crm/contacts")} className="text-xs text-slate hover:text-heading hover:underline">Clear all</button>
-        </div>
-      ) : null}
-
-      {modal === "add" ? <AddContactModal owners={owners} onClose={() => setModal(null)} onDone={() => { setModal(null); router.refresh(); }} /> : null}
-      {modal === "import" ? <ImportModal onClose={() => setModal(null)} onDone={() => { setModal(null); router.refresh(); }} /> : null}
-    </div>
-  );
-}
-
-const field = "w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust";
-
-function AddContactModal({ owners, onClose, onDone }: { owners: string[]; onClose: () => void; onDone: () => void }) {
-  const [v, setV] = useState({ name: "", email: "", phone: "", source: "manual", stage: "new" as Stage, owner: "" });
-  const [pending, setPending] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!v.name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) { setErr("Name and a valid email are required."); return; }
-    setPending(true); setErr(null);
-    try { await api("/api/crm/contact", "POST", v); onDone(); } catch { setErr("Could not create the contact."); setPending(false); }
-  }
-  return (
-    <Modal title="Add contact" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        <input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Name" aria-label="Name" className={field} />
-        <input value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="Email" aria-label="Email" className={field} />
-        <input value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone (optional)" aria-label="Phone" className={field} />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <input value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} placeholder="Source" aria-label="Source" className={field} />
-          <select value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} aria-label="Stage" className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select>
-        </div>
-        <select value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} aria-label="Owner" className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-        {err ? <p className="text-sm text-red">{err}</p> : null}
-        <ModalActions pending={pending} onClose={onClose} label="Add contact" />
-      </form>
-    </Modal>
-  );
-}
-
-function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (!lines.length) return { headers: [], rows: [] };
-  const parseLine = (line: string): string[] => {
-    const out: string[] = []; let cur = ""; let q = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
-      else if (ch === '"') q = true; else if (ch === ",") { out.push(cur); cur = ""; } else cur += ch;
-    }
-    out.push(cur); return out;
-  };
-  return {
-    headers: parseLine(lines[0]).map((header) => header.trim()),
-    rows: lines.slice(1).map((line) => parseLine(line).map((cell) => cell.trim())),
-  };
-}
-
-type ImportField = "name" | "email" | "phone" | "source" | "owner" | "stage";
-type ImportPreview = {
-  summary: { total: number; valid: number; invalid: number; newContacts: number; updates: number };
-  issues: Array<{ row: number; email?: string; reason: string }>;
-};
-const IMPORT_FIELDS: Array<{ key: ImportField; label: string; aliases: string[] }> = [
-  { key: "email", label: "Email (required)", aliases: ["email", "email address", "e-mail"] },
-  { key: "name", label: "Name", aliases: ["name", "full name", "contact name"] },
-  { key: "phone", label: "Phone", aliases: ["phone", "phone number", "mobile"] },
-  { key: "source", label: "Source", aliases: ["source", "lead source"] },
-  { key: "owner", label: "Owner", aliases: ["owner", "assigned to"] },
-  { key: "stage", label: "Stage", aliases: ["stage", "pipeline stage"] },
-];
-
-function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [file, setFile] = useState<{ headers: string[]; rows: string[][] }>({ headers: [], rows: [] });
-  const [mapping, setMapping] = useState<Record<ImportField, string>>({ name: "", email: "", phone: "", source: "", owner: "", stage: "" });
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
-  const [pending, setPending] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]; if (!f) return;
-    if (f.size > 2_000_000) { setResult("CSV files are limited to 2 MB."); return; }
-    f.text().then((text) => {
-      const parsed = parseCsv(text);
-      const headers = parsed.headers.map((header) => header.toLowerCase());
-      const next = { name: "", email: "", phone: "", source: "", owner: "", stage: "" } as Record<ImportField, string>;
-      for (const field of IMPORT_FIELDS) {
-        const index = headers.findIndex((header) => field.aliases.includes(header));
-        if (index >= 0) next[field.key] = String(index);
-      }
-      setFile(parsed); setMapping(next); setPreview(null); setResult(null);
-    });
-  }
-  function contacts() {
-    return file.rows.map((cells) => Object.fromEntries(IMPORT_FIELDS.map((field) => [field.key, mapping[field.key] === "" ? "" : cells[Number(mapping[field.key])] ?? ""])));
-  }
-  async function analyze() {
-    if (!file.rows.length || mapping.email === "") return;
-    setPending(true);
-    try { setPreview(await api("/api/crm/import", "POST", { mode: "preview", contacts: contacts() })); setResult(null); }
-    catch (error) { setResult(error instanceof Error ? error.message : "Preview failed."); }
-    finally { setPending(false); }
-  }
-  async function commit() {
-    if (!preview) return;
-    setPending(true);
-    try {
-      const res = await api("/api/crm/import", "POST", { mode: "commit", confirm: "IMPORT", contacts: contacts() });
-      setResult(`Imported ${res.imported}; skipped ${res.skipped}.`); setTimeout(onDone, 900);
-    } catch (error) { setResult(error instanceof Error ? error.message : "Import failed."); setPending(false); }
-  }
-  const rows = file.rows;
-  async function submit() {
-    if (preview) await commit();
-    else await analyze();
-  }
-  return (
-    <Modal title="Import contacts (CSV)" onClose={onClose}>
-      <p className="mb-3 text-sm text-slate">Preview and validate up to 500 rows before importing. Existing emails will be updated, not duplicated.</p>
-      <input type="file" accept=".csv,text/csv" onChange={onFile} aria-label="Choose CSV file" className="w-full text-sm" />
-      {file.rows.length ? <div className="mt-4 space-y-2">
-        <p className="text-sm font-medium text-heading">Map CSV columns ({file.rows.length} rows)</p>
-        <div className="grid grid-cols-2 gap-2">
-          {IMPORT_FIELDS.map((field) => <label key={field.key} className="text-xs text-slate">{field.label}
-            <select value={mapping[field.key]} onChange={(event) => { setMapping({ ...mapping, [field.key]: event.target.value }); setPreview(null); }} className="mt-1 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body">
-              <option value="">Not imported</option>
-              {file.headers.map((header, index) => <option key={`${header}-${index}`} value={index}>{header || `Column ${index + 1}`}</option>)}
-            </select>
-          </label>)}
-        </div>
+      {filtersOpen ? <div id="contact-filter-fields" className="mt-4 rounded-xl border border-mist bg-cloud/55 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-heading">Refine your contacts</h2><button type="button" onClick={() => setFiltersOpen(false)} className={`rounded px-2 py-1 text-xs text-slate hover:text-heading ${focus}`}>Hide filters</button></div>
+        <fieldset disabled={disabled} className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <label className="space-y-1.5 text-xs font-medium text-slate"><span>Stage</span><select value={value("stage")} onChange={(event) => push({ stage: event.target.value })} className={field} aria-label="Stage"><option value="">All stages</option>{STAGES_IN_ORDER.map((stage) => <option key={stage} value={stage}>{STAGE_LABELS[stage]}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-slate"><span>Segment</span><select value={value("segment")} onChange={(event) => push({ segment: event.target.value })} className={field} aria-label="Segment"><option value="">All segments</option>{SEGMENTS_IN_ORDER.map((segment) => <option key={segment} value={segment}>{SEGMENT_LABELS[segment]}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-slate"><span>Source</span><select value={value("source")} onChange={(event) => push({ source: event.target.value })} className={field} aria-label="Source"><option value="">All sources</option>{extras("source", sources)}{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-slate"><span>Owner</span><select value={value("owner")} onChange={(event) => push({ owner: event.target.value })} className={field} aria-label="Owner"><option value="">All owners</option><option value="__none__">Unassigned</option>{extras("owner", ["__none__", ...owners])}{owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-slate"><span>Funnel</span><select value={value("funnel")} onChange={(event) => push(event.target.value !== "live" ? { funnel: event.target.value, sessionId: "" } : { funnel: event.target.value })} className={field} aria-label="Funnel"><option value="">All funnels</option><option value="evergreen">Evergreen</option><option value="live">Live webinar</option></select></label>
+          <label className="space-y-1.5 text-xs font-medium text-slate xl:col-span-2"><span>Session</span><select value={value("sessionId")} onChange={(event) => push(event.target.value ? { sessionId: event.target.value, funnel: "live" } : { sessionId: "" })} className={field} aria-label="Session"><option value="">All sessions</option>{extras("sessionId", sessions.map((session) => session.id))}{sessions.map((session) => <option key={session.id} value={session.id}>{session.title} · {new Date(session.startsAt).toLocaleDateString("en-US", { timeZone: session.timezone || "UTC" })}</option>)}</select></label>
+          <label className="space-y-1.5 text-xs font-medium text-slate"><span>Tag</span><select value={value("tag")} onChange={(event) => push({ tag: event.target.value })} className={field} aria-label="Tag"><option value="">All tags</option>{extras("tag", tags)}{tags.map((tag) => <option key={tag} value={tag}>#{tag}</option>)}</select></label>
+        </fieldset>
       </div> : null}
-      {preview ? <div className="mt-4 rounded-lg border border-mist bg-cloud p-3 text-sm">
-        <div className="grid grid-cols-2 gap-1 text-body">
-          <span>{preview.summary.valid} valid</span><span>{preview.summary.invalid} invalid</span>
-          <span>{preview.summary.newContacts} new</span><span>{preview.summary.updates} updates</span>
-        </div>
-        {preview.issues.length ? <div className="mt-2 max-h-28 overflow-auto border-t border-mist pt-2 text-xs text-red">{preview.issues.map((issue) => <div key={`${issue.row}-${issue.email ?? ""}`}>Row {issue.row}: {issue.reason}</div>)}</div> : null}
-      </div> : null}
-      {result ? <p className={`mt-3 text-sm ${result.startsWith("Imported") ? "text-green" : "text-red"}`}>{result}</p> : null}
-      <div className="mt-5 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Cancel</button>
-        <button type="button" disabled={pending || !rows.length || mapping.email === "" || Boolean(preview && preview.summary.valid === 0)} onClick={submit} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">{pending ? (preview ? "Importing…" : "Analyzing…") : preview ? `Import ${preview.summary.valid} valid` : "Preview import"}</button>
+
+      <div role="group" aria-label="Contact views" className="mt-4 flex gap-1 overflow-x-auto sm:gap-3">
+        {CONTACT_VIEWS.map((item) => <button key={item.key} type="button" disabled={disabled} aria-pressed={view === item.key} title={item.description} onClick={() => push({ view: item.key })} className={`relative min-h-12 shrink-0 whitespace-nowrap border-b-[3px] px-2.5 py-3 text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-trust disabled:opacity-50 ${view === item.key ? "border-trust font-semibold text-heading dark:border-gold" : "border-transparent text-slate hover:border-mist hover:text-heading"}`}>{item.label}</button>)}
       </div>
-    </Modal>
-  );
+      {activeChips.length ? <div className="flex flex-wrap items-center gap-2 border-t border-mist py-3">
+        {activeChips.map((chip) => <button key={chip.key} type="button" disabled={disabled} aria-label={`Remove ${chip.label}`} onClick={() => push(chip.key === "view" ? { view: "all" } : chip.key === "funnel" ? { funnel: "", sessionId: "" } : { [chip.key]: "" })} className={`inline-flex min-h-8 max-w-full items-center gap-2 rounded-md border border-mist bg-cloud px-2.5 py-1.5 text-xs text-heading hover:bg-mist/50 disabled:opacity-50 ${focus}`}><span className="truncate">{chip.label}</span><span className="shrink-0 text-slate" aria-hidden="true">×</span></button>)}
+        <button type="button" disabled={disabled} onClick={reset} className={`min-h-8 rounded px-2 text-xs font-medium text-slate underline decoration-mist underline-offset-4 hover:text-heading ${focus}`}>Clear all</button>
+      </div> : null}
+    </div>
+    <span aria-live="polite" className="sr-only">{pending ? "Updating contacts…" : ""}</span>
+  </div>;
 }
 
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-navy/40 p-4" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="crm-modal-title" className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-mist bg-card p-4 sm:p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 id="crm-modal-title" className="mb-4 text-lg font-semibold text-heading">{title}</h3>
-        {children}
-      </div>
-    </div>
-  );
-}
-function ModalActions({ pending, onClose, label }: { pending: boolean; onClose: () => void; label: string }) {
-  return (
-    <div className="flex justify-end gap-2 pt-1">
-      <button type="button" onClick={onClose} className="rounded-lg border border-mist px-3 py-2 text-sm text-body hover:bg-cloud">Cancel</button>
-      <button type="submit" disabled={pending} className="rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep disabled:opacity-50">{pending ? "Saving…" : label}</button>
-    </div>
-  );
+export function ContactsPageSize({ query, pageSize }: { query: string; pageSize: number }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const interactive = useSyncExternalStore(subscribe, clientReady, serverReady);
+  return <label className="flex items-center gap-2 text-xs text-slate"><span className="hidden sm:inline">Rows per page</span><select aria-label="Page size" value={pageSize} disabled={pending || !interactive} onChange={(event) => { const params = new URLSearchParams(query); params.set("pageSize", event.target.value); params.delete("page"); startTransition(() => router.push(`/crm/contacts?${params.toString()}`, { scroll: false })); }} className="min-h-10 rounded-lg border border-mist bg-card px-2 py-2 text-sm text-body outline-none focus:border-trust focus:ring-2 focus:ring-trust/15 disabled:opacity-50">{[...new Set([25, 50, 100, 200, pageSize])].sort((a, b) => a - b).map((size) => <option key={size} value={size}>{size} / page</option>)}</select></label>;
 }

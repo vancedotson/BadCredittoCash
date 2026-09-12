@@ -2,359 +2,344 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { Contact } from "@/lib/store";
 import { contactsToCsv } from "@/lib/csv";
-import { STAGES_IN_ORDER, STAGE_LABELS, type Stage } from "@/lib/stages";
-import { StageBadge, SegmentBadge } from "./ui";
+import { STAGES_IN_ORDER, STAGE_LABELS, STAGE_TONES, type Stage, type Tone } from "@/lib/stages";
+import { SEGMENT_LABELS } from "@/lib/segments";
 
-function fmtDate(iso: string) { return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+const secondaryButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-heading transition-colors hover:bg-cloud focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold disabled:cursor-not-allowed disabled:opacity-50";
+const field = "min-h-11 w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-heading outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 disabled:opacity-60";
+
+function fmtDate(iso: string) {
+  const date = new Date(iso.length === 10 ? `${iso}T12:00:00` : iso);
+  return Number.isNaN(date.valueOf()) ? "No date" : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+function initials(name: string) { return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase(); }
 function download(csv: string, filename: string) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 async function api(url: string, method: string, body: unknown) {
-  const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) {
-    const payload = await res.json().catch(() => null) as { error?: string } | null;
-    throw new Error(payload?.error ?? "Request failed");
-  }
-  return res.json();
+  const response = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.error ?? "Request failed. Please try again.");
+  return payload;
 }
-
+function toneClass(tone: Tone) {
+  if (tone === "success") return "bg-green/10 text-green";
+  if (tone === "active" || tone === "warn") return "bg-gold/15 text-gold-deep";
+  if (tone === "danger") return "bg-red/10 text-red dark:text-[#ffb4aa]";
+  if (tone === "info") return "bg-sky text-trust dark:text-gold-deep";
+  return "bg-cloud text-slate";
+}
+function StagePill({ stage }: { stage: Stage }) {
+  return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold ${toneClass(STAGE_TONES[stage])}`}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />{STAGE_LABELS[stage]}</span>;
+}
+function Avatar({ name, small = false }: { name: string; small?: boolean }) {
+  return <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full border border-mist bg-cloud font-semibold text-slate ${small ? "h-8 w-8 text-[10px]" : "h-10 w-10 text-xs"}`}>{initials(name) || "?"}</span>;
+}
+function Engagement({ contact, short = false }: { contact: Contact; short?: boolean }) {
+  const percent = Math.max(0, Math.min(100, contact.watchPct));
+  return <div className="min-w-0">
+    {!short ? <p className="max-w-52 text-xs leading-5 text-heading">{SEGMENT_LABELS[contact.segment]}</p> : null}
+    <div className={`${short ? "" : "mt-1.5 "}flex items-center gap-2`}>
+      <span aria-hidden="true" className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-mist"><span className="block h-full rounded-full bg-trust dark:bg-gold" style={{ width: `${percent}%` }} /></span>
+      <span className="whitespace-nowrap text-[11px] text-slate"><span className="font-semibold tabular-nums text-heading">{percent}%</span> evergreen watch</span>
+    </div>
+  </div>;
+}
+function NextTask({ contact }: { contact: Contact }) {
+  const task = contact.nextTask;
+  if (!task) return <span className="text-xs text-slate">{contact.openTaskCount ? `${contact.openTaskCount} open task${contact.openTaskCount === 1 ? "" : "s"}` : "No next task"}</span>;
+  return <div className="max-w-52">
+    <p title={task.title} className="line-clamp-2 text-xs font-medium leading-5 text-heading">{task.title}</p>
+    <p className={`mt-1 text-[11px] ${task.overdue ? "font-medium text-red dark:text-[#ffb4aa]" : "text-slate"}`}>{task.overdue ? "Overdue" : task.dueDate ? "Due" : "No due date"}{task.dueDate ? ` · ${fmtDate(task.dueDate)}` : ""}</p>
+  </div>;
+}
 function bulkProgressMessage(action: string, count: number) {
   const contacts = `${count} contact${count === 1 ? "" : "s"}`;
   if (action === "delete") return `Moving ${contacts} to Trash…`;
   if (action === "stage") return `Updating the stage for ${contacts}…`;
   if (action === "owner") return `Assigning ${contacts}…`;
   if (action === "tag") return `Adding the tag to ${contacts}…`;
-  if (action === "task") return `Adding the task to ${contacts}…`;
-  return `Updating ${contacts}…`;
+  return `Adding the task to ${contacts}…`;
 }
-
 function bulkSuccessMessage(action: string, count: number) {
   const contacts = `${count} contact${count === 1 ? "" : "s"}`;
   if (action === "delete") return `Moved ${contacts} to Trash.`;
   if (action === "stage") return `Updated the stage for ${contacts}.`;
   if (action === "owner") return `Updated the owner for ${contacts}.`;
   if (action === "tag") return `Added the tag to ${contacts}.`;
-  if (action === "task") return `Added the task to ${contacts}.`;
-  return `Updated ${contacts}.`;
+  return `Added the task to ${contacts}.`;
 }
 
-export function ContactsTable({ rows, allIds, owners, tags, total }: { rows: Contact[]; allIds: string[]; owners: string[]; tags: string[]; total: number }) {
+export function ContactsTable({ rows, allIds, owners, tags, total, canWrite, canAdmin, query }: {
+  rows: Contact[]; allIds: string[]; owners: string[]; tags: string[]; total: number;
+  canWrite: boolean; canAdmin: boolean; query: string;
+}) {
   const router = useRouter();
-  const sp = useSearchParams();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [allMatching, setAllMatching] = useState(false);
   const [compact, setCompact] = useState(false);
-  const [menu, setMenu] = useState<string | null>(null);
-  const [fly, setFly] = useState<{ c: Contact; x: number; y: number } | null>(null);
+  const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [bulkInput, setBulkInput] = useState<{ action: "tag" | "task"; value: string } | null>(null);
   const [pendingAction, setPendingAction] = useState<{ action: string; count: number } | null>(null);
+  const pendingRef = useRef(false);
   const [actionError, setActionError] = useState<{ message: string; retry: () => void } | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
-  const [tableScroll, setTableScroll] = useState({ left: false, right: true });
+  const [tableScroll, setTableScroll] = useState({ left: false, right: false });
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setCompact(localStorage.getItem("crm-contacts-compact") === "1" || window.matchMedia("(max-width: 1535px)").matches));
-    return () => cancelAnimationFrame(raf);
+    if (pendingAction) return;
+    const frame = requestAnimationFrame(() => {
+      const available = new Set(allIds);
+      setSelected((previous) => {
+        const next = new Set([...previous].filter((id) => available.has(id)));
+        return next.size === previous.size ? previous : next;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [allIds, pendingAction]);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      let saved: string | null = null;
+      try { saved = localStorage.getItem("crm-contacts-compact"); } catch { /* Density also works without browser storage. */ }
+      setCompact(saved === "1" || (saved !== "0" && window.matchMedia("(max-width: 1535px)").matches));
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
-  function toggleDensity() { setCompact((v) => { const n = !v; try { localStorage.setItem("crm-contacts-compact", n ? "1" : "0"); } catch { /* ignore */ } return n; }); }
-  function syncTableScroll() {
-    const element = tableScrollRef.current;
-    if (!element) return;
-    setTableScroll({
-      left: element.scrollLeft > 2,
-      right: element.scrollLeft < element.scrollWidth - element.clientWidth - 2,
+  function toggleDensity() {
+    setCompact((previous) => {
+      const next = !previous;
+      try { localStorage.setItem("crm-contacts-compact", next ? "1" : "0"); } catch { /* Keep the current preference for this visit. */ }
+      return next;
     });
   }
-  function moveTable(direction: -1 | 1) {
-    tableScrollRef.current?.scrollBy({ left: direction * 360, behavior: "smooth" });
+  function syncTableScroll() {
+    const element = tableScrollRef.current;
+    if (element) setTableScroll({ left: element.scrollLeft > 2, right: element.scrollLeft < element.scrollWidth - element.clientWidth - 2 });
   }
   useEffect(() => {
-    const raf = requestAnimationFrame(syncTableScroll);
-    window.addEventListener("resize", syncTableScroll);
-    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", syncTableScroll); };
-  }, [rows]);
+    const frame = requestAnimationFrame(syncTableScroll);
+    const observer = new ResizeObserver(syncTableScroll);
+    if (tableScrollRef.current) observer.observe(tableScrollRef.current);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [rows, compact]);
 
-  const sort = sp.get("sort") ?? "recent";
-  const dir = sp.get("dir") ?? "desc";
-  function sortBy(field: string) {
-    const nd = sort === field ? (dir === "asc" ? "desc" : "asc") : "desc";
-    const p = new URLSearchParams(sp.toString()); p.set("sort", field); p.set("dir", nd); p.delete("page");
-    router.push(`/crm/contacts?${p.toString()}`);
-  }
-
-  const pageIds = rows.map((r) => r.id);
+  const parameters = new URLSearchParams(query);
+  const sort = parameters.get("sort") ?? "recent";
+  const direction = parameters.get("dir") ?? "desc";
+  const pending = pendingAction !== null;
+  const selectable = canWrite || canAdmin;
+  const pageIds = rows.map((contact) => contact.id);
+  const currentIds = new Set(allIds);
   const allPageSelected = rows.length > 0 && pageIds.every((id) => selected.has(id));
-  const ids = allMatching ? allIds : [...selected];
+  const ids = allMatching ? allIds : [...selected].filter((id) => currentIds.has(id));
   const count = ids.length;
+  const hasSelectionOnOtherPages = ids.some((id) => !pageIds.includes(id));
 
+  function sortBy(sortField: string) {
+    if (pendingRef.current) return;
+    const next = new URLSearchParams(query);
+    next.set("sort", sortField);
+    next.set("dir", sort === sortField && direction === "desc" ? "asc" : "desc");
+    next.delete("page");
+    router.push(`/crm/contacts?${next.toString()}`);
+  }
   function toggleAll() {
+    if (pendingRef.current) return;
+    setActionError(null);
     if (allPageSelected || allMatching) { setSelected(new Set()); setAllMatching(false); }
     else setSelected(new Set(pageIds));
   }
-  function toggleOne(id: string) { setAllMatching(false); setSelected((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
-  function clearSel() { setSelected(new Set()); setAllMatching(false); setBulkInput(null); }
+  function toggleOne(id: string) {
+    if (pendingRef.current) return;
+    setActionError(null);
+    const previouslyAllMatching = allMatching;
+    setAllMatching(false);
+    setSelected((previous) => { const next = new Set(previouslyAllMatching ? allIds : previous); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+  function clearSelection() { setSelected(new Set()); setAllMatching(false); setBulkInput(null); }
 
   async function bulk(action: string, value?: string) {
-    if (!count) return;
-    if (action === "delete" && !window.confirm(
-      `Move ${count} contact${count === 1 ? "" : "s"} to Trash? Their notes, tasks, bookings, and activity history will be preserved and an administrator can restore them.`,
-    )) return;
-    const operationCount = count;
-    setPendingAction({ action, count: operationCount });
+    if (!count || pendingRef.current || !canWrite || (action === "delete" && !canAdmin)) return;
+    if (action === "delete" && !window.confirm(`Move ${count} contact${count === 1 ? "" : "s"} to Trash? Their notes, tasks, bookings, and activity history will be preserved and an administrator can restore them.`)) return;
+    const operationIds = [...ids];
+    pendingRef.current = true;
+    setPendingAction({ action, count: operationIds.length });
     setActionError(null);
     setActionSuccess(null);
     try {
-      await api("/api/crm/contacts/bulk", "POST", {
-        ids,
-        action,
-        value,
-        confirm: action === "delete" ? "DELETE" : undefined,
-      });
-      setActionSuccess(bulkSuccessMessage(action, operationCount));
-      clearSel();
+      const result = await api("/api/crm/contacts/bulk", "POST", { ids: operationIds, action, value, confirm: action === "delete" ? "DELETE" : undefined });
+      if (typeof result?.affected !== "number") throw new Error("The server did not confirm how many contacts were updated. Refresh the list before retrying.");
+      const unaffected = operationIds.length - result.affected;
+      setActionSuccess(`${bulkSuccessMessage(action, result.affected)}${unaffected > 0 ? ` ${unaffected} selected contact${unaffected === 1 ? " was" : "s were"} not updated.` : ""}`);
+      clearSelection();
       router.refresh();
     } catch (error) {
-      setActionError({
-        message: error instanceof Error ? error.message : "Could not update the selected contacts.",
-        retry: () => { void bulk(action, value); },
-      });
-    }
-    finally { setPendingAction(null); }
+      setActionError({ message: error instanceof Error ? error.message : "Could not update the selected contacts.", retry: () => { void bulk(action, value); } });
+    } finally { pendingRef.current = false; setPendingAction(null); }
   }
-  function exportSel() {
-    const chosen = rows.filter((r) => selected.has(r.id));
+  function exportSelected() {
+    if (!canAdmin || allMatching || hasSelectionOnOtherPages || pendingRef.current) return;
+    const chosen = rows.filter((contact) => selected.has(contact.id));
     if (chosen.length) download(contactsToCsv(chosen), "vance-contacts-selected.csv");
   }
+  const arrow = (sortField: string) => <span aria-hidden="true" className={sort === sortField ? "text-heading" : "text-slate"}>{sort === sortField ? direction === "asc" ? "↑" : "↓" : "↕"}</span>;
+  const sortState = (sortField: string) => sort === sortField ? direction === "asc" ? "ascending" as const : "descending" as const : "none" as const;
+  const cell = compact ? "px-4 py-3" : "px-4 py-4";
 
-  const arrow = (f: string) => (sort === f ? <span className="text-trust">{dir === "asc" ? "▲" : "▼"}</span> : <span className="text-slate/40">↕</span>);
-  const pending = pendingAction !== null;
-  const th = "px-4 py-3 font-medium";
-  const td = compact ? "px-4 py-1.5" : "px-4 py-3";
+  return <div>
+    {actionError ? <div role="alert" className="m-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red dark:text-[#ffb4aa]">
+      <span>{actionError.message} Your selection is still here.</span>
+      <span className="flex items-center gap-3"><button type="button" disabled={pending} onClick={actionError.retry} className="min-h-10 font-semibold underline">Try again</button><button type="button" disabled={pending} onClick={() => setActionError(null)} aria-label="Dismiss error" className="h-10 w-10 text-lg">×</button></span>
+    </div> : null}
+    {actionSuccess ? <div role="status" className="m-4 flex items-center justify-between gap-3 rounded-xl border border-green/30 bg-green/10 px-4 py-3 text-sm text-green"><span>{actionSuccess}</span><button type="button" onClick={() => setActionSuccess(null)} aria-label="Dismiss confirmation" className="h-10 w-10 shrink-0 text-lg">×</button></div> : null}
 
-  return (
-    <div className="space-y-3">
-      {actionError ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
-          <span>{actionError.message} Your selection is still here.</span>
-          <span className="flex gap-3"><button type="button" onClick={actionError.retry} className="font-semibold underline">Try again</button><button type="button" onClick={() => setActionError(null)} aria-label="Dismiss error">×</button></span>
-        </div>
-      ) : null}
-      {actionSuccess ? (
-        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-green/30 bg-green/10 px-4 py-3 text-sm text-green">
-          <span>{actionSuccess}</span>
-          <button type="button" onClick={() => setActionSuccess(null)} aria-label="Dismiss confirmation" className="px-2 text-lg leading-none">×</button>
-        </div>
-      ) : null}
-      {/* Bulk bar */}
-      {count > 0 ? (
-        <div aria-busy={pending} className="rounded-xl border border-mist bg-sky px-4 py-2.5 text-sm">
-          {pendingAction ? (
-            <div role="status" aria-live="polite" className="flex min-h-10 items-center gap-3 font-medium text-trust">
-              <span aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-trust/30 border-t-trust" />
-              <span>{bulkProgressMessage(pendingAction.action, pendingAction.count)}</span>
-            </div>
-          ) : (
-          <>
-          <div className="flex items-center justify-between gap-2 sm:hidden">
-            <span className="font-medium text-trust">{count} selected</span>
-            <details className="relative">
-              <summary className="min-h-10 cursor-pointer list-none rounded-lg border border-mist bg-card px-3 py-2 font-medium text-body">Bulk actions ▾</summary>
-              <div className="absolute right-0 z-30 mt-1 grid w-56 gap-2 rounded-xl border border-mist bg-card p-3 shadow-card">
-                <select disabled={pending} defaultValue="" onChange={(e) => { if (e.target.value) bulk("stage", e.target.value); e.target.value = ""; }} className="min-h-10 rounded-lg border border-mist bg-card px-2 py-2 text-sm" aria-label="Set stage">
-                  <option value="" disabled>Set stage…</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
-                </select>
-                <select disabled={pending} defaultValue="" onChange={(e) => { bulk("owner", e.target.value === "__none__" ? "" : e.target.value); e.target.value = ""; }} className="min-h-10 rounded-lg border border-mist bg-card px-2 py-2 text-sm" aria-label="Assign owner">
-                  <option value="" disabled>Assign owner…</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <button type="button" onClick={() => setBulkInput({ action: "tag", value: "" })} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-left text-sm text-body">Add tag</button>
-                <button type="button" onClick={() => setBulkInput({ action: "task", value: "" })} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-left text-sm text-body">Add task</button>
-                {!allMatching ? <button type="button" onClick={exportSel} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-left text-sm text-body">Export selected</button> : null}
-                <button type="button" onClick={() => bulk("delete")} className="min-h-10 rounded-lg border border-mist px-3 py-2 text-left text-sm text-red">Move to Trash</button>
-                <button type="button" onClick={clearSel} className="min-h-10 px-3 py-2 text-left text-sm text-slate">Clear selection</button>
-              </div>
-            </details>
-          </div>
-          {!allMatching && allPageSelected && total > rows.length ? (
-            <button type="button" onClick={() => setAllMatching(true)} className="mt-2 text-sm text-trust underline hover:opacity-80 sm:hidden">Select all {total}</button>
-          ) : null}
-          <div className="hidden flex-wrap items-center gap-2 sm:flex">
-            <span className="font-medium text-trust">{count} selected</span>
-            {!allMatching && allPageSelected && total > rows.length ? (
-              <button type="button" onClick={() => setAllMatching(true)} className="text-trust underline hover:opacity-80">Select all {total}</button>
-            ) : null}
-            <select disabled={pending} defaultValue="" onChange={(e) => { if (e.target.value) bulk("stage", e.target.value); e.target.value = ""; }} className="min-h-10 rounded-lg border border-mist bg-card px-2 py-2 text-sm" aria-label="Set stage">
-              <option value="" disabled>Set stage…</option>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
-            </select>
-            <select disabled={pending} defaultValue="" onChange={(e) => { bulk("owner", e.target.value === "__none__" ? "" : e.target.value); e.target.value = ""; }} className="min-h-10 rounded-lg border border-mist bg-card px-2 py-2 text-sm" aria-label="Assign owner">
-              <option value="" disabled>Assign owner…</option><option value="__none__">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}
-            </select>
-            <button type="button" onClick={() => setBulkInput({ action: "tag", value: "" })} className="min-h-10 rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body hover:bg-cloud">+ Tag</button>
-            <button type="button" onClick={() => setBulkInput({ action: "task", value: "" })} className="min-h-10 rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body hover:bg-cloud">+ Task</button>
-            {!allMatching ? <button type="button" onClick={exportSel} className="min-h-10 rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body hover:bg-cloud">Export</button> : null}
-            <button type="button" onClick={() => bulk("delete")} className="min-h-10 rounded-lg border border-mist bg-card px-3 py-2 text-sm text-red hover:bg-cloud">Delete</button>
-            <button type="button" onClick={clearSel} className="min-h-10 px-2 text-sm text-slate hover:text-heading">Clear</button>
-          </div>
-          {bulkInput ? (
-            <form onSubmit={(e) => { e.preventDefault(); if (bulkInput.value.trim()) bulk(bulkInput.action, bulkInput.value.trim()); setBulkInput(null); }} className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <input autoFocus value={bulkInput.value} onChange={(e) => setBulkInput({ ...bulkInput, value: e.target.value })} placeholder={bulkInput.action === "tag" ? "Tag to add…" : "Task title…"} className="min-h-10 min-w-0 flex-1 rounded-lg border border-mist bg-card px-3 py-2 text-sm outline-none focus:border-trust" />
-              <button type="submit" className="min-h-10 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink hover:bg-gold-deep">Apply to {count}</button>
-              <button type="button" onClick={() => setBulkInput(null)} className="min-h-10 text-sm text-slate">Cancel</button>
-            </form>
-          ) : null}
-          </>
-          )}
-        </div>
-      ) : null}
-
-      <div className="hidden justify-end md:flex">
-        <button type="button" onClick={toggleDensity} className="text-xs text-slate hover:text-heading hover:underline">{compact ? "Comfortable rows" : "Compact rows"}</button>
+    {count > 0 ? <div aria-busy={pending} className="m-4 rounded-xl border border-mist bg-cloud p-3 sm:p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+        <strong className="font-semibold text-heading">{count} selected{allMatching ? " across all matching results" : hasSelectionOnOtherPages ? " across matching results" : " on this page"}</strong>
+        {!allMatching && allPageSelected && total > rows.length ? <button type="button" disabled={pending} onClick={() => { setAllMatching(true); setActionError(null); }} className="min-h-10 font-medium text-trust underline dark:text-gold-deep">Select all {total} matching contacts</button> : null}
+        <button type="button" disabled={pending} onClick={() => { clearSelection(); setActionError(null); }} className="ml-auto min-h-10 text-slate underline disabled:opacity-50">Clear selection</button>
       </div>
+      {pendingAction ? <div role="status" aria-live="polite" className="mb-3 flex items-center gap-2 text-sm font-medium text-heading"><span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-mist border-t-heading" />{bulkProgressMessage(pendingAction.action, pendingAction.count)}</div> : null}
+      <fieldset disabled={pending} className="flex flex-wrap gap-2 disabled:opacity-60"><legend className="sr-only">Actions for selected contacts</legend>
+        {canWrite ? <>
+          <select defaultValue="" aria-label="Set stage" onChange={(event) => { if (event.target.value) void bulk("stage", event.target.value); event.target.value = ""; }} className={`${secondaryButton} max-w-full`}><option value="" disabled>Set stage…</option>{STAGES_IN_ORDER.map((stage) => <option key={stage} value={stage}>{STAGE_LABELS[stage]}</option>)}</select>
+          <select defaultValue="" aria-label="Assign owner" onChange={(event) => { void bulk("owner", event.target.value === "__none__" ? "" : event.target.value); event.target.value = ""; }} className={`${secondaryButton} max-w-full`}><option value="" disabled>Assign owner…</option><option value="__none__">Unassigned</option>{owners.map((owner) => <option key={owner} value={owner}>{owner}</option>)}</select>
+          <button type="button" onClick={() => setBulkInput({ action: "tag", value: "" })} className={secondaryButton}>Add tag</button>
+          <button type="button" onClick={() => setBulkInput({ action: "task", value: "" })} className={secondaryButton}>Add task</button>
+        </> : null}
+        {canAdmin && !allMatching && !hasSelectionOnOtherPages ? <button type="button" onClick={exportSelected} className={secondaryButton}>Export selected</button> : null}
+        {canAdmin && canWrite ? <button type="button" onClick={() => void bulk("delete")} className={`${secondaryButton} text-red dark:text-[#ffb4aa]`}>Move to Trash</button> : null}
+      </fieldset>
+      {bulkInput ? <form onSubmit={(event) => { event.preventDefault(); if (bulkInput.value.trim()) void bulk(bulkInput.action, bulkInput.value.trim()); }} className="mt-3 border-t border-mist pt-3">
+        <label htmlFor="contacts-bulk-value" className="mb-2 block text-xs font-semibold text-heading">{bulkInput.action === "tag" ? "Tag to add" : "Task title"}</label>
+        <div className="flex flex-col gap-2 sm:flex-row"><input id="contacts-bulk-value" autoFocus disabled={pending} required value={bulkInput.value} onChange={(event) => setBulkInput({ ...bulkInput, value: event.target.value })} className={`${field} min-w-0 flex-1`} /><button type="submit" disabled={pending || !bulkInput.value.trim()} className="min-h-11 shrink-0 rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink hover:bg-gold/85 disabled:opacity-50">Apply to {count}</button><button type="button" disabled={pending} onClick={() => setBulkInput(null)} className={secondaryButton}>Cancel</button></div>
+      </form> : null}
+    </div> : null}
 
-      {/* Desktop table */}
-      <div ref={tableScrollRef} onScroll={syncTableScroll} className="crm-scroll hidden overflow-x-auto rounded-2xl border border-mist bg-card pb-1 md:block">
-        <table className="w-full min-w-[1180px] text-left text-sm">
-          <thead className="border-b border-mist bg-cloud text-xs uppercase tracking-wide text-slate">
-            <tr>
-              <th className="sticky left-0 z-20 w-12 bg-cloud px-4 py-3"><input type="checkbox" checked={allMatching || allPageSelected} ref={(el) => { if (el) el.indeterminate = !allMatching && selected.size > 0 && !allPageSelected; }} onChange={toggleAll} className="h-4 w-4 cursor-pointer accent-trust" aria-label="Select all" /></th>
-              <th className={`${th} sticky left-12 z-20 min-w-44 bg-cloud`}><button type="button" onClick={() => sortBy("name")} className="inline-flex items-center gap-1 uppercase">Name {arrow("name")}</button></th>
-              <th className={`${th} min-w-56`}>Email</th>
-              <th className={`${th} min-w-32`}>Owner</th>
-              <th className={`${th} min-w-32`}><button type="button" onClick={() => sortBy("stage")} className="inline-flex items-center gap-1 uppercase">Stage {arrow("stage")}</button></th>
-              <th className={`${th} min-w-36`}>Segment</th>
-              <th className={`${th} min-w-24 text-right`}><button type="button" onClick={() => sortBy("watch")} className="inline-flex items-center gap-1 uppercase">Watch {arrow("watch")}</button></th>
-              <th className={`${th} min-w-48`}>Next task</th>
-              <th className={`${th} min-w-28 whitespace-nowrap`}><button type="button" onClick={() => sortBy("created")} className="inline-flex items-center gap-1 uppercase">Created {arrow("created")}</button></th>
-              <th className="sticky right-0 z-30 w-20 min-w-20 border-l border-mist bg-cloud py-3 pl-1 pr-2">
-                <span className="flex items-center justify-end gap-1">
-                  <button type="button" onClick={() => moveTable(-1)} disabled={!tableScroll.left} aria-label="Scroll table left" title="Scroll table left" className="grid h-8 w-8 place-items-center rounded-lg border border-mist bg-card text-lg font-semibold text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">‹</button>
-                  <button type="button" onClick={() => moveTable(1)} disabled={!tableScroll.right} aria-label="Scroll table right" title="Scroll table right" className="grid h-8 w-8 place-items-center rounded-lg border border-mist bg-card text-lg font-semibold text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">›</button>
-                </span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-mist">
-            {rows.length === 0 ? (
-              <tr><td colSpan={10} className="px-4 py-10 text-center text-slate"><p>No contacts match these filters.</p><button type="button" onClick={() => router.push("/crm/contacts")} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">Reset filters</button></td></tr>
-            ) : rows.map((c) => {
-              const checked = allMatching || selected.has(c.id);
-              return (
-                <tr key={c.id} className={`relative transition-colors ${checked ? "bg-sky/40" : "hover:bg-cloud"}`}
-                  onMouseEnter={(e) => setFly({ c, x: e.clientX, y: e.clientY })} onMouseLeave={() => setFly(null)}>
-                  <td className={`${td} sticky left-0 z-10 ${checked ? "bg-sky" : "bg-card"}`}><input type="checkbox" checked={checked} onChange={() => toggleOne(c.id)} className="h-4 w-4 cursor-pointer accent-trust" aria-label={`Select ${c.name}`} /></td>
-                  <td className={`${td} sticky left-12 z-10 font-medium ${checked ? "bg-sky" : "bg-card"}`}>
-                    <Link href={`/crm/contacts/${c.id}`} className="text-heading hover:text-trust hover:underline">{c.name}</Link>
-                    {c.tags?.length ? <div className="mt-1 flex flex-wrap gap-1">{c.tags.map((tag) => <span key={tag} className="rounded bg-sky px-1.5 py-0.5 text-xs font-medium text-trust">#{tag}</span>)}</div> : null}
-                  </td>
-                  <td className={`${td} text-slate`}>{c.email}</td>
-                  <td className={`${td} text-slate`}>{c.owner ?? "—"}</td>
-                  <td className={td}><StageBadge stage={c.stage} /></td>
-                  <td className={td}><SegmentBadge segment={c.segment} /></td>
-                  <td className={`${td} text-right tabular-nums text-slate`}>{c.watchPct ? `${c.watchPct}%` : "—"}</td>
-                  <td className={`${td} max-w-[180px] truncate text-sm ${c.nextTask?.overdue ? "text-red" : "text-slate"}`}>{c.nextTask ? c.nextTask.title : c.openTaskCount === 0 ? "—" : ""}</td>
-                  <td className={`${td} whitespace-nowrap text-slate`}>{fmtDate(c.createdAt)}</td>
-                  <td data-no-contact-preview className={`${td} sticky right-0 w-20 min-w-20 border-l border-mist ${menu === c.id ? "z-[80]" : "z-10"} ${checked ? "bg-sky" : "bg-card"}`} onMouseEnter={() => setFly(null)} onMouseLeave={(event) => setFly({ c, x: event.clientX, y: event.clientY })}>
-                    <button type="button" onClick={() => { setFly(null); setMenu(menu === c.id ? null : c.id); }} aria-label="Actions" className="ml-auto block px-2 text-slate hover:text-heading">⋮</button>
-                    {menu === c.id ? <RowMenu c={c} owners={owners} tags={tags} onClose={() => setMenu(null)} onDone={() => { setMenu(null); router.refresh(); }} /> : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile cards */}
-      <div className="space-y-2 md:hidden">
-        {rows.length === 0 ? <div className="py-6 text-center text-sm text-slate"><p>No contacts match these filters.</p><button type="button" onClick={() => router.push("/crm/contacts")} className="mt-3 rounded-lg bg-navy px-4 py-2 text-sm font-medium text-white">Reset filters</button></div> : rows.map((c) => (
-          <div key={c.id} className={`rounded-xl border border-mist bg-card p-3 ${allMatching || selected.has(c.id) ? "ring-1 ring-trust" : ""}`}>
-            <div className="flex items-start gap-2">
-              <label className="-m-2 grid h-10 w-10 shrink-0 cursor-pointer place-items-center" aria-label={`Select ${c.name}`}><input type="checkbox" checked={allMatching || selected.has(c.id)} onChange={() => toggleOne(c.id)} className="h-4 w-4 accent-trust" /></label>
-              <Link href={`/crm/contacts/${c.id}`} className="min-w-0 flex-1 truncate font-medium text-heading">{c.name}</Link>
-              <span className="shrink-0 text-xs text-slate">{fmtDate(c.createdAt)}</span>
-              <button type="button" onClick={() => setMenu(menu === c.id ? null : c.id)} aria-label={`Actions for ${c.name}`} className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center text-xl text-slate hover:text-heading">⋮</button>
-            </div>
-            <div className="mt-1 truncate text-sm text-slate">{c.email}</div>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5"><StageBadge stage={c.stage} /><SegmentBadge segment={c.segment} />{c.owner ? <span className="rounded-md bg-sky px-1.5 py-0.5 text-xs text-trust">{c.owner}</span> : null}{c.tags?.map((tag) => <span key={tag} className="rounded bg-sky px-1.5 py-0.5 text-xs text-trust">#{tag}</span>)}</div>
-            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-mist pt-2 text-sm text-slate">
-              <span>Watched <strong className="font-medium text-body">{c.watchPct ? `${c.watchPct}%` : "—"}</strong></span>
-              <span className={`truncate text-right ${c.nextTask?.overdue ? "text-red" : ""}`}>{c.nextTask ? c.nextTask.title : "No next task"}</span>
-            </div>
-            {menu === c.id ? <RowMenu c={c} owners={owners} tags={tags} onClose={() => setMenu(null)} onDone={() => { setMenu(null); router.refresh(); }} /> : null}
-          </div>
-        ))}
-      </div>
-
-      {/* Hover flyout */}
-      {fly && !menu ? (
-        <div className="pointer-events-none fixed z-50 hidden w-64 rounded-xl border border-mist bg-card p-3 shadow-card md:block" style={{ left: Math.min(fly.x + 16, (typeof window !== "undefined" ? window.innerWidth : 1200) - 280), top: Math.max(12, Math.min(fly.y + 12, (typeof window !== "undefined" ? window.innerHeight : 800) - 240)) }}>
-          <div className="font-medium text-heading">{fly.c.name}</div>
-          <div className="text-xs text-slate">{fly.c.email}{fly.c.phone ? ` · ${fly.c.phone}` : ""}</div>
-          <div className="mt-2 flex flex-wrap gap-1.5"><StageBadge stage={fly.c.stage} /><SegmentBadge segment={fly.c.segment} /></div>
-          <dl className="mt-2 space-y-1 text-xs text-slate">
-            <div className="flex justify-between"><dt>Watched</dt><dd className="text-body">{fly.c.watchPct}%</dd></div>
-            <div className="flex justify-between"><dt>Last activity</dt><dd className="text-body">{fly.c.daysSinceActivity}d ago</dd></div>
-            <div className="flex justify-between"><dt>Open tasks</dt><dd className="text-body">{fly.c.openTaskCount}</dd></div>
-            {fly.c.nextTask ? <div className={fly.c.nextTask.overdue ? "text-red" : ""}>Next: {fly.c.nextTask.title}</div> : null}
-          </dl>
-        </div>
-      ) : null}
+    <div className="flex min-h-12 items-center justify-between gap-3 border-b border-mist px-4 py-2 sm:px-5">
+      <span className="hidden text-xs text-slate md:block">{sort === "recent" ? "Most recent activity first" : `Sorted by ${sort === "created" ? "date added" : sort === "watch" ? "evergreen watch" : sort} · ${direction === "asc" ? "ascending" : "descending"}`}</span>
+      {selectable && rows.length ? <label className="flex min-h-10 items-center gap-2 text-xs font-medium text-slate md:hidden"><input type="checkbox" disabled={pending} checked={allMatching || allPageSelected} onChange={toggleAll} className="h-4 w-4 accent-navy dark:accent-gold" />Select all on this page</label> : <span className="text-xs text-slate md:hidden">{rows.length} on this page</span>}
+      <button type="button" disabled={pending} onClick={toggleDensity} className="ml-auto hidden min-h-9 items-center gap-2 rounded-lg px-2 text-xs font-medium text-slate hover:bg-cloud hover:text-heading disabled:opacity-50 md:inline-flex"><svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.4"><path d={compact ? "M2 4h12M2 8h12M2 12h12" : "M2 3h12v3H2zM2 10h12v3H2z"} /></svg>{compact ? "Comfortable rows" : "Compact rows"}</button>
+      <div className="hidden items-center gap-1 md:flex"><button type="button" disabled={pending || !tableScroll.left} onClick={() => tableScrollRef.current?.scrollBy({ left: -360, behavior: "smooth" })} aria-label="Scroll table left" className="grid h-8 w-8 place-items-center rounded-lg border border-mist text-lg text-heading hover:bg-cloud disabled:opacity-30">‹</button><button type="button" disabled={pending || !tableScroll.right} onClick={() => tableScrollRef.current?.scrollBy({ left: 360, behavior: "smooth" })} aria-label="Scroll table right" className="grid h-8 w-8 place-items-center rounded-lg border border-mist text-lg text-heading hover:bg-cloud disabled:opacity-30">›</button></div>
     </div>
-  );
+
+    <div ref={tableScrollRef} onScroll={syncTableScroll} className="crm-scroll hidden overflow-x-auto md:block">
+      <table className="w-full min-w-[1100px] text-left text-sm"><caption className="sr-only">Contacts, owners, pipeline stages, evergreen engagement, and next tasks</caption>
+        <thead className="border-b border-mist bg-cloud/70 text-[10px] uppercase tracking-[0.08em] text-slate"><tr>
+          {selectable ? <th scope="col" className="sticky left-0 z-20 w-12 bg-cloud px-4 py-3"><input type="checkbox" disabled={pending || !rows.length} checked={allMatching || allPageSelected} ref={(element) => { if (element) element.indeterminate = !allMatching && count > 0 && !allPageSelected; }} onChange={toggleAll} className="h-4 w-4 cursor-pointer accent-navy dark:accent-gold" aria-label="Select all" /></th> : null}
+          <th scope="col" aria-sort={sortState("name")} className={`sticky ${selectable ? "left-12" : "left-0"} z-20 min-w-60 bg-cloud px-4 py-3 font-semibold`}><button disabled={pending} type="button" onClick={() => sortBy("name")} className="inline-flex items-center gap-2 uppercase">Contact {arrow("name")}</button></th>
+          <th scope="col" className="min-w-28 px-4 py-3 font-semibold">Owner</th>
+          <th scope="col" aria-sort={sortState("stage")} className="min-w-32 px-4 py-3 font-semibold"><button disabled={pending} type="button" onClick={() => sortBy("stage")} className="inline-flex items-center gap-2 uppercase">Stage {arrow("stage")}</button></th>
+          <th scope="col" aria-sort={sortState("watch")} className="min-w-60 px-4 py-3 font-semibold"><span className="block">Engagement</span><button disabled={pending} type="button" onClick={() => sortBy("watch")} className="mt-1 inline-flex items-center gap-1 text-[10px] font-normal normal-case">Evergreen watch {arrow("watch")}</button></th>
+          <th scope="col" className="min-w-48 px-4 py-3 font-semibold">Next task</th>
+          <th scope="col" aria-sort={sortState("created")} className="min-w-24 px-4 py-3 font-semibold"><button disabled={pending} type="button" onClick={() => sortBy("created")} className="inline-flex items-center gap-2 uppercase">Added {arrow("created")}</button></th>
+          <th scope="col" className="sticky right-0 z-20 w-14 border-l border-mist bg-cloud px-2 py-3"><span className="sr-only">Contact actions</span></th>
+        </tr></thead>
+        <tbody className="divide-y divide-mist">
+          {rows.length === 0 ? <tr><td colSpan={selectable ? 8 : 7}><EmptyContacts /></td></tr> : rows.map((contact) => {
+            const checked = allMatching || selected.has(contact.id);
+            const background = checked ? "bg-cloud" : "bg-card group-hover:bg-cloud";
+            return <tr key={contact.id} className={`group transition-colors ${checked ? "bg-cloud" : "hover:bg-cloud"}`}>
+              {selectable ? <td className={`${cell} sticky left-0 z-10 ${background}`}><input type="checkbox" disabled={pending} checked={checked} onChange={() => toggleOne(contact.id)} className="h-4 w-4 cursor-pointer accent-navy dark:accent-gold" aria-label={`Select ${contact.name}`} /></td> : null}
+              <td className={`${cell} sticky ${selectable ? "left-12" : "left-0"} z-10 ${background}`}><div className="flex items-center gap-3"><Avatar name={contact.name} small={compact} /><div className="min-w-0"><Link href={`/crm/contacts/${contact.id}`} className="font-semibold text-heading decoration-gold underline-offset-4 hover:underline">{contact.name}</Link><p title={contact.email} className="mt-1 max-w-52 truncate text-xs text-slate">{contact.email}</p>{contact.tags?.length ? <div className="mt-1.5 flex max-w-52 flex-wrap gap-1">{contact.tags.map((tag) => <span key={tag} className="rounded bg-cloud px-1.5 py-0.5 text-[10px] font-medium text-slate">#{tag}</span>)}</div> : null}</div></div></td>
+              <td className={`${cell} text-xs text-slate`}>{contact.owner ? <span className="flex items-center gap-2"><span aria-hidden="true" className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-cloud text-[9px] font-semibold text-heading">{initials(contact.owner)}</span>{contact.owner}</span> : "Unassigned"}</td>
+              <td className={cell}><StagePill stage={contact.stage} /></td>
+              <td className={cell}><Engagement contact={contact} /></td>
+              <td className={cell}><NextTask contact={contact} /></td>
+              <td className={`${cell} whitespace-nowrap text-xs text-slate`}>{fmtDate(contact.createdAt)}</td>
+              <td className={`sticky right-0 z-10 border-l border-mist px-2 ${background}`}><button type="button" disabled={pending} onClick={() => setActiveContact(contact)} aria-label={`${canWrite ? "Manage" : "View"} ${contact.name}`} className="grid h-10 w-10 place-items-center rounded-lg text-xl text-slate hover:bg-mist/50 hover:text-heading disabled:opacity-50">⋯</button></td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
+    </div>
+
+    <div className="divide-y divide-mist md:hidden">
+      {!rows.length ? <EmptyContacts /> : rows.map((contact) => <article key={contact.id} aria-label={contact.name} className={`p-4 ${allMatching || selected.has(contact.id) ? "bg-cloud" : "bg-card"}`}>
+        <div className="flex items-start gap-3">
+          {selectable ? <label className="-ml-2 -mt-1 grid h-10 w-8 shrink-0 place-items-center"><span className="sr-only">Select {contact.name}</span><input type="checkbox" disabled={pending} checked={allMatching || selected.has(contact.id)} onChange={() => toggleOne(contact.id)} className="h-4 w-4 accent-navy dark:accent-gold" /></label> : null}
+          <Avatar name={contact.name} small />
+          <div className="min-w-0 flex-1"><Link href={`/crm/contacts/${contact.id}`} className="font-semibold text-heading underline-offset-4 hover:underline">{contact.name}</Link><p title={contact.email} className="mt-1 truncate text-xs text-slate">{contact.email}</p></div>
+          <button type="button" disabled={pending} onClick={() => setActiveContact(contact)} aria-label={`${canWrite ? "Manage" : "View"} ${contact.name}`} className="-mr-2 -mt-1 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl text-slate hover:bg-cloud disabled:opacity-50">⋯</button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><StagePill stage={contact.stage} /><span className="text-xs text-slate">{contact.owner ?? "Unassigned"}</span>{contact.tags?.map((tag) => <span key={tag} className="rounded bg-cloud px-1.5 py-0.5 text-[10px] text-slate">#{tag}</span>)}</div>
+        <div className="mt-3 rounded-lg border border-mist bg-cloud/50 p-3"><Engagement contact={contact} /><div className="mt-3 border-t border-mist pt-3"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate">Next task</p><NextTask contact={contact} /></div></div>
+        <p className="mt-3 text-[11px] text-slate">Added {fmtDate(contact.createdAt)} · {contact.daysSinceActivity === 0 ? "Active today" : `Active ${contact.daysSinceActivity}d ago`}</p>
+      </article>)}
+    </div>
+    {activeContact ? <ContactDialog key={activeContact.id} contact={activeContact} owners={owners} tags={tags} canWrite={canWrite} onClose={() => setActiveContact(null)} onDone={() => { setActiveContact(null); router.refresh(); }} onTaskAdded={() => router.refresh()} /> : null}
+  </div>;
 }
 
-function RowMenu({ c, owners, tags, onClose, onDone }: { c: Contact; owners: string[]; tags: string[]; onClose: () => void; onDone: () => void }) {
+function EmptyContacts() {
+  return <div className="px-5 py-14 text-center"><span aria-hidden="true" className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-full border border-mist bg-cloud text-slate"><svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg></span><p className="font-semibold text-heading">No contacts match these filters.</p><p className="mt-2 text-sm text-slate">Try a different search or clear your filters to see everyone.</p><Link href="/crm/contacts?view=all" className={`${secondaryButton} mt-5`}>Reset filters</Link></div>;
+}
+
+function ContactDialog({ contact, owners, tags, canWrite, onClose, onDone, onTaskAdded }: {
+  contact: Contact; owners: string[]; tags: string[]; canWrite: boolean; onClose: () => void; onDone: () => void; onTaskAdded: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [stage, setStage] = useState(contact.stage);
+  const [owner, setOwner] = useState(contact.owner ?? "");
+  const [contactTags, setContactTags] = useState(contact.tags ?? []);
   const [task, setTask] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"contact" | "task" | null>(null);
+  const pendingRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const edit = async (patch: Record<string, unknown>) => {
-    setPending(true);
+  const [taskSuccess, setTaskSuccess] = useState<string | null>(null);
+  const changed = stage !== contact.stage || owner !== (contact.owner ?? "") || JSON.stringify(contactTags) !== JSON.stringify(contact.tags ?? []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog?.showModal();
+    return () => { dialog?.close(); previousFocus?.focus(); };
+  }, []);
+  async function saveContact() {
+    if (!canWrite || !changed || pendingRef.current) return;
+    pendingRef.current = true;
+    setPending("contact");
     setError(null);
-    try {
-      await api(`/api/crm/contact/${c.id}`, "PATCH", { ...patch, expectedUpdatedAt: c.updatedAt });
-      onDone();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Could not save this contact.");
-    } finally {
-      setPending(false);
-    }
-  };
-  const addTask = async () => {
-    if (!task.trim()) return;
-    setPending(true);
+    try { await api(`/api/crm/contact/${contact.id}`, "PATCH", { stage, owner, tags: contactTags, expectedUpdatedAt: contact.updatedAt }); onDone(); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Could not save this contact."); }
+    finally { pendingRef.current = false; setPending(null); }
+  }
+  async function addTask() {
+    if (!canWrite || !task.trim() || pendingRef.current) return;
+    pendingRef.current = true;
+    setPending("task");
     setError(null);
-    try {
-      await api("/api/crm/task", "POST", { email: c.email, title: task.trim() });
-      onDone();
-    } catch (error) {
-      setError(error instanceof Error ? error.message : "Could not add the task.");
-    } finally {
-      setPending(false);
-    }
-  };
-  return (
-    <>
-      <div className="fixed inset-0 z-[60] bg-navy/25 backdrop-blur-[1px]" onClick={onClose} />
-      <div className="fixed left-4 right-4 top-1/2 z-[70] max-h-[calc(100vh-2rem)] -translate-y-1/2 overflow-y-auto rounded-xl border border-trust/40 bg-card p-4 text-left shadow-2xl ring-1 ring-navy/10 sm:left-auto sm:right-6 sm:w-64">
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Stage</label>
-        <select disabled={pending} defaultValue={c.stage} onChange={(e) => edit({ stage: e.target.value })} className="mb-2 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm outline-none focus:border-trust disabled:opacity-60">{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s as Stage]}</option>)}</select>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Owner</label>
-        <select disabled={pending} defaultValue={c.owner ?? ""} onChange={(e) => edit({ owner: e.target.value })} className="mb-2 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm outline-none focus:border-trust disabled:opacity-60"><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Add tag</label>
-        {c.tags?.length ? <div className="mb-1.5 flex flex-wrap gap-1">{c.tags.map((tag) => <button type="button" key={tag} title={`Remove #${tag}`} onClick={() => edit({ tags: (c.tags ?? []).filter((value) => value !== tag) })} className="rounded bg-sky px-2 py-1 text-xs font-medium text-trust hover:bg-red/10 hover:text-red">#{tag} ×</button>)}</div> : null}
-        <select defaultValue="" onChange={(e) => { if (e.target.value) edit({ tags: [...new Set([...(c.tags ?? []), e.target.value])] }); }} className="mb-2 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm outline-none focus:border-trust">
-          <option value="" disabled>{tags.some((tag) => !(c.tags ?? []).includes(tag)) ? "Select a tag..." : "All tags assigned"}</option>
-          {tags.filter((tag) => !(c.tags ?? []).includes(tag)).map((tag) => <option key={tag} value={tag}>#{tag}</option>)}
-        </select>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Quick task</label>
-        <div className="flex gap-1.5"><input value={task} onChange={(e) => setTask(e.target.value)} placeholder="Task…" className="min-w-0 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm outline-none focus:border-trust" /><button disabled={pending} type="button" onClick={addTask} className="rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep disabled:opacity-60">{pending ? "Saving…" : "Add"}</button></div>
-        {error ? <p role="alert" className="mt-2 text-xs text-red">{error} Your changes were not discarded; try again.</p> : null}
-        <Link href={`/crm/contacts/${c.id}`} className="mt-3 block text-sm text-trust hover:underline">Open contact →</Link>
+    setTaskSuccess(null);
+    try { await api("/api/crm/task", "POST", { email: contact.email, title: task.trim() }); setTask(""); setTaskSuccess("Task added. Your contact edits are still here."); onTaskAdded(); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Could not add this task."); }
+    finally { pendingRef.current = false; setPending(null); }
+  }
+  return <dialog ref={dialogRef} aria-labelledby="contact-dialog-title" aria-describedby="contact-dialog-description" onCancel={(event) => { event.preventDefault(); if (!pendingRef.current) onClose(); }} onClick={(event) => { if (event.target === event.currentTarget && !pendingRef.current) { const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose(); } }} className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/50 backdrop:backdrop-blur-sm">
+    <div className="flex max-h-[calc(100dvh-2rem)] flex-col">
+      <header className="flex items-start gap-3 border-b border-mist p-5 sm:p-6"><Avatar name={contact.name} /><div className="min-w-0 flex-1"><h2 id="contact-dialog-title" className="text-xl font-bold text-heading">{contact.name}</h2><p id="contact-dialog-description" className="mt-1 break-all text-sm text-slate">{contact.email}</p></div><button type="button" disabled={!!pending} onClick={onClose} aria-label="Close contact actions" className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl text-slate hover:bg-cloud disabled:opacity-50">×</button></header>
+      <div className="overflow-y-auto p-5 sm:p-6">
+        <dl className="grid grid-cols-2 gap-x-5 gap-y-4 rounded-xl border border-mist bg-cloud/60 p-4 text-xs"><div><dt className="text-slate">Source</dt><dd className="mt-1 font-semibold text-heading">{contact.source || "Not recorded"}</dd></div><div><dt className="text-slate">Last activity</dt><dd className="mt-1 font-semibold text-heading">{contact.daysSinceActivity === 0 ? "Today" : `${contact.daysSinceActivity} days ago`}</dd></div><div><dt className="text-slate">Evergreen watch</dt><dd className="mt-1 font-semibold text-heading">{contact.watchPct}%</dd></div><div><dt className="text-slate">Open tasks</dt><dd className="mt-1 font-semibold text-heading">{contact.openTaskCount}</dd></div>{contact.phone ? <div className="col-span-2"><dt className="text-slate">Phone</dt><dd className="mt-1 font-semibold text-heading">{contact.phone}</dd></div> : null}</dl>
+        {contact.nextTask ? <div className="mt-4 rounded-lg border-l-2 border-gold bg-cloud/50 px-3 py-2"><p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate">Next task</p><NextTask contact={contact} /></div> : null}
+        {canWrite ? <>
+          <form id="contact-quick-edit" onSubmit={(event) => { event.preventDefault(); void saveContact(); }} className="mt-5"><fieldset disabled={!!pending} className="space-y-4"><legend className="mb-3 text-sm font-semibold text-heading">Contact details</legend><div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold text-heading">Stage<select value={stage} onChange={(event) => setStage(event.target.value as Stage)} className={`${field} mt-2`}>{STAGES_IN_ORDER.map((item) => <option key={item} value={item}>{STAGE_LABELS[item]}</option>)}</select></label><label className="block text-xs font-semibold text-heading">Owner<select value={owner} onChange={(event) => setOwner(event.target.value)} className={`${field} mt-2`}><option value="">Unassigned</option>{[...new Set([...owners, ...(contact.owner ? [contact.owner] : [])])].map((item) => <option key={item} value={item}>{item}</option>)}</select></label></div>
+            <div><p className="mb-2 text-xs font-semibold text-heading">Tags</p>{contactTags.length ? <div className="mb-2 flex flex-wrap gap-2">{contactTags.map((tag) => <button type="button" key={tag} aria-label={`Remove tag ${tag}`} onClick={() => setContactTags((previous) => previous.filter((item) => item !== tag))} className="inline-flex min-h-8 items-center gap-2 rounded-md bg-cloud px-2 text-xs font-medium text-heading">#{tag}<span aria-hidden="true">×</span></button>)}</div> : null}<label className="block text-xs text-slate">Add tag<select value="" disabled={!!pending || !tags.some((tag) => !contactTags.includes(tag))} onChange={(event) => { if (event.target.value) setContactTags((previous) => [...new Set([...previous, event.target.value])]); }} className={`${field} mt-2`}><option value="">{tags.some((tag) => !contactTags.includes(tag)) ? "Choose a tag" : "No other tags available"}</option>{tags.filter((tag) => !contactTags.includes(tag)).map((tag) => <option key={tag} value={tag}>#{tag}</option>)}</select></label></div>
+          </fieldset></form>
+          <form onSubmit={(event) => { event.preventDefault(); void addTask(); }} className="mt-5 border-t border-mist pt-5"><label htmlFor="contact-quick-task" className="block text-xs font-semibold text-heading">Quick task</label><div className="mt-2 flex gap-2"><input id="contact-quick-task" disabled={!!pending} value={task} onChange={(event) => setTask(event.target.value)} placeholder="What needs to happen next?" className={`${field} min-w-0 flex-1`} /><button type="submit" disabled={!!pending || !task.trim()} className={`${secondaryButton} shrink-0`}>{pending === "task" ? "Adding…" : "Add task"}</button></div><p className="mt-2 text-[11px] text-slate">Creates an open task without a due date.</p></form>
+        </> : <div className="mt-5 flex flex-wrap gap-3"><StagePill stage={contact.stage} /><span className="text-sm text-slate">{contact.owner || "Unassigned"}</span></div>}
+        {error ? <p role="alert" className="mt-4 rounded-lg border border-red/30 bg-red/5 p-3 text-sm text-red dark:text-[#ffb4aa]">{error} Your changes are still here.</p> : null}
+        {taskSuccess ? <p role="status" className="mt-4 rounded-lg border border-green/30 bg-green/10 p-3 text-sm text-green">{taskSuccess}</p> : null}
       </div>
-    </>
-  );
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-mist bg-card p-4 sm:px-6"><Link href={`/crm/contacts/${contact.id}`} onClick={(event) => { if (pendingRef.current) event.preventDefault(); }} aria-disabled={!!pending} tabIndex={pending ? -1 : undefined} className="inline-flex min-h-11 items-center text-sm font-semibold text-trust hover:underline dark:text-gold-deep">Open full profile <span aria-hidden="true" className="ml-2">↗</span></Link>{canWrite ? <button type="submit" form="contact-quick-edit" disabled={!!pending || !changed} className="min-h-11 rounded-lg bg-gold px-5 py-2 text-sm font-semibold text-ink hover:bg-gold/85 disabled:opacity-50">{pending === "contact" ? "Saving…" : "Save changes"}</button> : <button type="button" onClick={onClose} className={secondaryButton}>Done</button>}</footer>
+    </div>
+  </dialog>;
 }

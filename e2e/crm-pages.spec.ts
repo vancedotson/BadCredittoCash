@@ -123,13 +123,13 @@ test("CRM bulk deletion shows progress and completion feedback", async ({ page }
   const requestHeld = new Promise<void>((resolve) => { releaseRequest = resolve; });
   await page.route("**/api/crm/contacts/bulk", async (route) => {
     await requestHeld;
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true }) });
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, affected: 17 }) });
   });
   await page.goto("/crm/contacts");
 
   await page.getByLabel("Select all", { exact: true }).check();
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("button", { name: "Move to Trash", exact: true }).click();
 
   await expect(page.getByRole("status")).toContainText("Moving 17 contacts to Trash");
   releaseRequest();
@@ -264,8 +264,8 @@ test("CRM empty filter results offer a reset", async ({ page }) => {
   await page.goto("/crm/contacts?q=no-such-contact-987");
   const contactsTable = page.getByRole("table");
   await expect(contactsTable.getByText("No contacts match these filters.", { exact: true })).toBeVisible();
-  await contactsTable.getByRole("button", { name: "Reset filters", exact: true }).click();
-  await expect(page).toHaveURL(/\/crm\/contacts$/);
+  await contactsTable.getByRole("link", { name: "Reset filters", exact: true }).click();
+  await expect(page).toHaveURL(/\/crm\/contacts\?view=all$/);
 });
 
 test("CRM task completion can be undone", async ({ page }) => {
