@@ -190,9 +190,9 @@ test("task quick action preserves the API contract and closes accessibly after s
   });
   await openOverview(page);
   const { dialog, trigger } = await openQuickAction(page, "task");
-  await dialog.getByLabel("Task title", { exact: true }).fill("Follow up after the webinar");
+  await dialog.getByRole("textbox", { name: "Task title", exact: true }).fill("Follow up after the webinar");
   await dialog.getByLabel("Contact", { exact: true }).selectOption({ label: "Ana Martins" });
-  await dialog.getByLabel("Priority", { exact: true }).selectOption("high");
+  await dialog.getByRole("radio", { name: "High", exact: true }).check();
   await dialog.getByLabel("Owner", { exact: true }).selectOption("Team");
   await dialog.getByLabel("Due date", { exact: true }).fill("2026-12-01");
   await dialog.getByRole("button", { name: "Create task", exact: true }).click();
