@@ -15,9 +15,22 @@ import {
 import { SegmentBadge } from "@/components/crm/ui";
 import { ChevronRightIcon } from "@/components/marketing-v2/Icons";
 import { UndoNotice, type UndoNoticeState } from "@/components/crm/UndoNotice";
+import styles from "./PipelineBoard.module.css";
 
 const inputClass =
-  "rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none transition-colors placeholder:text-slate focus:border-trust";
+  "min-w-0 rounded-lg border border-mist bg-card px-3 py-2 text-base text-body outline-none transition-colors placeholder:text-slate focus:border-trust focus:ring-2 focus:ring-trust/15 dark:focus:border-gold md:text-sm";
+
+function PipelineIcon({ name, className = "h-3.5 w-3.5 shrink-0" }: { name: "search" | "source" | "watch" | "clock" | "task" | "empty"; className?: string }) {
+  const paths = {
+    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" /></>,
+    source: <><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 5" /></>,
+    watch: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+    task: <><path d="M5 21V4m0 1c5-4 9 4 14 0v10c-5 4-9-4-14 0" /></>,
+    empty: <><path d="m3 13 4-8h10l4 8v6H3v-6Z" /><path d="M3 13h5l2 3h4l2-3h5" /></>,
+  };
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>{paths[name]}</svg>;
+}
 
 async function api(url: string, method: string, body: unknown) {
   const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -84,7 +97,7 @@ export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact
     const raf = requestAnimationFrame(syncBoardScroll);
     window.addEventListener("resize", syncBoardScroll);
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", syncBoardScroll); };
-  }, [filtered]);
+  }, [filtered, collapsed]);
 
   useEffect(() => {
     if (!focusId) return;
@@ -216,7 +229,7 @@ export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact
   const cardProps = { owners, selected, pending, draggingId: dragId, stageOf, onToggleSelect: toggleSelect, onMoveStage: (id: string, s: Stage) => requestMove([id], s), onAssign: assign, onQuickTask: quickTask, onDragStart: setDragId, onDragEnd: () => setDragId(null) };
 
   return (
-    <div ref={boardRef} className="space-y-4">
+    <div ref={boardRef} className={`${styles.workspace} space-y-3`}>
       {undoNotice ? <UndoNotice key={undoNotice.id} notice={undoNotice} onDismiss={() => setUndoNotice(null)} /> : null}
       {actionError ? (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red/30 bg-red/5 px-4 py-3 text-sm text-red">
@@ -225,8 +238,14 @@ export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact
         </div>
       ) : null}
       {/* Toolbar */}
-      <div className="grid grid-cols-2 gap-2 xl:flex xl:flex-wrap xl:items-center">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" aria-label="Search pipeline" className={`${inputClass} col-span-2 min-h-10 w-full min-w-[180px] xl:flex-1`} />
+      <div className={`${styles.toolbar} rounded-xl border border-mist bg-card p-2`}>
+        <button type="button" onClick={() => scrollByCol(-1)} disabled={!boardScroll.left} aria-label="Scroll left" className={`${styles.scrollLeft} h-10 w-10 shrink-0 place-items-center rounded-lg border border-mist text-heading transition-colors hover:bg-sky disabled:cursor-default disabled:opacity-30`}>
+          <ChevronRightIcon className="h-4 w-4 rotate-180" />
+        </button>
+        <div className={`${styles.search} relative min-w-0`}>
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate"><PipelineIcon name="search" className="h-4 w-4" /></span>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or email…" aria-label="Search pipeline" className={`${inputClass} min-h-10 w-full pl-9`} />
+        </div>
         <select value={ownerF} onChange={(e) => setOwnerF(e.target.value)} className={`${inputClass} min-h-10 w-full xl:w-auto`} aria-label="Filter by owner">
           <option value="">All owners</option>
           <option value="__none__">Unassigned</option>
@@ -241,8 +260,11 @@ export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact
           <option value="stale">Stalest first</option>
           <option value="name">Name</option>
         </select>
-        <button type="button" onClick={() => setAddOpen(true)} className="min-h-10 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep">
+        <button type="button" onClick={() => setAddOpen(true)} className={`${styles.addContact} min-h-10 whitespace-nowrap rounded-lg bg-gold px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-[#e69a2b]`}>
           + Add contact
+        </button>
+        <button type="button" onClick={() => scrollByCol(1)} disabled={!boardScroll.right} aria-label="Scroll right" className={`${styles.scrollRight} h-10 w-10 shrink-0 place-items-center rounded-lg border border-mist text-heading transition-colors hover:bg-sky disabled:cursor-default disabled:opacity-30`}>
+          <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
 
@@ -267,15 +289,7 @@ export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact
 
       {/* Desktop kanban — all stages in one horizontal, scrollable row */}
       <div className="hidden md:block">
-        <div className="mb-2 flex items-center justify-end gap-2">
-          <button type="button" onClick={() => scrollByCol(-1)} disabled={!boardScroll.left} aria-label="Scroll left" className="grid h-9 w-9 place-items-center rounded-lg border border-mist bg-card text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">
-            <ChevronRightIcon className="h-4 w-4 rotate-180" />
-          </button>
-          <button type="button" onClick={() => scrollByCol(1)} disabled={!boardScroll.right} aria-label="Scroll right" className="grid h-9 w-9 place-items-center rounded-lg border border-mist bg-card text-trust shadow-sm transition-colors hover:border-trust hover:bg-sky disabled:cursor-default disabled:opacity-30">
-            <ChevronRightIcon className="h-4 w-4" />
-          </button>
-        </div>
-        <div ref={scrollRef} onScroll={syncBoardScroll} className="crm-scroll flex gap-4 overflow-x-auto pb-2">
+        <div ref={scrollRef} onScroll={syncBoardScroll} className="crm-scroll flex gap-3 overflow-x-auto pb-3">
           {ACTIVE_STAGES.map((stage) => (
             <Column key={stage} stage={stage} cards={cardsIn(stage)} collapsed={collapsed.has(stage)} onToggleCollapse={() => toggleCollapse(stage)} over={overStage === stage} drop={dropHandlers(stage)} cardProps={cardProps} />
           ))}
@@ -291,13 +305,13 @@ export function PipelineBoard({ contacts, owners, focusId }: { contacts: Contact
       <div className="md:hidden">
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
           {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => (
-            <button key={s} type="button" aria-pressed={mobileStage === s} onClick={(e) => { setMobileStage(s); e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium ${mobileStage === s ? "bg-navy text-white" : "border border-mist bg-card text-slate"}`}>
+            <button key={s} type="button" aria-pressed={mobileStage === s} onClick={(e) => { setMobileStage(s); e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${mobileStage === s ? "bg-navy text-white" : "border border-mist bg-card text-slate"}`}>
               {STAGE_LABELS[s]}
               <span className={`rounded-full px-1.5 text-xs ${mobileStage === s ? "bg-white/20" : "bg-mist/70"}`}>{cardsIn(s).length}</span>
             </button>
           ))}
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {cardsIn(mobileStage).length === 0 ? (
             <p className="py-8 text-center text-sm text-slate">No contacts in {STAGE_LABELS[mobileStage]}.</p>
           ) : (
@@ -336,24 +350,24 @@ function Column({
 }) {
   if (collapsed) {
     return (
-      <button type="button" onClick={onToggleCollapse} className="flex w-12 shrink-0 flex-col items-center gap-2 rounded-2xl border border-mist bg-cloud py-3 text-slate hover:bg-mist/40" {...drop}>
+      <button type="button" onClick={onToggleCollapse} aria-label={`Expand ${STAGE_LABELS[stage]}`} aria-expanded={false} data-pipeline-stage={stage} className={`flex w-12 shrink-0 flex-col items-center gap-3 rounded-xl border py-4 text-slate hover:bg-mist/40 ${over ? "border-trust bg-sky ring-2 ring-trust/30" : "border-mist bg-cloud"}`} {...drop}>
         <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums">{cards.length}</span>
         <span className="text-xs [writing-mode:vertical-rl]">{STAGE_LABELS[stage]}</span>
       </button>
     );
   }
   return (
-    <div className={`flex ${closed ? "w-64" : "w-72"} shrink-0 flex-col rounded-2xl border bg-cloud transition-all duration-200 ${over ? "-translate-y-0.5 border-trust bg-sky/40 shadow-card ring-2 ring-trust/30" : "border-mist"}`} {...drop}>
-      <div className="flex items-center justify-between px-4 py-3">
+    <div data-pipeline-stage={stage} className={`${styles.column} ${closed ? styles.closedColumn : ""} flex flex-col rounded-xl border transition-colors duration-200 ${over ? "border-trust bg-sky shadow-card ring-2 ring-trust/30" : "border-mist/65 bg-mist/20"}`} {...drop}>
+      <div className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="font-heading text-sm font-semibold text-heading">{STAGE_LABELS[stage]}</span>
-          <span className="rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{cards.length}</span>
+          <h2 className="font-heading text-sm font-bold text-heading">{STAGE_LABELS[stage]}</h2>
+          <span className="min-w-6 rounded-full bg-sky px-2 py-0.5 text-center text-xs font-semibold tabular-nums text-trust dark:text-[#a6cefa]">{cards.length}</span>
         </div>
-        <button type="button" onClick={onToggleCollapse} aria-label={`Collapse ${STAGE_LABELS[stage]}`} className="text-slate hover:text-heading">&#8211;</button>
+        <button type="button" onClick={onToggleCollapse} aria-label={`Collapse ${STAGE_LABELS[stage]}`} aria-expanded={true} className="grid h-8 w-8 place-items-center rounded-full text-slate transition-colors hover:bg-card hover:text-heading">&#8211;</button>
       </div>
-      <div className="flex min-h-[60px] flex-col gap-2 px-2 pb-2">
+      <div className="flex min-h-[200px] flex-col gap-2.5 px-2 pb-2">
         {cards.length === 0 ? (
-          <p className="px-2 py-6 text-center text-xs text-slate">Drop here</p>
+          <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate/25 bg-card/30 px-3 text-slate"><PipelineIcon name="empty" className="h-8 w-8 opacity-70" /><p className="text-xs">Drop here</p></div>
         ) : (
           cards.map((c) => <PipelineCard key={c.id} c={c} {...cardProps} />)
         )}
@@ -444,16 +458,16 @@ function PipelineCard({ c, owners, selected, pending, draggingId, stageOf, onTog
       onDragStart={beginDrag}
       onDrag={animateDrag}
       onDragEnd={finishDrag}
-      className={`relative rounded-xl border border-mist bg-card p-3 transition-[transform,opacity,box-shadow] duration-200 ${isPending ? "opacity-50" : ""} ${isDragging ? "scale-[0.985] opacity-60 shadow-inner" : "hover:-translate-y-0.5 hover:shadow-card"}`}
+      className={`${styles.card} relative min-w-0 rounded-lg border border-mist bg-card p-3 shadow-[0_1px_2px_rgba(15,44,76,0.025)] transition-[transform,opacity,box-shadow] duration-200 ${selected.has(c.id) ? "ring-2 ring-trust/35" : ""} ${isPending ? "opacity-50" : ""} ${isDragging ? "scale-[0.985] opacity-60 shadow-inner" : "hover:-translate-y-0.5 hover:shadow-card motion-reduce:hover:translate-y-0"}`}
       style={{ borderLeft: `3px solid ${agingColor(c.stageAgeDays)}`, cursor: isDragging ? "grabbing" : "grab" }}
     >
       <div className="flex items-start gap-2">
-        <label className="-m-2 grid h-10 w-10 shrink-0 cursor-pointer place-items-center" aria-label={`Select ${c.name}`}><input type="checkbox" checked={selected.has(c.id)} onChange={() => onToggleSelect(c.id)} className="h-4 w-4 accent-trust" /></label>
-        <Link href={`/crm/contacts/${c.id}`} className="min-w-0 flex-1 truncate text-sm font-medium text-heading hover:text-trust">{c.name}</Link>
-        <button type="button" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ top: Math.max(16, Math.min(rect.bottom + 8, window.innerHeight - 300)), right: Math.max(16, window.innerWidth - rect.right) }); setMenu((m) => !m); }} aria-label="Actions" className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center text-lg text-slate hover:text-heading">&#8942;</button>
+        <label className="-m-2 grid h-10 w-10 shrink-0 cursor-pointer place-items-center"><input type="checkbox" aria-label={`Select ${c.name}`} checked={selected.has(c.id)} onChange={() => onToggleSelect(c.id)} className="h-3.5 w-3.5 accent-trust" /></label>
+        <Link href={`/crm/contacts/${c.id}`} title={c.name} className="min-w-0 flex-1 truncate text-sm font-semibold text-trust hover:underline dark:text-[#a6cefa]">{c.name}</Link>
+        <button type="button" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setMenuPosition({ top: Math.max(16, Math.min(rect.bottom + 8, window.innerHeight - 300)), right: Math.max(16, window.innerWidth - rect.right) }); setMenu((m) => !m); }} aria-label="Actions" aria-expanded={menu} className="-mr-2 -mt-2 grid h-10 w-8 shrink-0 place-items-center rounded-md text-lg text-slate hover:bg-cloud hover:text-heading">&#8942;</button>
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <SegmentBadge segment={c.segment} />
         {c.owner ? <span className="rounded-md bg-sky px-1.5 py-0.5 text-xs font-medium text-trust">{c.owner}</span> : null}
         {(c.tags ?? []).slice(0, 1).map((t) => <span key={t} className="rounded-md bg-mist/60 px-1.5 py-0.5 text-xs text-slate">#{t}</span>)}
@@ -461,21 +475,21 @@ function PipelineCard({ c, owners, selected, pending, draggingId, stageOf, onTog
 
       {/* why-now signal */}
       {c.nextTask ? (
-        <div className={`mt-1.5 truncate text-sm ${c.nextTask.overdue ? "text-red" : "text-slate"}`}>
-          &#9873; {c.nextTask.title}{c.nextTask.overdue ? " · overdue" : ""}
+        <div title={`${c.nextTask.title}${c.nextTask.overdue ? " · overdue" : ""}`} className={`mt-2.5 flex items-center gap-1.5 text-xs ${c.nextTask.overdue ? "text-red dark:text-[#ffb4aa]" : "text-slate"}`}>
+          <PipelineIcon name="task" /><span className="truncate">{c.nextTask.title}{c.nextTask.overdue ? " · overdue" : ""}</span>
         </div>
       ) : c.daysSinceActivity >= 5 ? (
-        <div className="mt-1.5 text-sm text-gold-deep">No follow-up set</div>
+        <div className="mt-2.5 flex items-center gap-1.5 text-xs text-gold-deep"><PipelineIcon name="task" />No follow-up set</div>
       ) : null}
 
-      <div className="mt-1.5 flex items-center justify-between gap-2 text-sm text-slate">
-        <span className="truncate capitalize">{source}{c.phone ? " · has phone" : ""}</span>
-        <span className="shrink-0">{c.watchPct ? `${c.watchPct}% watched` : ""}</span>
+      <div className="mt-3 space-y-1.5 text-xs text-slate">
+        <div className="flex items-center gap-1.5"><PipelineIcon name="source" /><span title={`${source}${c.phone ? " · has phone" : ""}`} className="truncate capitalize">{source}{c.phone ? " · has phone" : ""}</span></div>
+        {c.watchPct ? <div className="flex items-center gap-1.5" title="Evergreen watch progress"><PipelineIcon name="watch" /><span className="font-medium tabular-nums">{c.watchPct}% watched</span></div> : null}
+        <div className="flex items-start gap-1.5"><PipelineIcon name="clock" /><span className="tabular-nums">In stage {c.stageAgeDays}d · active {c.daysSinceActivity}d ago</span></div>
       </div>
-      <div className="mt-0.5 text-xs text-slate">In stage {c.stageAgeDays}d · active {c.daysSinceActivity}d ago</div>
 
-      <div className="mt-2 flex items-center gap-2">
-        <select value={stage} onChange={(e) => onMoveStage(c.id, e.target.value as Stage)} className="min-h-9 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust" aria-label={`Move ${c.name} to another stage`}>
+      <div className="mt-3 flex items-center gap-2">
+        <select value={stage} onChange={(e) => onMoveStage(c.id, e.target.value as Stage)} className="min-h-10 min-w-0 flex-1 rounded-md border border-mist bg-card px-2 py-1.5 text-base text-body outline-none focus:border-trust md:min-h-8 md:text-xs" aria-label={`Move ${c.name} to another stage`}>
           {[...ACTIVE_STAGES, ...CLOSED_STAGES].map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
         </select>
       </div>
@@ -484,15 +498,15 @@ function PipelineCard({ c, owners, selected, pending, draggingId, stageOf, onTog
       {menu && menuPosition ? createPortal(
         <>
           <div className="fixed inset-0 z-[80] bg-navy/25 backdrop-blur-[1px]" onClick={() => setMenu(false)} />
-          <div className="fixed z-[90] w-60 rounded-xl border border-trust/40 bg-card p-4 shadow-2xl ring-1 ring-navy/10" style={menuPosition}>
+          <div className={`${styles.actionMenu} fixed z-[90] w-64 rounded-xl border border-mist bg-card p-4 shadow-2xl ring-1 ring-navy/10`} style={menuPosition}>
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Assign to</label>
-            <select value={c.owner ?? ""} onChange={(e) => { onAssign(c.id, e.target.value); setMenu(false); }} className="mb-3 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust">
+            <select aria-label="Assign to" value={c.owner ?? ""} onChange={(e) => { onAssign(c.id, e.target.value); setMenu(false); }} className="mb-3 min-h-10 w-full rounded-lg border border-mist bg-card px-2 py-1.5 text-base text-body outline-none focus:border-trust md:text-sm">
               <option value="">Unassigned</option>
               {owners.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
             <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate">Quick task</label>
             <div className="flex gap-1.5">
-              <input value={task} onChange={(e) => setTask(e.target.value)} placeholder="Task…" className="min-w-0 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-sm text-body outline-none focus:border-trust" />
+              <input aria-label="Quick task" value={task} onChange={(e) => setTask(e.target.value)} placeholder="Task…" className="min-h-10 min-w-0 flex-1 rounded-lg border border-mist bg-card px-2 py-1.5 text-base text-body outline-none focus:border-trust md:text-sm" />
               <button disabled={taskPending} type="button" onClick={async () => { if (!task.trim()) return; setTaskPending(true); try { await onQuickTask(c.email, task.trim()); setTask(""); setMenu(false); } catch { /* the board-level retry keeps the draft available */ } finally { setTaskPending(false); } }} className="rounded-lg bg-gold px-2 py-1.5 text-xs font-semibold text-ink hover:bg-gold-deep disabled:opacity-60">{taskPending ? "…" : "Add"}</button>
             </div>
             <Link href={`/crm/contacts/${c.id}`} className="mt-3 block text-sm text-trust hover:underline">Open contact &#8594;</Link>

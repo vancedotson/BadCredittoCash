@@ -1,0 +1,47 @@
+.toolbar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.search { grid-column: 1 / -1; }
+.scrollLeft, .scrollRight { display: none; }
+
+.column {
+  flex: 1 0 15.5rem;
+  min-width: 0;
+}
+
+.closedColumn { flex: 0.9 0 14rem; }
+
+.workspace :is(button, a, input, select):focus-visible,
+.actionMenu :is(button, a, input, select):focus-visible {
+  outline: 2px solid var(--color-trust);
+  outline-offset: 2px;
+}
+
+/* Preserve the shared segment meanings with readable text in either theme. */
+:global([data-theme="dark"]) .card :global(.text-trust),
+:global([data-theme="dark"]) .actionMenu :global(.text-trust) {
+  color: #a6cefa;
+}
+
+:global([data-theme="dark"]) .workspace :is(button, a, input, select):focus-visible,
+:global([data-theme="dark"]) .actionMenu :is(button, a, input, select):focus-visible {
+  outline-color: var(--color-gold);
+}
+
+@media (min-width: 48rem) {
+  .toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)) 2.5rem 2.5rem; }
+  .search { grid-column: 1 / 4; grid-row: 1; }
+  .scrollLeft { display: grid; grid-column: 4; grid-row: 1; }
+  .scrollRight { display: grid; grid-column: 5; grid-row: 1; }
+  .addContact { grid-column: 4 / 6; }
+}
+
+@media (min-width: 80rem) {
+  .toolbar { display: flex; }
+  .search { flex: 1; min-width: 10rem; }
+  .toolbar select { width: auto; max-width: 12rem; }
+}
