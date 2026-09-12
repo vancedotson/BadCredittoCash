@@ -148,8 +148,8 @@ test("queue completion remains reversible and failed actions retain their work i
 });
 
 async function fillContact(dialog: Locator) {
-  await dialog.getByLabel("Name", { exact: true }).fill("Overview Test Contact");
-  await dialog.getByLabel("Email", { exact: true }).fill("overview-test@example.com");
+  await dialog.getByRole("textbox", { name: "Name", exact: true }).fill("Overview Test Contact");
+  await dialog.getByRole("textbox", { name: "Email", exact: true }).fill("overview-test@example.com");
 }
 
 test("contact quick action keeps failed drafts and prevents duplicate pending saves", async ({ page }) => {
@@ -169,8 +169,8 @@ test("contact quick action keeps failed drafts and prevents duplicate pending sa
   await fillContact(dialog);
   await dialog.getByRole("button", { name: "Create contact", exact: true }).click();
   await expect(dialog.getByRole("alert")).toBeVisible();
-  await expect(dialog.getByLabel("Name", { exact: true })).toHaveValue("Overview Test Contact");
-  await expect(dialog.getByLabel("Email", { exact: true })).toHaveValue("overview-test@example.com");
+  await expect(dialog.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Overview Test Contact");
+  await expect(dialog.getByRole("textbox", { name: "Email", exact: true })).toHaveValue("overview-test@example.com");
   await dialog.getByRole("button", { name: "Create contact", exact: true }).click();
   await expect(dialog.getByRole("button", { name: /Saving|Creating/ })).toBeDisabled();
   await page.keyboard.press("Escape");

@@ -38,12 +38,15 @@
   font-weight: 400;
 }
 
-.titleInput {
+.titleInput,
+.nameInput {
   min-height: 3.25rem;
   font-size: 1rem;
 }
 
-.titleInput::placeholder {
+.titleInput::placeholder,
+.nameInput::placeholder,
+.contactField::placeholder {
   color: var(--color-slate);
 }
 
@@ -282,5 +285,104 @@
 
   .schedule {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.contactColumns {
+  display: grid;
+  min-width: 0;
+  gap: 1.125rem;
+}
+
+.contactField {
+  min-height: 3rem;
+}
+
+.contactControl {
+  position: relative;
+  display: block;
+}
+
+.contactControlIcon,
+.stageDot {
+  position: absolute;
+  top: 50%;
+  left: 0.875rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--color-slate);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.iconField {
+  padding-left: 2.625rem;
+}
+
+.stageDot {
+  left: 1.125rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-slate);
+}
+
+.crmDetails {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1.125rem;
+  border: 1px solid var(--color-mist);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--color-cloud) 75%, var(--color-card));
+}
+
+.crmHeading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.crmIcon {
+  display: grid;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 0.625rem;
+  color: var(--color-heading);
+  background: var(--color-sky);
+}
+
+.crmTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.crmDescription {
+  margin-top: 0.125rem;
+  color: var(--color-slate);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .contactColumns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 359px) {
+  .header {
+    gap: 0.625rem;
+  }
+
+  .headerIcon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
   }
 }

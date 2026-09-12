@@ -6,7 +6,7 @@ import type { ContactOption } from "@/lib/store";
 import { STAGES_IN_ORDER, STAGE_LABELS, type Stage } from "@/lib/stages";
 import { PRIORITIES, PRIORITY_LABELS, TASK_TYPES, TYPE_LABELS, type TaskPriority, type TaskType } from "@/lib/tasks";
 import { CheckIcon, ChevronRightIcon, DocumentIcon, PersonIcon, PhoneIcon, RefreshIcon } from "@/components/marketing-v2/Icons";
-import styles from "./OverviewTaskComposer.module.css";
+import styles from "./OverviewQuickActions.module.css";
 
 const field = "mt-2 min-h-11 w-full min-w-0 rounded-lg border border-mist bg-card px-3 py-2.5 text-base font-normal text-body outline-none transition-colors focus:border-trust focus:ring-2 focus:ring-trust/15 disabled:opacity-60 sm:text-sm";
 const label = "block min-w-0 text-sm font-medium text-heading";
@@ -56,16 +56,16 @@ function Shell({ kind, children, onClose, onSubmit, pending, err }: { kind: "con
   useEffect(() => { if (err) errorMessage.current?.focus(); }, [err]);
 
   return (
-    <dialog ref={dialog} aria-labelledby="overview-action-title" aria-describedby="overview-action-description" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }} className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/45 backdrop:backdrop-blur-[3px] ${kind === "task" ? styles.dialog : ""}`}>
+    <dialog ref={dialog} aria-labelledby="overview-action-title" aria-describedby="overview-action-description" onCancel={(event) => { event.preventDefault(); if (!pending) onClose(); }} className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-2xl border border-mist bg-card p-0 text-body shadow-2xl backdrop:bg-navy/45 backdrop:backdrop-blur-[3px] ${styles.dialog}`}>
       <form aria-label={title} aria-busy={pending} onSubmit={onSubmit} className="flex max-h-[calc(100dvh-2rem)] flex-col">
-        <header className={`flex shrink-0 items-start gap-3 border-b border-mist px-5 py-5 sm:px-7 sm:py-6 ${kind === "task" ? styles.header : ""}`}>
-          <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold-deep ${kind === "task" ? styles.headerIcon : ""}`}>
+        <header className={`flex shrink-0 items-start gap-3 border-b border-mist px-5 py-5 sm:px-7 sm:py-6 ${styles.header}`}>
+          <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold-deep ${styles.headerIcon}`}>
             <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               {kind === "contact" ? <><circle cx="9" cy="8" r="3" /><path d="M3 21v-2a6 6 0 0 1 12 0v2m4-14v6m-3-3h6" /></> : <><rect x="4" y="4" width="16" height="17" rx="2" /><path d="M9 4V2h6v2m-7 9 3 3 5-6" /></>}
             </svg>
           </span>
           <div className="min-w-0 flex-1">
-            <h2 id="overview-action-title" className={`text-xl font-semibold tracking-tight text-heading ${kind === "task" ? styles.title : ""}`}>{title}</h2>
+            <h2 id="overview-action-title" className={`text-xl font-semibold tracking-tight text-heading ${styles.title}`}>{title}</h2>
             <p id="overview-action-description" className="mt-1 text-sm leading-relaxed text-slate">{kind === "contact" ? "Keep their details and next steps in one place." : "Turn your next step into a clear follow-up."}</p>
           </div>
           <button type="button" aria-label={`Close ${kind} dialog`} disabled={pending} onClick={onClose} className={`-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate transition-colors hover:bg-cloud hover:text-heading disabled:opacity-50 ${focus}`}>
@@ -103,19 +103,32 @@ function AddContact({ owners, onClose }: { owners: string[]; onClose: () => void
   }
   return (
     <Shell kind="contact" onClose={close} onSubmit={submit} pending={pending} err={err}>
-      <div className="space-y-4">
-        <label className={label}>Name<input name="name" required autoComplete="name" data-initial-focus value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Full name" className={field} /></label>
-        <label className={label}>Email<input name="email" type="email" required autoComplete="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="name@example.com" className={field} /></label>
-        <label className={label}>Phone <span className="font-normal text-slate">(optional)</span><input aria-label="Phone" name="phone" type="tel" autoComplete="tel" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone number" className={field} /></label>
-      </div>
-      <div className="border-t border-mist pt-5">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate">Organization</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className={label}>Source<input name="source" value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} className={field} /></label>
-          <label className={label}>Stage<select aria-label="Stage" name="stage" value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} className={field}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select></label>
-          <label className={`${label} sm:col-span-2`}>Owner<select aria-label="Owner" name="owner" value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={field}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>
+      <div className={styles.details}>
+        <label className={label}>
+          <span className={styles.fieldHeading}>Name<span aria-hidden="true" className={styles.required}>Required</span></span>
+          <input name="name" required autoComplete="name" data-initial-focus value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Full name" className={`${field} ${styles.nameInput}`} />
+        </label>
+        <div className={styles.contactColumns}>
+          <label className={label}>
+            <span className={styles.fieldHeading}>Email<span aria-hidden="true" className={styles.required}>Required</span></span>
+            <span className={styles.contactControl}><EmailIcon className={styles.contactControlIcon} /><input name="email" type="email" required autoComplete="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} placeholder="name@example.com" className={`${field} ${styles.contactField} ${styles.iconField}`} /></span>
+          </label>
+          <label className={label}>Phone <span className="font-normal text-slate">(optional)</span>
+            <span className={styles.contactControl}><PhoneIcon className={styles.contactControlIcon} /><input aria-label="Phone" name="phone" type="tel" autoComplete="tel" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} placeholder="Phone number" className={`${field} ${styles.contactField} ${styles.iconField}`} /></span>
+          </label>
         </div>
       </div>
+      <section aria-labelledby="overview-contact-crm-title" className={styles.crmDetails}>
+        <div className={styles.crmHeading}>
+          <span className={styles.crmIcon}><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="5" rx="1" /><rect x="3" y="16" width="6" height="5" rx="1" /><rect x="15" y="16" width="6" height="5" rx="1" /><path d="M12 8v4M6 16v-4h12v4" /></svg></span>
+          <div><h3 id="overview-contact-crm-title" className={styles.crmTitle}>CRM details</h3><p className={styles.crmDescription}>Set their source, stage, and owner.</p></div>
+        </div>
+        <label className={label}>Source<input name="source" value={v.source} onChange={(e) => setV({ ...v, source: e.target.value })} className={`${field} ${styles.contactField}`} /></label>
+        <div className={styles.contactColumns}>
+          <label className={label}>Stage<span className={styles.contactControl}><span aria-hidden="true" className={styles.stageDot} /><select aria-label="Stage" name="stage" value={v.stage} onChange={(e) => setV({ ...v, stage: e.target.value as Stage })} className={`${field} ${styles.contactField} ${styles.iconField}`}>{STAGES_IN_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}</select></span></label>
+          <label className={label}>Owner<span className={styles.contactControl}><PersonIcon className={styles.contactControlIcon} /><select aria-label="Owner" name="owner" value={v.owner} onChange={(e) => setV({ ...v, owner: e.target.value })} className={`${field} ${styles.contactField} ${styles.iconField}`}><option value="">Unassigned</option>{owners.map((o) => <option key={o} value={o}>{o}</option>)}</select></span></label>
+        </div>
+      </section>
     </Shell>
   );
 }
@@ -202,8 +215,12 @@ function AddTask({ contacts, owners, onClose }: { contacts: ContactOption[]; own
 
 function TaskTypeIcon({ type }: { type: TaskType }) {
   if (type === "email") {
-    return <svg viewBox="0 0 20 20" fill="none" className={styles.typeIcon} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="11" rx="1.5" /><path d="m3.5 5 6.5 5 6.5-5" /></svg>;
+    return <EmailIcon className={styles.typeIcon} />;
   }
   const Icon = type === "call" ? PhoneIcon : type === "follow_up" ? RefreshIcon : type === "document" ? DocumentIcon : CheckIcon;
   return <Icon className={styles.typeIcon} />;
+}
+
+function EmailIcon({ className }: { className: string }) {
+  return <svg viewBox="0 0 20 20" fill="none" className={className} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="11" rx="1.5" /><path d="m3.5 5 6.5 5 6.5-5" /></svg>;
 }
