@@ -5,12 +5,13 @@ import Link from "next/link";
 import { CheckIcon, ArrowRightIcon } from "@/components/marketing-v2/Icons";
 import { SectionScan } from "../../marketing-v3/shared/primitives";
 import { QUIZ_QUESTIONS as QUESTIONS, QUIZ_TOTAL as TOTAL, quizReflections, type QuizAnswers } from "@/config/collector-quiz";
+import { site } from "@/config/site-v3";
 
 /**
  * "The 60-second collector check" — dark case-file skin of the lead-magnet quiz
  * (content + logic in src/config/collector-quiz). Same behavior as the light
  * home skin; styled with the v3 tokens so the accent tracks the V1/V2/V3 toggle.
- * Routes to /book. Compliance-safe.
+ * Routes to the live session (site.cta.secondary). Compliance-safe.
  */
 
 function optionStyle(sel: boolean) {
@@ -135,13 +136,13 @@ function ResultsV4({ answers, onRestart, onBack }: { answers: QuizAnswers; onRes
       ) : null}
 
       <p className="mx-auto mt-7" style={{ maxWidth: 600, fontSize: 19, lineHeight: 1.6, color: "var(--v3-mut)" }}>
-        From what you shared, you may have protections under the FCRA and FDCPA. The only way to know for sure is to look at your specific situation. Book a free, no-pressure call and I&apos;ll tell you the honest next step.
+        From what you shared, you may have protections under the FCRA and FDCPA. Join the free live session to see where the line is, how to document it, and what you can do next.
       </p>
 
       <div className="mt-9 flex flex-col items-center gap-3">
-        <Link href="/book" className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12, fontSize: 16 }}>
+        <Link href={site.cta.secondary.href} className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12, fontSize: 16 }}>
           <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
-          Book my free call
+          {site.cta.secondary.label}
         </Link>
         <p className="v3-mono" style={{ fontSize: 13.5, color: "var(--v3-faint)" }}>Free. No obligation.</p>
       </div>

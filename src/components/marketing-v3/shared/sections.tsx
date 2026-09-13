@@ -460,7 +460,7 @@ export function Faq() {
             className="v3-btn v3-btn-primary v3-clip"
             onClick={() => track("cta_clicked", { where: "faq", variant: "v3" })}
           >
-            Get my questions answered, free
+            {site.cta.primary.label}
           </Link>
         </Reveal>
       </div>

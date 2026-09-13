@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SectionScan } from "../../marketing-v3/shared/primitives";
 import { ArrowRightIcon } from "@/components/marketing-v2/Icons";
 import { COLLECTORS } from "@/config/collector-quiz";
+import { site } from "@/config/site-v3";
 
 /**
  * "Know the playbook" — a two-column education section between the testimonials
@@ -52,14 +53,14 @@ export function CollectorTacticsV4() {
         <div className="min-w-0 lg:h-full">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:h-full" style={{ gridAutoRows: "minmax(84px, 1fr)", gridAutoFlow: "dense" }}>
             {/* Feature CTA — spans 2x2 */}
-            <Link href="/book" className="v4-bento-cta col-span-2 row-span-2 flex flex-col justify-between rounded-md p-5 no-underline">
+            <Link href={site.cta.secondary.href} className="v4-bento-cta col-span-2 row-span-2 flex flex-col justify-between rounded-md p-5 no-underline">
               <span className="v3-mono" style={{ fontSize: 10.5, letterSpacing: "0.18em", color: "var(--v3-accent)" }}>THE USUAL SUSPECTS</span>
               <div>
                 <p className="v3-display" style={{ fontSize: "clamp(20px,2.2vw,26px)", lineHeight: 1.1, color: "var(--v3-ink)" }}>Recognize a name?</p>
-                <p className="mt-1.5" style={{ fontSize: 13.5, lineHeight: 1.45, color: "var(--v3-mut)" }}>You are not the first they have called. Let us look at yours.</p>
+                <p className="mt-1.5" style={{ fontSize: 13.5, lineHeight: 1.45, color: "var(--v3-mut)" }}>You are not the first they have called. See what they&apos;re not allowed to do.</p>
               </div>
               <span className="v3-mono inline-flex items-center gap-1.5" style={{ fontSize: 12.5, color: "var(--v3-accent)" }}>
-                Book my free call <ArrowRightIcon className="h-3.5 w-3.5" />
+                {site.cta.secondary.label} <ArrowRightIcon className="h-3.5 w-3.5" />
               </span>
             </Link>
 

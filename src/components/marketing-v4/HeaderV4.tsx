@@ -53,7 +53,7 @@ export function HeaderV4() {
             className="v3-btn v3-btn-ghost v4-bar-cta"
             style={{ minHeight: 42, fontSize: 13, padding: "0 18px" }}
           >
-            {site.cta.secondary.label}
+            {site.cta.primary.label}
           </Link>
           {/* hamburger — mobile only (display handled in v3.css; Tailwind's
               `hidden` can't override .v4-navburger's own display) */}
@@ -98,7 +98,7 @@ export function HeaderV4() {
             style={{ width: "100%" }}
             onClick={() => setOpen(false)}
           >
-            {site.cta.secondary.label}
+            {site.cta.primary.label}
           </Link>
         </div>
       )}

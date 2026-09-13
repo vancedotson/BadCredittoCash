@@ -30,9 +30,12 @@ export const site = {
     officeAddress: "425 W. Wilshire Blvd Ste E, Oklahoma City, OK 73116",
   },
 
+  // Main page CTAs. Primary goes to the credit-check lead magnet; secondary to
+  // the live webinar funnel. Every home-page button reads from here — including
+  // the header, the quiz result and the collector-tactics card.
   cta: {
-    primary: { label: "See how it works, free", href: "#register" },
-    secondary: { label: "Book my free call", href: "/book" },
+    primary: { label: "Check my credit report, free", href: "/credit-check" },
+    secondary: { label: "Join the live session", href: "/live" },
   },
 
   nav: [
