@@ -1,0 +1,94 @@
+{
+  "$comment": "Source of truth for pre-optimized images. `npm run images` regenerates public/img/ from this file; src/lib/image-loader.ts reads it to pick a file per requested width. Cloudflare has no image-optimization binding configured for this Worker, so /_next/image would otherwise return the original multi-megabyte PNG at every size. After adding or changing an entry, run `npm run images` and commit public/img/.",
+  "outDir": "public/img",
+  "quality": 78,
+  "sources": {
+    "/vance.png": {
+      "name": "vance",
+      "input": "public/vance.png",
+      "widths": [
+        256,
+        384,
+        640,
+        828,
+        1080,
+        1280,
+        1920
+      ]
+    },
+    "/vance2.png": {
+      "name": "vance2",
+      "input": "public/vance2.png",
+      "widths": [
+        256,
+        384,
+        640,
+        828,
+        1080,
+        1280,
+        1920
+      ]
+    },
+    "/vance-avatar.png": {
+      "name": "vance-avatar",
+      "input": "public/vance.png",
+      "crop": {
+        "left": 600,
+        "top": 190,
+        "width": 840,
+        "height": 840
+      },
+      "widths": [
+        64,
+        128,
+        256
+      ]
+    },
+    "/oklahoma.png": {
+      "name": "oklahoma",
+      "input": "public/oklahoma.png",
+      "widths": [
+        640,
+        1080,
+        1600,
+        1920,
+        2560
+      ]
+    },
+    "/oklahoma-night.png": {
+      "name": "oklahoma-night",
+      "input": "public/oklahoma-night.png",
+      "widths": [
+        640,
+        1080,
+        1600,
+        1920,
+        2560
+      ]
+    },
+    "/v3/tex-coast.jpg": {
+      "name": "tex-coast",
+      "input": "public/v3/tex-coast.jpg",
+      "widths": [
+        640,
+        1100
+      ]
+    },
+    "/v3/tex-fog.jpg": {
+      "name": "tex-fog",
+      "input": "public/v3/tex-fog.jpg",
+      "widths": [
+        640,
+        1100
+      ]
+    },
+    "/v3/tex-water.jpg": {
+      "name": "tex-water",
+      "input": "public/v3/tex-water.jpg",
+      "widths": [
+        640,
+        1100
+      ]
+    }
+  }
+}

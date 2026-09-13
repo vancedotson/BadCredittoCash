@@ -1301,13 +1301,13 @@
   inset: 0;
   /* Oklahoma City skyline under a strong dark overlay (a little reveal only) */
   background: linear-gradient(rgba(6, 6, 7, 0.78), rgba(6, 6, 7, 0.78)),
-    url("/oklahoma-night.png") center / cover no-repeat;
+    url("/img/oklahoma-night-1600.webp") center / cover no-repeat;
   filter: grayscale(0.25) contrast(1.05);
 }
 .v4-reframe-smoke {
   position: absolute;
   inset: -12%;
-  background: url("/v3/tex-fog.jpg") center / cover no-repeat;
+  background: url("/img/tex-fog-1100.webp") center / cover no-repeat;
   filter: grayscale(1) contrast(1.15) brightness(0.9);
   opacity: 0.1;
   mix-blend-mode: screen;

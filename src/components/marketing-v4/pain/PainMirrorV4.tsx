@@ -18,12 +18,12 @@ import { useRevealChildren } from "../../marketing-v3/shared/hooks";
 const DETAIL: { para: string; img: string; level: number }[] = [
   {
     para: "You know the ringtone by heart now. You let it go to voicemail, but the knot in your stomach doesn't. It just waits for the next call.",
-    img: "/v3/tex-fog.jpg",
+    img: "/img/tex-fog-1100.webp",
     level: 74,
   },
   {
     para: "They know calling your job is humiliating. That's the point. They're betting the pressure of everyone finding out makes you pay just to make it stop. A lot of what they do isn't just rude. It crosses a line the law drew.",
-    img: "/oklahoma-night.png",
+    img: "/img/oklahoma-night-1600.webp",
     level: 86,
   },
   {
@@ -33,12 +33,12 @@ const DETAIL: { para: string; img: string; level: number }[] = [
   },
   {
     para: "You did it by the book. You mailed the dispute. You waited. And it came back marked “verified,” as if no one even looked. Most of the time, no one did.",
-    img: "/v3/tex-water.jpg",
+    img: "/img/tex-water-1100.webp",
     level: 90,
   },
   {
     para: "They took the money up front and mailed the same template letters you could have sent yourself. When it didn't work, they blamed you. You were never the problem. You just needed someone who knows the law.",
-    img: "/oklahoma.png",
+    img: "/img/oklahoma-1600.webp",
     level: 96,
   },
 ];

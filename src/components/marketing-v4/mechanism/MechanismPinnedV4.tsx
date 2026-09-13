@@ -20,7 +20,8 @@ import { useScrollScene } from "../../marketing-v3/shared/hooks";
 const stepVar = (i: number) => `var(--v3-step-${i})`;
 // ⚠️ PLACEHOLDER stage backgrounds (barely visible) — swap for imagery that
 // represents each step: finding violations / holding accountable / results.
-const STEP_IMAGES = ["/v3/tex-ridge.jpg", "/v3/tex-fog.jpg", "/oklahoma.png"];
+// Pre-optimized WebP (npm run images). tex-ridge stays JPEG: its grain compresses worse as WebP.
+const STEP_IMAGES = ["/v3/tex-ridge.jpg", "/img/tex-fog-1100.webp", "/img/oklahoma-1600.webp"];
 
 export function MechanismPinnedV4() {
   const { ref, progress } = useScrollScene<HTMLDivElement>();

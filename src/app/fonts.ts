@@ -25,6 +25,11 @@ export const inter = localFont({
 export const sourceSerif = localFont({
   variable: "--font-source-serif",
   display: "swap",
+  // Only used for italic accents in below-the-fold home sections. Preloading
+  // made every page — /live, /credit-check, the CRM — download ~100 KB of serif
+  // it never renders. Without preload the browser fetches it only where a serif
+  // element actually appears.
+  preload: false,
   fallback: ["Georgia", "serif"],
   src: [
     {
