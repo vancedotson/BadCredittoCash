@@ -276,7 +276,7 @@ export function TimeZonePicker() {
         value={zone}
         onChange={(e) => setZone(e.target.value)}
         className="v4-booking-input"
-        style={{ width: "100%", maxWidth: 340 }}
+        style={{ width: "100%", maxWidth: 340, minHeight: 44 }}
       >
         {zones.map((z) => (
           <option key={z} value={z}>

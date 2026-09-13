@@ -235,7 +235,7 @@ export function ActivityFeed({ owners, sessions = [] }: { owners: string[]; sess
                             {e.contactId ? <> · <Link href={`/crm/contacts/${e.contactId}`} className="text-trust underline underline-offset-2">{e.contactName}</Link></> : e.email ? <span className="text-slate"> · {e.email}</span> : <span className="text-slate"> · anonymous</span>}
                           </span>
                           {repeated ? <span className="shrink-0 rounded-full bg-mist/70 px-2 py-0.5 text-xs font-medium tabular-nums text-slate">{cluster.items.length} {cluster.eventKey === "webinar_watch_progress" ? "milestones" : "times"}</span> : null}
-                          {det || repeated || sessionLabel ? <button type="button" onClick={() => toggle(cluster.key)} aria-expanded={open} className="shrink-0 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
+                          {det || repeated || sessionLabel ? <button type="button" onClick={() => toggle(cluster.key)} aria-expanded={open} className="-mx-2 -my-2 shrink-0 px-2 py-2 text-xs text-slate hover:text-heading">{open ? "hide" : "details"}</button> : null}
                           <span className="shrink-0 text-xs text-slate" title={absTime(e.createdAt)}>{relTime(e.createdAt)}</span>
                         </div>
                         {open ? (

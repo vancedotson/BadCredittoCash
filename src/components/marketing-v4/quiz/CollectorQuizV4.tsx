@@ -100,7 +100,7 @@ export function CollectorQuizV4() {
                 </div>
 
                 <div className="mt-8 flex items-center justify-between gap-3">
-                  <button type="button" onClick={back} disabled={step === 1} className="v3-mono" style={{ fontSize: 14, color: "var(--v3-faint)", opacity: step === 1 ? 0 : 1 }}>← Back</button>
+                  <button type="button" onClick={back} disabled={step === 1} className="v3-mono -mx-3 -my-3 px-3 py-3" style={{ fontSize: 14, color: "var(--v3-faint)", opacity: step === 1 ? 0 : 1 }}>← Back</button>
                   <button type="button" onClick={next} disabled={!answered} className="v3-btn v3-btn-primary v3-clip disabled:opacity-50" style={{ paddingLeft: 12, fontSize: 16 }}>
                     <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
                     {step < TOTAL ? "Continue" : "See my results"}
@@ -148,8 +148,8 @@ function ResultsV4({ answers, onRestart, onBack }: { answers: QuizAnswers; onRes
       </div>
 
       <div className="mt-9 flex items-center justify-center gap-6">
-        <button type="button" onClick={onBack} className="v3-mono" style={{ fontSize: 14, color: "var(--v3-faint)" }}>← Back</button>
-        <button type="button" onClick={onRestart} className="v3-mono" style={{ fontSize: 14, color: "var(--v3-faint)" }}>Start over</button>
+        <button type="button" onClick={onBack} className="v3-mono -mx-3 -my-3 px-3 py-3" style={{ fontSize: 14, color: "var(--v3-faint)" }}>← Back</button>
+        <button type="button" onClick={onRestart} className="v3-mono -mx-3 -my-3 px-3 py-3" style={{ fontSize: 14, color: "var(--v3-faint)" }}>Start over</button>
       </div>
     </div>
   );

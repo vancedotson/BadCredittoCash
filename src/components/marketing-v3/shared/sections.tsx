@@ -608,9 +608,9 @@ export function Footer() {
             >
               <span>{site.contact.officeAddress}</span>
               <span>
-                <a href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>
+                <a href={site.contact.phoneHref} className="-my-2 inline-block py-2">{site.contact.phoneDisplay}</a>
                 {" · "}
-                <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
+                <a href={`mailto:${site.contact.email}`} className="-my-2 inline-block py-2">{site.contact.email}</a>
               </span>
             </address>
           </div>
@@ -619,7 +619,7 @@ export function Footer() {
               <a
                 key={l.label}
                 href={l.href}
-                className="v3-mono transition-colors hover:text-[var(--v3-accent)]"
+                className="v3-mono -my-3 inline-block py-3 transition-colors hover:text-[var(--v3-accent)]"
                 style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--v3-mut)" }}
               >
                 {l.label}

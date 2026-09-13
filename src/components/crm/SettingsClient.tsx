@@ -156,9 +156,9 @@ export function OwnerManager({ workloads, defaultOwner, ownerNames }: { workload
                     <div className="text-xs text-slate">{w.contacts} contact{w.contacts === 1 ? "" : "s"} · {w.openTasks} open task{w.openTasks === 1 ? "" : "s"}</div>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs sm:justify-end">
-                    <button type="button" onClick={() => setDefault(w.owner)} className="text-slate hover:text-trust">{isDefault ? "Unset" : "Make default"}</button>
-                    <button type="button" onClick={() => { setEditing(w.owner); setEditVal(w.owner); }} className="text-slate hover:text-trust">Rename</button>
-                    <button type="button" onClick={() => { setRemoving(removing === w.owner ? null : w.owner); setReassign(""); }} className="text-slate hover:text-red">Remove</button>
+                    <button type="button" onClick={() => setDefault(w.owner)} className="-my-2 py-2 text-slate hover:text-trust">{isDefault ? "Unset" : "Make default"}</button>
+                    <button type="button" onClick={() => { setEditing(w.owner); setEditVal(w.owner); }} className="-my-2 py-2 text-slate hover:text-trust">Rename</button>
+                    <button type="button" onClick={() => { setRemoving(removing === w.owner ? null : w.owner); setReassign(""); }} className="-my-2 py-2 text-slate hover:text-red">Remove</button>
                   </div>
                 </div>
               )}

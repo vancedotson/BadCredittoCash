@@ -331,7 +331,7 @@ function TaskRow({ task, selected, onSelect, onToggle, onEdit, onDelete, onSnooz
   return (
     <div className="relative flex items-start gap-2 rounded-lg border border-mist bg-card px-2 py-2 sm:gap-2.5 sm:px-3 sm:py-2.5" style={{ borderLeft: `3px solid ${PRIORITY_DOT[task.priority ?? "normal"]}` }}>
       <input type="checkbox" checked={selected.has(task.id)} onChange={() => onSelect(task.id)} className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-trust" aria-label={`Select ${task.title}`} />
-      <button type="button" onClick={() => onToggle(task.id)} aria-label={task.done ? "Mark not done" : "Mark done"} className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border ${task.done ? "border-green bg-green text-white" : "border-mist bg-card text-transparent hover:border-trust"}`}>
+      <button type="button" onClick={() => onToggle(task.id)} aria-label={task.done ? "Mark not done" : "Mark done"} className={`relative mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border after:absolute after:-inset-2.5 after:content-[''] ${task.done ? "border-green bg-green text-white" : "border-mist bg-card text-transparent hover:border-trust"}`}>
         <CheckIcon className="h-3 w-3" />
       </button>
       <div className="min-w-0 flex-1">

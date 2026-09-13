@@ -199,7 +199,7 @@ export function TaskItem({
             setPending(false);
           }
         }}
-        className={`grid h-5 w-5 shrink-0 place-items-center rounded border ${
+        className={`relative grid h-5 w-5 shrink-0 place-items-center rounded border after:absolute after:-inset-2.5 after:content-[''] ${
           task.done ? "border-green bg-green text-white" : "border-mist bg-card text-transparent hover:border-trust"
         }`}
       >
