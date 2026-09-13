@@ -6,7 +6,7 @@
     radial-gradient(ellipse at 8% 38%, rgba(242,169,59,.08), transparent 48%),
     linear-gradient(180deg, rgba(6,6,7,.76), rgba(6,6,7,.9) 58%, rgba(6,6,7,.97)),
     linear-gradient(90deg, rgba(6,6,7,.42), rgba(6,6,7,.18) 50%, rgba(6,6,7,.5)),
-    url("/oklahoma-night.png");
+    url("/img/oklahoma-night-1600.webp");
   background-position: center, center, center, center top;
   background-repeat: no-repeat;
   background-size: auto, auto, auto, cover;
@@ -182,7 +182,7 @@
 .cc-simple-heading h1 { font-size: clamp(48px, 5.4vw, 68px); line-height: 1; margin: 0; }
 .cc-simple-heading h1 span { color: var(--v3-accent); }
 .cc-simple-heading > p:last-child { color: var(--cc-muted); font-size: 16px; line-height: 1.6; margin: 20px 0 30px; }
-.cc-simple-progress ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0; margin: 0 0 18px; list-style: none; gap: 8px; }
+.cc-simple-progress ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; margin: 0 0 18px; list-style: none; gap: 8px; }
 .cc-simple-progress li { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 52px; padding: 9px; border: 1px solid var(--v3-line); color: var(--cc-muted); background: #ffffff02; font-size: 12px; }
 .cc-progress-number { display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #55554e; border-radius: 50%; font-family: var(--v3-mono); font-size: 11px; flex-shrink: 0; }
 .cc-simple-progress [aria-current] { color: var(--v3-ink); border-color: #f2a93b99; background: #f2a93b0a; }
@@ -204,11 +204,6 @@
 .cc-simple-handoff .cc-copy { font-size: 13px; }
 .cc-simple-text-button { display: block; border: 0; border-top: 1px solid var(--v3-line); background: none; padding: 18px 0 0; margin-top: 18px; min-height: 44px; color: var(--cc-muted); font-size: 13px; line-height: 1.6; text-align: left; cursor: pointer; width: 100%; text-decoration: underline; text-underline-offset: 4px; }
 .cc-simple-text-button:hover { color: var(--v3-accent); }
-.cc-simple-files { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 23px 0; }
-.cc-simple-files > div { display: flex; align-items: center; flex-direction: column; gap: 8px; padding: 15px 8px; border: 1px solid #454139; background: #f2a93b04; }
-.cc-simple-files svg { color: var(--v3-accent); }
-.cc-simple-files span { font-size: 14px; color: var(--v3-ink); }
-.cc-simple-files small { font-family: var(--v3-mono); font-size: 9px; letter-spacing: .1em; color: var(--cc-muted); }
 .cc-simple-get-actions { display: grid; gap: 12px; }
 .cc-simple-address { color: #c4c1b9; font-size: 13px; line-height: 1.7; margin: 16px 0 22px; }
 .cc-simple-address strong { color: var(--v3-ink); font-weight: 550; }
@@ -231,11 +226,29 @@
 .cc-simple-help strong { color: var(--v3-ink); font-weight: 550; }
 .cc-simple-help a { color: var(--v3-accent); text-decoration: underline; text-underline-offset: 3px; }
 .cc-simple-help a:last-child { display: inline-block; padding-block: 5px; }
-.cc-simple-next { border-top: 1px solid var(--v3-line); padding-top: 20px; margin-top: 10px; }
-.cc-simple-next p { font-size: 13px; color: #d1cbbf; margin: 0 0 13px; line-height: 1.6; }
-.cc-simple-next .cc-primary { background: transparent; color: var(--v3-accent); border-color: #f2a93b80; }
-.cc-simple-next .cc-primary:hover { background: #f2a93b10; }
 .cc-simple-delivery-tip { color: #c4c1b9; font-size: 14px; line-height: 1.7; margin: 0 0 23px; }
+/* Step 2 holds both paths: get the reports, or upload ones you already have. */
+.cc-simple-copy strong { color: var(--v3-ink); font-weight: 600; }
+.cc-simple-jump { display: inline-block; margin: 2px 0 6px; padding-block: 8px; color: var(--v3-accent); font-size: 14px; text-decoration: underline; text-underline-offset: 4px; }
+.cc-simple-jump:hover { color: #ffc268; }
+.cc-simple-branch { border-top: 1px solid var(--v3-line); margin-top: 26px; padding-top: 26px; scroll-margin-top: 24px; }
+.cc-simple-branch-title { margin: 0 0 18px; color: var(--v3-accent); }
+.cc-simple-branch .cc-simple-site { margin-bottom: 8px; }
+.cc-upload-submit { margin: 4px 0 0; }
+.cc-upload-hint { color: var(--cc-muted); font-size: 12px; line-height: 1.6; text-align: center; margin: 10px 0 0; }
+/* "All files have been sent" confirmation popup. */
+/* Tailwind's preflight zeroes every margin, which removes the `margin: auto` a
+   modal <dialog> relies on to center itself — restore it explicitly. */
+.cc-sent-dialog { position: fixed; inset: 0; margin: auto; height: fit-content; width: min(440px, calc(100vw - 32px)); padding: 0; border: 1px solid #75be9177; border-top: 3px solid #75be91; background: #0e0f10; color: var(--v3-ink); box-shadow: 0 30px 80px #000a; }
+.cc-sent-dialog::backdrop { background: #000000b8; backdrop-filter: blur(3px); }
+.cc-sent-dialog[open] { animation: cc-sent-in .22s ease-out; }
+@keyframes cc-sent-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cc-sent-dialog[open] { animation: none; } }
+.cc-sent-dialog-body { padding: 34px 30px 28px; text-align: center; }
+.cc-sent-dialog-mark { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 20px; color: #99dfb4; background: #75be9115; border: 1px solid #75be9166; border-radius: 50%; }
+.cc-sent-dialog h2 { font-size: 34px; line-height: 1.05; margin: 0; color: var(--v3-ink); }
+.cc-sent-dialog-body > p { font-size: 16px; line-height: 1.6; color: #d1cbbf; margin: 12px 0 24px; }
+.cc-sent-dialog-body > .cc-sent-dialog-local { font-size: 12px; color: var(--cc-muted); margin: -12px 0 22px; }
 .cc-uploads .cc-simple-copy strong { color: var(--v3-ink); font-weight: 600; }
 .cc-upload-notice { padding: 16px; margin: 20px 0; border: 1px solid #f2a93b55; color: #d1cbbf; font-size: 13px; line-height: 1.7; background: #f2a93b06; }
 .cc-upload-notice p { margin: 0 0 10px; }
@@ -257,7 +270,6 @@
 .cc-upload-choose:hover:not(:disabled) { background: #f2a93b16; }
 .cc-upload-choose:disabled { color: #8d8a83; border-color: #454139; background: none; cursor: not-allowed; }
 .cc-upload-choose.is-secondary { border: 0; background: none; font-size: 11px; text-decoration: underline; text-underline-offset: 4px; padding-inline: 0; }
-.cc-simple-guide .cc-upload-send { width: 100%; min-height: 44px; padding: 11px 8px; font-size: 13px; }
 .cc-upload-cancel { display: block; color: var(--cc-muted); background: none; border: 0; font-size: 11px; cursor: pointer; padding: 8px 0; margin: 0 auto; min-height: 32px; }
 .cc-upload-cancel:disabled { opacity: .5; cursor: not-allowed; }
 .cc-upload-error { color: #ffb6a5; font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
@@ -291,8 +303,6 @@
   .cc-simple-copy { font-size: 14px; }
   .cc-simple-guide .cc-primary { font-size: 14px; padding-inline: 12px; }
   .cc-simple-handoff p, .cc-simple-text-button { font-size: 12px; }
-  .cc-simple-files { gap: 6px; margin-block: 20px; }
-  .cc-simple-files span { font-size: 12px; }
   .cc-guide-open { font-size: 14px; gap: 10px; padding: 12px; }
   .cc-guide-open small { font-size: 11px; }
   .cc-simple-save { padding: 14px; }
@@ -305,7 +315,7 @@
   .cc-upload-status { grid-column: 2; margin: 5px 0 14px; min-height: 0; }
   .cc-upload-card > :is(.cc-upload-filename, .cc-upload-size, button, .cc-upload-error) { grid-column: 1 / -1; }
   .cc-upload-filename { font-size: 12px; margin-bottom: 14px; }
-  .cc-upload-choose, .cc-simple-guide .cc-upload-send { font-size: 14px; min-height: 46px; }
+  .cc-upload-choose { font-size: 14px; min-height: 46px; }
   .cc-upload-choose.is-secondary, .cc-upload-cancel { font-size: 12px; }
   .cc-upload-total { gap: 13px; }
 }
