@@ -20,7 +20,7 @@ export function HeroCinematic() {
         aria-hidden
         fill
         priority
-        sizes="100vw"
+        sizes="(min-width: 1024px) 100vw, 50vw"
         className="object-cover object-center dark:hidden"
       />
       <Image
@@ -28,7 +28,7 @@ export function HeroCinematic() {
         alt=""
         aria-hidden
         fill
-        sizes="100vw"
+        sizes="(min-width: 1024px) 100vw, 50vw"
         className="hidden object-cover object-center dark:block"
       />
       <div aria-hidden className="absolute inset-0 bg-navy/80" />

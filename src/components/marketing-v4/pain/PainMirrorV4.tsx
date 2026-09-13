@@ -15,30 +15,34 @@ import { useRevealChildren } from "../../marketing-v3/shared/hooks";
  *    photography (a lit-up phone, a credit report, etc.). Storytelling copy and
  *    the distress levels are subjective/emotional framing, not factual claims.
  */
-const DETAIL: { para: string; img: string; level: number }[] = [
+const PAIN_VEIL = "linear-gradient(90deg, rgba(6,6,7,0.97) 0%, rgba(6,6,7,0.9) 50%, rgba(6,6,7,0.82) 100%)";
+
+// Pre-optimized WebP pairs (npm run images): `sm` for phones, `lg` for desktop.
+// The stylesheet picks one via --pain-bg-sm / --pain-bg-lg, so only one downloads.
+const DETAIL: { para: string; img: { sm: string; lg: string }; level: number }[] = [
   {
     para: "You know the ringtone by heart now. You let it go to voicemail, but the knot in your stomach doesn't. It just waits for the next call.",
-    img: "/img/tex-fog-1100.webp",
+    img: { sm: "/img/tex-fog-640.webp", lg: "/img/tex-fog-1100.webp" },
     level: 74,
   },
   {
     para: "They know calling your job is humiliating. That's the point. They're betting the pressure of everyone finding out makes you pay just to make it stop. A lot of what they do isn't just rude. It crosses a line the law drew.",
-    img: "/img/oklahoma-night-1600.webp",
+    img: { sm: "/img/oklahoma-night-1080.webp", lg: "/img/oklahoma-night-1600.webp" },
     level: 86,
   },
   {
     para: "An account you never opened. A balance that was never yours. A late payment that never happened. You've read every line, and it doesn't belong there, but it's still dragging your score down.",
-    img: "/v3/tex-ridge.jpg",
+    img: { sm: "/img/tex-ridge-640.webp", lg: "/img/tex-ridge-1100.webp" },
     level: 80,
   },
   {
     para: "You did it by the book. You mailed the dispute. You waited. And it came back marked “verified,” as if no one even looked. Most of the time, no one did.",
-    img: "/img/tex-water-1100.webp",
+    img: { sm: "/img/tex-water-640.webp", lg: "/img/tex-water-1100.webp" },
     level: 90,
   },
   {
     para: "They took the money up front and mailed the same template letters you could have sent yourself. When it didn't work, they blamed you. You were never the problem. You just needed someone who knows the law.",
-    img: "/img/oklahoma-1600.webp",
+    img: { sm: "/img/oklahoma-1080.webp", lg: "/img/oklahoma-1600.webp" },
     level: 96,
   },
 ];
@@ -80,8 +84,9 @@ export function PainMirrorV4() {
                   className="v4-pain-bg"
                   aria-hidden
                   style={{
-                    backgroundImage: `linear-gradient(90deg, rgba(6,6,7,0.97) 0%, rgba(6,6,7,0.9) 50%, rgba(6,6,7,0.82) 100%), url(${d.img})`,
-                  }}
+                    "--pain-bg-sm": `${PAIN_VEIL}, url(${d.img.sm})`,
+                    "--pain-bg-lg": `${PAIN_VEIL}, url(${d.img.lg})`,
+                  } as React.CSSProperties}
                 />
                 <div className="v4-pain-body">
                   <div className="flex items-start gap-5">

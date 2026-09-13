@@ -51,7 +51,7 @@ export function HorizRail() {
              where 31.333px = ⅓ of the 64px total gap + ½ dot width. */}
           <div
             aria-hidden
-            className="absolute top-[9px] hidden h-[3px] md:block"
+            className="absolute top-[9px] hidden h-[3px] [container-type:inline-size] md:block"
             style={{ left: "10px", right: "calc(33.333% - 31.333px)" }}
           >
             <span className="absolute inset-0 rounded-full bg-gold/20" />
@@ -63,7 +63,7 @@ export function HorizRail() {
             {/* traveling pulse, only after the rail has drawn */}
             {drawn && (
               <span
-                className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold shadow-[0_0_10px_2px_var(--color-gold)] [animation:railPulse_2.8s_ease-in-out_1.6s_infinite] motion-reduce:hidden"
+                className="absolute left-0 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold shadow-[0_0_10px_2px_var(--color-gold)] [animation:railPulse_2.8s_ease-in-out_1.6s_infinite] motion-reduce:hidden"
               />
             )}
           </div>

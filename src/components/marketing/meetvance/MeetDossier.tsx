@@ -37,8 +37,7 @@ export function MeetDossier() {
           alt="Vance Dotson, consumer advocate, holding client case files"
           width={620}
           height={930}
-          priority
-          sizes="460px"
+          sizes="(min-width: 1024px) 460px, 1px"
           className="absolute -bottom-[12%] left-0 h-[110%] w-auto object-contain object-top drop-shadow-2xl"
         />
         <div

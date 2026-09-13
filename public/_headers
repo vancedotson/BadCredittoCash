@@ -1,0 +1,14 @@
+# Cloudflare Workers static-asset headers (copied into .open-next/assets by the
+# OpenNext build). Without this, every asset — including content-hashed JS, CSS
+# and fonts — was served `max-age=0, must-revalidate`, so each page view
+# re-validated ~20 files over the network.
+
+# Next.js build output: file names change whenever content changes, so these
+# can be cached forever.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Pre-optimized images (npm run images). Names include the width but not a
+# content hash, so cache for a week and revalidate in the background after.
+/img/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400

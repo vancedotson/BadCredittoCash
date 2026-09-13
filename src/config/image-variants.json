@@ -50,6 +50,7 @@
       "widths": [
         640,
         1080,
+        1280,
         1600,
         1920,
         2560
@@ -61,6 +62,7 @@
       "widths": [
         640,
         1080,
+        1280,
         1600,
         1920,
         2560
@@ -81,6 +83,17 @@
         640,
         1100
       ]
+    },
+    "/v3/tex-ridge.jpg": {
+      "name": "tex-ridge",
+      "input": "public/v3/tex-ridge.jpg",
+      "quality": 65,
+      "blur": 0.6,
+      "widths": [
+        640,
+        1100
+      ],
+      "$note": "Grainy texture: default quality made the WebP larger than the JPEG. Lower quality + a 0.6px blur is invisible under its grayscale, 50%-opacity, darkened overlay."
     },
     "/v3/tex-water.jpg": {
       "name": "tex-water",

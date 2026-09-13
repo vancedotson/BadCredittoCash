@@ -12,6 +12,18 @@
   background-size: auto, auto, auto, cover;
   background-attachment: scroll, scroll, scroll, fixed;
 }
+/* Phones: a smaller backdrop, and no fixed attachment — iOS ignores it and
+   other mobile browsers repaint the whole page on every scroll frame. */
+@media (max-width: 767px) {
+  .credit-check {
+    background-image:
+      radial-gradient(ellipse at 8% 38%, rgba(242,169,59,.08), transparent 48%),
+      linear-gradient(180deg, rgba(6,6,7,.76), rgba(6,6,7,.9) 58%, rgba(6,6,7,.97)),
+      linear-gradient(90deg, rgba(6,6,7,.42), rgba(6,6,7,.18) 50%, rgba(6,6,7,.5)),
+      url("/img/oklahoma-night-1080.webp");
+    background-attachment: scroll;
+  }
+}
 .credit-check * { box-sizing: border-box; }
 .cc-container { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
 .cc-header { border-bottom: 1px solid var(--v3-line); }

@@ -284,9 +284,12 @@
 
 /* Mechanism rail — a bright pulse that travels along the connector after it
    has drawn, keeping the left-to-right flow alive between the step dots. */
+/* Moves with transform (100cqw = the rail's width; the rail is an inline-size
+   container). Animating `left` registered as a layout shift on every frame of
+   an infinite animation. */
 @keyframes railPulse {
   0% {
-    left: 0%;
+    transform: translateX(0);
     opacity: 0;
   }
   12% {
@@ -296,7 +299,7 @@
     opacity: 1;
   }
   100% {
-    left: 100%;
+    transform: translateX(100cqw);
     opacity: 0;
   }
 }

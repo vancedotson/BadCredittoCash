@@ -31,6 +31,10 @@ for (const [publicPath, source] of Object.entries(config.sources)) {
   const inputBytes = (await stat(input)).size;
   let base = sharp(input);
   if (source.crop) base = base.extract(source.crop);
+  // Optional per-source overrides for images that compress badly at the
+  // default quality (fine grain/noise).
+  const quality = source.quality ?? config.quality;
+  if (source.blur) base = base.blur(source.blur);
   const meta = source.crop ? source.crop : await sharp(input).metadata();
 
   const lines = [];
@@ -43,7 +47,7 @@ for (const [publicPath, source] of Object.entries(config.sources)) {
     const info = await base
       .clone()
       .resize({ width, withoutEnlargement: true })
-      .webp({ quality: config.quality, alphaQuality: 90, effort: 5, smartSubsample: true })
+      .webp({ quality, alphaQuality: 90, effort: 5, smartSubsample: true })
       .toFile(file);
     totalOut += info.size;
     lines.push(`  ${String(width).padStart(4)}w  ${kb(info.size).padStart(7)}  ${info.width}x${info.height}`);

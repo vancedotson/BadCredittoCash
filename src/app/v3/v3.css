@@ -119,7 +119,18 @@
   display: none !important;
 }
 /* Mechanism per-step imagery stays on /v5 (subtler + brighter for paper). */
-.v5-light .v4-mech-bg {
+.v5-light .v4-mech-slide {
+  position: absolute;
+  inset: 0;
+  background-image: var(--mech-bg-lg);
+  background-size: cover;
+  background-position: center;
+  transition: opacity 0.9s ease;
+}
+@media (max-width: 760px) {
+  .v4-mech-slide { background-image: var(--mech-bg-sm); }
+}
+.v4-mech-bg {
   opacity: 0.24;
   filter: grayscale(0.5) contrast(1) brightness(1.15);
 }
@@ -365,14 +376,26 @@
 }
 
 /* A section's traveling scan-line (a bright bar sweeping down once on reveal) */
+/* The scan line sweeps the section top to bottom. It used to animate `top`,
+   which is a layout property — every frame registered as a layout shift and
+   pushed CLS on funnel pages to ~0.11. The overlay now fills the section and
+   the line moves with transform, measured in container units so 100cqh is the
+   section's height. Same visual, zero layout shift. */
 .v3-scan {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+  container-type: size;
+}
+.v3-scan::before {
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
   height: 2px;
-  z-index: 3;
-  pointer-events: none;
   background: linear-gradient(
     90deg,
     transparent,
@@ -381,8 +404,9 @@
   );
   box-shadow: 0 0 18px 2px color-mix(in srgb, var(--v3-accent) 35%, transparent);
   opacity: 0;
+  will-change: transform, opacity;
 }
-.v3-scan.in {
+.v3-scan.in::before {
   animation: v3Scan 1.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
 }
 
@@ -712,7 +736,12 @@
   height: 30%;
   opacity: 0.5;
 }
+/* While playing, bars sit at full height and pulse with scaleY. Animating
+   `height` moved each bar's top edge inside the centered flex row, which
+   counted as a layout shift on every frame. */
 .v3-wave.playing i {
+  height: 100% !important;
+  transform-origin: center;
   animation: v3Wave 0.9s ease-in-out infinite;
 }
 
@@ -833,10 +862,10 @@
   100% { transform: translate(-4%, 3%); }
 }
 @keyframes v3Scan {
-  0% { top: 0; opacity: 0; }
+  0% { transform: translateY(0); opacity: 0; }
   12% { opacity: 1; }
   88% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  100% { transform: translateY(100cqh); opacity: 0; }
 }
 @keyframes v3Stamp {
   0% { opacity: 0; transform: scale(1.7) rotate(-14deg); }
@@ -844,8 +873,8 @@
   100% { opacity: 1; transform: scale(1) rotate(-8deg); }
 }
 @keyframes v3Wave {
-  0%, 100% { height: 22%; opacity: 0.5; }
-  50% { height: 100%; opacity: 1; }
+  0%, 100% { transform: scaleY(0.22); opacity: 0.5; }
+  50% { transform: scaleY(1); opacity: 1; }
 }
 @keyframes v3IntroRing {
   to { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
@@ -1152,6 +1181,8 @@
   position: absolute;
   inset: 0;
   z-index: 0;
+  /* Values come from --pain-bg-* set per row; only the applied one downloads. */
+  background-image: var(--pain-bg-lg);
   background-size: cover;
   background-position: center;
   opacity: 0;
@@ -1268,6 +1299,7 @@
     opacity: 1;
   }
   .v4-pain-bg {
+    background-image: var(--pain-bg-sm);
     opacity: 0.4;
     transform: none;
   }
@@ -1312,6 +1344,13 @@
   opacity: 0.1;
   mix-blend-mode: screen;
   animation: v4Smoke 34s ease-in-out infinite alternate;
+}
+@media (max-width: 760px) {
+  .v4-reframe-img {
+    background: linear-gradient(rgba(6, 6, 7, 0.78), rgba(6, 6, 7, 0.78)),
+      url("/img/oklahoma-night-1080.webp") center / cover no-repeat;
+  }
+  .v4-reframe-smoke { background-image: url("/img/tex-fog-640.webp"); }
 }
 .v4-reframe-smoke.two {
   inset: -18%;
@@ -2015,7 +2054,7 @@
   }
   .v3-redact::after { display: none; }
   .v3-grain,
-  .v3-scan.in,
+  .v3-scan.in::before,
   .v3-wave.playing i,
   .v3-marquee-track,
   .v3-intro-ring,

@@ -20,8 +20,12 @@ import { useScrollScene } from "../../marketing-v3/shared/hooks";
 const stepVar = (i: number) => `var(--v3-step-${i})`;
 // ⚠️ PLACEHOLDER stage backgrounds (barely visible) — swap for imagery that
 // represents each step: finding violations / holding accountable / results.
-// Pre-optimized WebP (npm run images). tex-ridge stays JPEG: its grain compresses worse as WebP.
-const STEP_IMAGES = ["/v3/tex-ridge.jpg", "/img/tex-fog-1100.webp", "/img/oklahoma-1600.webp"];
+// Pre-optimized WebP pairs (npm run images): `sm` for phones, `lg` for desktop.
+const STEP_IMAGES = [
+  { sm: "/img/tex-ridge-640.webp", lg: "/img/tex-ridge-1100.webp" },
+  { sm: "/img/tex-fog-640.webp", lg: "/img/tex-fog-1100.webp" },
+  { sm: "/img/oklahoma-1080.webp", lg: "/img/oklahoma-1600.webp" },
+];
 
 export function MechanismPinnedV4() {
   const { ref, progress } = useScrollScene<HTMLDivElement>();
@@ -51,15 +55,12 @@ export function MechanismPinnedV4() {
             {STEP_IMAGES.map((img, i) => (
               <div
                 key={i}
+                className="v4-mech-slide"
                 style={{
-                  position: "absolute",
-                  inset: 0,
-                  backgroundImage: `url(${img})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
+                  "--mech-bg-sm": `url(${img.sm})`,
+                  "--mech-bg-lg": `url(${img.lg})`,
                   opacity: i === active ? 1 : 0,
-                  transition: "opacity 0.9s ease",
-                }}
+                } as React.CSSProperties}
               />
             ))}
           </div>

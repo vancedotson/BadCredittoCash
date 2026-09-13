@@ -26,7 +26,7 @@ export function HeroV4() {
         aria-hidden
         fill
         priority
-        sizes="100vw"
+        sizes="(min-width: 1024px) 100vw, 75vw"
         className="object-cover object-center"
         style={{ opacity: 0.62, filter: "grayscale(0.12) contrast(1.08) brightness(1.02)" }}
       />
@@ -112,7 +112,7 @@ export function HeroV4() {
             alt="Vance Dotson, consumer advocate"
             fill
             priority
-            sizes="(min-width: 1024px) 44vw, 90vw"
+            sizes="(min-width: 1024px) 44vw, 1px"
             className="object-cover"
             style={{
               objectPosition: "center top",
