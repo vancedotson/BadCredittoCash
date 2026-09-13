@@ -227,6 +227,78 @@ export const liveWebinar = {
   },
 
   /**
+   * /live registration page — the "Value + Form" layout from the funnel
+   * wireframe encyclopedia (v4), entry "09 — Webinar / Masterclass Registration
+   * Page": hero with the form beside it, outcome cards, agenda timeline, speaker
+   * profile, who it's for, logistics row, FAQ, centered final signup band.
+   *
+   * PROOF: every credibility line below is already approved in site-v3.ts
+   * (`trustBar`, `meetVance`, `painMirror`). There are deliberately NO
+   * testimonials, attendee counts or "seats left" — site-v3's testimonials are
+   * still ⚠️ placeholders, and no capacity is configured. Add real, permitted
+   * quotes here once they exist.
+   */
+  registrationPage: {
+    announcement: "FREE LIVE SESSION",
+
+    /** Three things they walk away with — the hero bullets and outcome cards. */
+    outcomes: [
+      {
+        title: "Name exactly what they did wrong.",
+        detail: "Calls to your job, talking to your family, threats about things that can't happen — you'll know which conduct the FDCPA restricts.",
+      },
+      {
+        title: "Have it on the record.",
+        detail: "What to write down and keep while it's happening, so it isn't your word against theirs.",
+      },
+      {
+        title: "Know what to ask for, in writing.",
+        detail: "The written requests the law gives you, and what a collector has to do once they're on the record.",
+      },
+    ],
+
+    /** Trust facts — lifted from site-v3 `trustBar` / `meetVance.credentials`. */
+    trust: ["Consumer advocate since 2004", "FDCPA & FCRA", "Real office in Oklahoma City", "Free — no payment step"],
+
+    /** "Who it's for" — mirrors vetted site-v3 `painMirror` points. */
+    whoFor: {
+      kicker: "WHO THIS IS FOR",
+      heading: "If any of this sounds familiar, save a seat.",
+      items: [
+        { title: "They call where they shouldn't.", detail: "Your job. Your family. At dinner, again and again." },
+        { title: "The threats don't add up.", detail: "Letters and calls warning about consequences that don't sound right." },
+        { title: "You already tried.", detail: "You disputed it or asked them to stop — and nothing changed." },
+      ],
+    },
+
+    speaker: {
+      kicker: "YOUR HOST",
+      name: "Vance Dotson",
+      role: "Consumer advocate · Oklahoma City",
+      /** First-person, from vetted site-v3 `meetVance.body`. A host statement, not a testimonial. */
+      quote: "I'm not a call center. I'm a real person, with a real office, who takes this personally.",
+      credentials: [
+        "Consumer advocate since 2004",
+        "Spoken at national consumer-advocate conferences",
+        "Uses the FDCPA and FCRA to hold collectors and bureaus to the rules",
+      ],
+    },
+
+    logistics: {
+      kicker: "THE DETAILS",
+      where: "Online — join from any browser",
+      whereNote: "Your joining link arrives by email",
+      cost: "Free",
+      costNote: "No payment, now or later",
+    },
+
+    finalBand: {
+      heading: "They're counting on you not knowing the rules.",
+      sub: "It's free, it's live, and it runs once.",
+    },
+  },
+
+  /**
    * /live/confirmed — step 2, and the single biggest lever on show-up rate.
    * A registration is only worth something if the person is there at one
    * specific moment, so every block here exists to get them into the room.
