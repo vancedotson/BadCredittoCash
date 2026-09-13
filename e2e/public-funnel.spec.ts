@@ -6,8 +6,12 @@ test("public homepage reaches the registration form", async ({ page }) => {
   await expect(page).toHaveTitle(/Vance Dotson/i);
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/calls/i);
 
-  await page.getByRole("link", { name: /see how it works, free/i }).first().click();
+  // The primary CTA leads to the credit-check lead magnet and the secondary CTA
+  // to the live webinar; the registration form stays on the page at #register.
+  await expect(page.getByRole("link", { name: /check my credit report, free/i }).first()).toHaveAttribute("href", "/credit-check");
+  await expect(page.getByRole("link", { name: /join the live session/i }).first()).toHaveAttribute("href", "/live");
 
+  await page.goto("/#register");
   await expect(page.locator("#register")).toBeInViewport();
   const email = page.getByRole("textbox", { name: "Email", exact: true });
   await expect(email).toBeVisible();
