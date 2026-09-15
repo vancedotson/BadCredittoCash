@@ -29,8 +29,13 @@ const scriptSource = "https://challenges.cloudflare.com/turnstile/v0/api.js?rend
 const loadTimeoutMs = 10_000;
 // Turnstile site keys are public identifiers. Keep the production key available
 // at build time because Next.js inlines NEXT_PUBLIC_* values while compiling,
-// before Wrangler's runtime vars are attached to the Worker.
-const productionSitekey = "0x4AAAAAAEJgbygCL0OAMxvi";
+// before Wrangler's runtime vars are attached to the Worker. That inlining means
+// this fallback is what actually ships to the browser, so it MUST stay equal to
+// `NEXT_PUBLIC_TURNSTILE_SITE_KEY` in wrangler.jsonc. When the two drifted, the
+// widget rendered the stale key and Turnstile refused the domain with error
+// 110200 ("Unable to connect to website"). turnstile-sitekey.test.ts fails the
+// build if they diverge again.
+const productionSitekey = "0x4AAAAAAEXg2qOJgmbI5TSP";
 
 function loadTurnstile(forceReload = false): Promise<TurnstileApi> {
   if (window.turnstile) return Promise.resolve(window.turnstile);
