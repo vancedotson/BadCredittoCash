@@ -67,6 +67,14 @@ async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | nu
     rejectNextQuestion: () => { failNextQuestion = true; } };
 }
 
+test("an unscheduled live page presents no actions", async ({ page }) => {
+  await page.route("**/api/live/session**", (route) => route.fulfill({ json: { session: null, participant: null } }));
+  await page.goto("/live");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("isn’t on the calendar yet");
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+});
+
 test("live previews cannot register, book, send questions, or record activity", async ({ page }) => {
   const mocks = await mockPublicApis(page, session());
   await page.goto(`/live?session=${sessionA}&preview=1`);

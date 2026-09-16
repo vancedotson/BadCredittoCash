@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { site } from "@/config/site-v3";
 import { Kicker } from "@/components/marketing-v3/shared/primitives";
 import { LiveSessionLoading, useLiveSession } from "./LiveSessionProvider";
@@ -27,9 +26,8 @@ export function UnscheduledNotice() {
         {error ? "We couldn't load this session." : "This session has been cancelled."}
       </h1>
       <p className="mt-6" role={error ? "alert" : undefined} style={{ color: "var(--v3-mut)", lineHeight: 1.6 }}>
-        {error ?? "Check your email for the update. You can still watch the free on-demand training."}
+        {error ?? "Check your email for the latest update."}
       </p>
-      <Link className="v3-btn v3-btn-primary mt-8" href="/#register">Watch the free training</Link>
     </main>;
   }
   return (
@@ -45,15 +43,6 @@ export function UnscheduledNotice() {
         thing that does: the free on-demand training covers the same ground and you
         can watch it right now.
       </p>
-
-      <div className="mt-9 flex flex-wrap gap-4">
-        <Link className="v3-btn v3-btn-primary" href="/#register">
-          Watch the free training &nbsp;&rarr;
-        </Link>
-        <Link className="v3-btn v3-btn-ghost" href="/book">
-          Book a free call
-        </Link>
-      </div>
 
       <p className="v3-mono mt-10" style={{ fontSize: 11.5, color: "var(--v3-faint)", lineHeight: 1.8 }}>
         &gt; {site.ev.fileNo}
