@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 type StudioState = "idle" | "preparing" | "live";
+type ConnectionQuality = "idle" | "checking" | "good" | "poor";
 
 function waitForIce(peer: RTCPeerConnection): Promise<void> {
   if (peer.iceGatheringState === "complete") return Promise.resolve();
@@ -24,10 +25,45 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
   const displayRef = useRef<MediaStream | null>(null);
   const compositionTrackRef = useRef<MediaStreamTrack | null>(null);
   const animationRef = useRef<number | null>(null);
+  const qualityTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const outboundBytesRef = useRef(0);
   const whipSessionRef = useRef<string | null>(null);
   const [state, setState] = useState<StudioState>("idle");
   const [sharing, setSharing] = useState(false);
+  const [devicesReady, setDevicesReady] = useState(false);
+  const [quality, setQuality] = useState<ConnectionQuality>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  async function prepareDevices(): Promise<MediaStream> {
+    const current = mediaRef.current;
+    if (current?.getTracks().every((track) => track.readyState === "live")) return current;
+    const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    mediaRef.current = media;
+    if (videoRef.current) videoRef.current.srcObject = media;
+    for (const track of media.getTracks()) track.addEventListener("ended", () => setDevicesReady(false), { once: true });
+    setDevicesReady(true);
+    return media;
+  }
+
+  async function testDevices() {
+    setError(null);
+    try { await prepareDevices(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Camera and microphone access could not be confirmed."); }
+  }
+
+  function monitorConnection(peer: RTCPeerConnection) {
+    setQuality("checking");
+    qualityTimerRef.current = setInterval(() => {
+      void peer.getStats().then((reports) => {
+        let outboundBytes = 0;
+        reports.forEach((report) => {
+          if (report.type === "outbound-rtp" && report.kind === "video" && !report.isRemote && typeof report.bytesSent === "number") outboundBytes += report.bytesSent;
+        });
+        setQuality(peer.connectionState === "connected" && outboundBytes > outboundBytesRef.current ? "good" : "poor");
+        outboundBytesRef.current = outboundBytes;
+      }).catch(() => setQuality("poor"));
+    }, 3000);
+  }
 
   async function stopScreenShare(restoreCamera = true) {
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
@@ -52,26 +88,37 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
     await stopScreenShare(false);
     peerRef.current?.close();
     peerRef.current = null;
+    if (qualityTimerRef.current) clearInterval(qualityTimerRef.current);
+    qualityTimerRef.current = null;
+    outboundBytesRef.current = 0;
     mediaRef.current?.getTracks().forEach((track) => track.stop());
     mediaRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    setDevicesReady(false);
+    setQuality("idle");
     setState("idle");
   }
 
   useEffect(() => () => {
     if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    if (qualityTimerRef.current) clearInterval(qualityTimerRef.current);
     peerRef.current?.close();
     displayRef.current?.getTracks().forEach((track) => track.stop());
     compositionTrackRef.current?.stop();
     mediaRef.current?.getTracks().forEach((track) => track.stop());
   }, []);
 
+  useEffect(() => {
+    if (state !== "live") return;
+    const protectBroadcast = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", protectBroadcast);
+    return () => window.removeEventListener("beforeunload", protectBroadcast);
+  }, [state]);
+
   async function start() {
     setError(null); setState("preparing");
     try {
-      const media = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      mediaRef.current = media;
-      if (videoRef.current) videoRef.current.srcObject = media;
+      const media = await prepareDevices();
       const setup = await fetch(`/api/crm/live-webinars/${encodeURIComponent(sessionId)}/stream`, { method: "POST" });
       const result = await setup.json() as { publishUrl?: string; error?: string };
       if (!setup.ok || !result.publishUrl) throw new Error(result.error || "The broadcast could not be prepared.");
@@ -87,11 +134,16 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
       const location = publish.headers.get("location");
       if (location) whipSessionRef.current = new URL(location, result.publishUrl).toString();
       setState("live");
+      monitorConnection(peer);
       onPrepared();
     } catch (cause) {
       await stop();
       setError(cause instanceof Error ? cause.message : "The broadcast could not be started.");
     }
+  }
+
+  async function confirmStop() {
+    if (window.confirm("End this live broadcast for everyone?")) await stop();
   }
 
   async function shareScreen() {
@@ -151,12 +203,18 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
   if (!configured) return <p className="rounded-lg border border-gold/30 bg-gold/5 p-3 text-xs leading-relaxed text-slate">Browser broadcasting is built in. Cloudflare Stream billing and its API token still need to be connected.</p>;
 
   return <div className="space-y-3 rounded-lg border border-mist bg-cloud/40 p-3">
-    <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-heading">Broadcast studio</p><span className={`text-xs font-medium ${state === "live" ? "text-green" : "text-slate"}`}>{state === "live" ? "Live" : state === "preparing" ? "Starting…" : "Offline"}</span></div>
+    <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-heading">Broadcast studio</p><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${state === "live" ? "bg-red text-white" : "bg-mist text-slate"}`}>{state === "live" ? "● YOU ARE LIVE" : state === "preparing" ? "Starting…" : "Offline"}</span></div>
     <video ref={videoRef} autoPlay muted playsInline className="aspect-video w-full rounded-md bg-ink object-cover" />
+    <div className="flex flex-wrap gap-2 text-xs">
+      <span className={devicesReady ? "text-green" : "text-slate"}>{devicesReady ? "✓ Camera ready" : "Camera not tested"}</span>
+      <span className={devicesReady ? "text-green" : "text-slate"}>{devicesReady ? "✓ Microphone ready" : "Microphone not tested"}</span>
+      {state === "live" ? <span className={quality === "good" ? "text-green" : quality === "poor" ? "text-red" : "text-slate"}>Connection: {quality === "good" ? "good" : quality === "poor" ? "unstable" : "checking…"}</span> : null}
+    </div>
     {error ? <p role="alert" className="text-xs text-red">{error}</p> : null}
-    <div className="flex gap-2">
-      {state === "idle" ? <button type="button" onClick={() => void start()} disabled={disabled} className="flex-1 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink disabled:opacity-50">Start live</button> : <button type="button" onClick={() => void stop()} className="flex-1 rounded-lg bg-red px-3 py-2 text-sm font-semibold text-white">End live</button>}
+    <div className="flex flex-wrap gap-2">
+      {state === "idle" ? <><button type="button" onClick={() => void testDevices()} disabled={disabled} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body disabled:opacity-50">Test camera &amp; mic</button><button type="button" onClick={() => void start()} disabled={disabled || !devicesReady} className="flex-1 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink disabled:opacity-50">Start live</button></> : <button type="button" onClick={() => void confirmStop()} className="flex-1 rounded-lg bg-red px-3 py-2 text-sm font-semibold text-white">End live</button>}
       {state === "live" ? <button type="button" onClick={() => void shareScreen()} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body">{sharing ? "Stop sharing" : "Share screen + camera"}</button> : null}
     </div>
+    {state === "idle" && !devicesReady ? <p className="text-xs leading-relaxed text-slate">Test both devices before the Start live button becomes available.</p> : null}
   </div>;
 }
