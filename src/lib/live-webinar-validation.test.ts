@@ -8,6 +8,10 @@ const valid = { title: "Collector rights live", slug: "collector-rights", starts
 
 describe("live session validation", () => {
   it("accepts a scheduled session with a supported player", () => expect(validateLiveSessionInput(valid).session).toMatchObject({ ...valid, startsAt: "2026-10-10T17:00:00.000Z", endsAt: "2026-10-10T17:45:00.000Z" }));
+  it("accepts a Cloudflare Stream player and rejects lookalike hosts", () => {
+    expect(validateLiveSessionInput({ ...valid, embedUrl: "https://customer-ab12.cloudflarestream.com/0123456789abcdef0123456789abcdef/iframe" }).session).toBeTruthy();
+    expect(validateLiveSessionInput({ ...valid, embedUrl: "https://customer-ab12.cloudflarestream.com.evil.example/input/iframe" }).error).toBeTruthy();
+  });
   it.each([
     { embedUrl: "javascript:alert(1)" }, { embedUrl: "https://evil.example/player" }, { embedUrl: "https://user:secret@www.youtube.com/embed/test" },
     { embedUrl: null }, { timezone: "Invalid/Zone" }, { endsAt: "2026-10-10T16:00:00Z" }, { replayPublished: true },

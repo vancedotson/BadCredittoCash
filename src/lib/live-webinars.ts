@@ -21,6 +21,8 @@ export function mapLiveSession(row: Row): LiveWebinarSession {
     status: row.status as LiveWebinarSession["status"], embedUrl: nullable(row.embed_url), replayUrl: nullable(row.replay_url),
     replayPublished: row.replay_published === true, replayAvailableUntil: nullable(row.replay_available_until),
     automationEnabled: row.automation_enabled === true, scheduleVersion: Number(row.schedule_version ?? 1),
+    streamProvider: row.stream_provider === "cloudflare" ? "cloudflare" : "external",
+    cloudflareLiveInputId: nullable(row.cloudflare_live_input_id),
   };
 }
 

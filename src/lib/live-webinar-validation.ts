@@ -26,7 +26,7 @@ export function validateLiveSessionInput(value: unknown): { session?: LiveWebina
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start || end.getTime() - start.getTime() > 86_400_000) return { error: "Set a valid start and end, no more than 24 hours apart." };
   const embedUrl = typeof input.embedUrl === "string" && input.embedUrl.trim() ? input.embedUrl.trim() : null;
   const replayUrl = typeof input.replayUrl === "string" && input.replayUrl.trim() ? input.replayUrl.trim() : null;
-  if ((embedUrl && !isLivePlayerUrl(embedUrl)) || (replayUrl && !isLivePlayerUrl(replayUrl))) return { error: "Use a YouTube, YouTube privacy-enhanced, or Vimeo player URL." };
+  if ((embedUrl && !isLivePlayerUrl(embedUrl)) || (replayUrl && !isLivePlayerUrl(replayUrl))) return { error: "Use a supported Cloudflare Stream, YouTube, or Vimeo player URL." };
   if (input.status === "scheduled" && !embedUrl) return { error: "Add the live player URL before scheduling this session." };
   const expiry = typeof input.replayAvailableUntil === "string" && input.replayAvailableUntil ? new Date(input.replayAvailableUntil) : null;
   if (expiry && (!Number.isFinite(expiry.getTime()) || expiry <= end)) return { error: "The replay expiry must be after the session ends." };

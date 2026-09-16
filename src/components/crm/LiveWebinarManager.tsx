@@ -10,6 +10,7 @@ import { LiveWebinarMessages } from "./LiveWebinarMessages";
 import { LiveWebinarCalendar } from "./LiveWebinarCalendar";
 import { LiveWebinarSessionEditor } from "./LiveWebinarSessionEditor";
 import { calendarDate } from "@/lib/live-webinar-calendar";
+import { CloudflareBroadcastStudio } from "./CloudflareBroadcastStudio";
 
 const field = "mt-1 w-full rounded-lg border border-mist bg-card px-3 py-2 text-sm text-body outline-none focus:border-trust disabled:opacity-60";
 const button = "rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body hover:bg-cloud disabled:opacity-50";
@@ -44,7 +45,7 @@ function SessionReport({ report }: { report: LiveWebinarSessionReport }) {
   </div>;
 }
 
-export function LiveWebinarManager({ initialSessions, initialSessionId, initialNow, calendarTimezone = "America/Chicago", canWrite, siteEnabled }: { initialSessions: LiveWebinarSession[]; initialSessionId?: string; initialNow: string; calendarTimezone?: string; canWrite: boolean; siteEnabled: boolean }) {
+export function LiveWebinarManager({ initialSessions, initialSessionId, initialNow, calendarTimezone = "America/Chicago", canWrite, siteEnabled, streamConfigured = false }: { initialSessions: LiveWebinarSession[]; initialSessionId?: string; initialNow: string; calendarTimezone?: string; canWrite: boolean; siteEnabled: boolean; streamConfigured?: boolean }) {
   const router = useRouter();
   // Do not accept clicks on server-rendered controls before handlers are attached.
   const interactive = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
@@ -118,6 +119,7 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, initialN
           {sessions.length > 1 ? <label className="block text-xs text-slate">Switch session<select aria-label="Session" value={selectedId} disabled={controlsDisabled} onChange={(event) => { select(event.target.value); const item = sessions.find((session) => session.id === event.target.value); if (item) setMonth(calendarDate(item.startsAt, calendarTimezone).slice(0, 7)); }} className={field}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}</select></label> : null}
           <div className="space-y-2 text-sm text-slate"><p>{formatLiveDate(selected.startsAt, selected.timezone)}</p><p className="text-xs">Ends {formatLiveDate(selected.endsAt, selected.timezone)}</p><p className="text-xs">{selected.timezone}</p></div>
           <div className="flex flex-wrap gap-2"><Badge tone={selected.automationEnabled ? "success" : "neutral"}>Session emails {selected.automationEnabled ? "enabled" : "disabled"}</Badge><Badge tone={selected.replayPublished ? "info" : "neutral"}>Replay {selected.replayPublished ? "published" : "unpublished"}</Badge></div>
+          {canWrite ? <CloudflareBroadcastStudio sessionId={selected.id} configured={streamConfigured} disabled={controlsDisabled} onPrepared={() => { setNotice("Cloudflare broadcast prepared."); setRefresh((value) => value + 1); }} /> : null}
           <div className="space-y-3 border-t border-mist pt-5">
             {canWrite ? <button type="button" disabled={controlsDisabled} onClick={() => setEditing(selected)} className={`${primaryButton} w-full`}>Edit session</button> : null}
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link href={`/live?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Registration page ↗</Link>{selected.replayPublished ? <Link href={`/live/replay?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Replay page ↗</Link> : null}</div>

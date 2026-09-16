@@ -25,6 +25,7 @@
     "EMAIL_MODE": "test",
     "EMAIL_TEST_RECIPIENT": "anadias.dev@gmail.com",
     "LIVE_WEBINAR_ENABLED": "false",
+    "CLOUDFLARE_STREAM_ENABLED": "false",
     "EMAIL_FROM": "Bad Credit to Cash <updates@updates.badcredittocash.com>",
     "APP_BASE_URL": "https://vance-dotson.vancedotson.workers.dev",
     "GOOGLE_CALENDAR_ACCOUNT_EMAIL": "vancedotson84@gmail.com",

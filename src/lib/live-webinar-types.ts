@@ -12,6 +12,8 @@ export type LiveWebinarSession = {
   replayAvailableUntil: string | null;
   automationEnabled: boolean;
   scheduleVersion: number;
+  streamProvider?: "external" | "cloudflare";
+  cloudflareLiveInputId?: string | null;
 };
 
 export type PublicLiveWebinarSession = LiveWebinarSession;
@@ -74,7 +76,9 @@ export const LIVE_PLAYER_ORIGINS = [
 export function isLivePlayerUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return !url.username && !url.password && (LIVE_PLAYER_ORIGINS as readonly string[]).includes(url.origin);
+    const cloudflarePlayer = /^customer-[a-z0-9]+\.cloudflarestream\.com$/i.test(url.hostname);
+    return url.protocol === "https:" && !url.username && !url.password
+      && ((LIVE_PLAYER_ORIGINS as readonly string[]).includes(url.origin) || cloudflarePlayer);
   } catch { return false; }
 }
 
