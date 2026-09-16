@@ -21,14 +21,35 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
   const videoRef = useRef<HTMLVideoElement>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const mediaRef = useRef<MediaStream | null>(null);
+  const displayRef = useRef<MediaStream | null>(null);
+  const compositionTrackRef = useRef<MediaStreamTrack | null>(null);
+  const animationRef = useRef<number | null>(null);
   const whipSessionRef = useRef<string | null>(null);
   const [state, setState] = useState<StudioState>("idle");
+  const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function stopScreenShare(restoreCamera = true) {
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    animationRef.current = null;
+    displayRef.current?.getTracks().forEach((track) => track.stop());
+    displayRef.current = null;
+    compositionTrackRef.current?.stop();
+    compositionTrackRef.current = null;
+    const camera = mediaRef.current?.getVideoTracks()[0];
+    if (restoreCamera && camera) {
+      const sender = peerRef.current?.getSenders().find((item) => item.track?.kind === "video");
+      if (sender) await sender.replaceTrack(camera);
+      if (videoRef.current) videoRef.current.srcObject = mediaRef.current;
+    }
+    setSharing(false);
+  }
 
   async function stop() {
     const whipSession = whipSessionRef.current;
     whipSessionRef.current = null;
     if (whipSession) void fetch(whipSession, { method: "DELETE" }).catch(() => undefined);
+    await stopScreenShare(false);
     peerRef.current?.close();
     peerRef.current = null;
     mediaRef.current?.getTracks().forEach((track) => track.stop());
@@ -37,7 +58,13 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
     setState("idle");
   }
 
-  useEffect(() => () => { peerRef.current?.close(); mediaRef.current?.getTracks().forEach((track) => track.stop()); }, []);
+  useEffect(() => () => {
+    if (animationRef.current !== null) cancelAnimationFrame(animationRef.current);
+    peerRef.current?.close();
+    displayRef.current?.getTracks().forEach((track) => track.stop());
+    compositionTrackRef.current?.stop();
+    mediaRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
 
   async function start() {
     setError(null); setState("preparing");
@@ -69,16 +96,54 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
 
   async function shareScreen() {
     try {
+      if (sharing) { await stopScreenShare(); return; }
       const display = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const track = display.getVideoTracks()[0];
+      displayRef.current = display;
+      const screenVideo = document.createElement("video");
+      const cameraVideo = document.createElement("video");
+      for (const video of [screenVideo, cameraVideo]) { video.muted = true; video.playsInline = true; }
+      screenVideo.srcObject = display;
+      cameraVideo.srcObject = mediaRef.current;
+      await Promise.all([screenVideo.play(), cameraVideo.play()]);
+
+      const screenTrack = display.getVideoTracks()[0];
       const sender = peerRef.current?.getSenders().find((item) => item.track?.kind === "video");
-      if (!track || !sender) throw new Error("The screen could not be shared.");
-      await sender.replaceTrack(track);
-      track.addEventListener("ended", () => {
-        const camera = mediaRef.current?.getVideoTracks()[0];
-        if (camera) void sender.replaceTrack(camera);
-      }, { once: true });
+      if (!screenTrack || !sender) throw new Error("The screen could not be shared.");
+
+      const settings = screenTrack.getSettings();
+      const sourceWidth = settings.width || screenVideo.videoWidth || 1280;
+      const sourceHeight = settings.height || screenVideo.videoHeight || 720;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.min(sourceWidth, 1920);
+      canvas.height = Math.round(canvas.width * sourceHeight / sourceWidth);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("The camera overlay could not be created.");
+
+      const draw = () => {
+        context.drawImage(screenVideo, 0, 0, canvas.width, canvas.height);
+        if (cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          const overlayWidth = Math.min(canvas.width * 0.24, 360);
+          const cameraRatio = cameraVideo.videoWidth && cameraVideo.videoHeight ? cameraVideo.videoWidth / cameraVideo.videoHeight : 16 / 9;
+          const overlayHeight = overlayWidth / cameraRatio;
+          const margin = Math.max(16, canvas.width * 0.018);
+          const x = canvas.width - overlayWidth - margin;
+          const y = canvas.height - overlayHeight - margin;
+          context.fillStyle = "#ffffff";
+          context.fillRect(x - 4, y - 4, overlayWidth + 8, overlayHeight + 8);
+          context.drawImage(cameraVideo, x, y, overlayWidth, overlayHeight);
+        }
+        animationRef.current = requestAnimationFrame(draw);
+      };
+      draw();
+      const composedTrack = canvas.captureStream(30).getVideoTracks()[0];
+      if (!composedTrack) throw new Error("The camera overlay could not be captured.");
+      compositionTrackRef.current = composedTrack;
+      await sender.replaceTrack(composedTrack);
+      if (videoRef.current) videoRef.current.srcObject = new MediaStream([composedTrack]);
+      setSharing(true);
+      screenTrack.addEventListener("ended", () => { void stopScreenShare(); }, { once: true });
     } catch (cause) {
+      await stopScreenShare();
       setError(cause instanceof Error ? cause.message : "The screen could not be shared.");
     }
   }
@@ -91,7 +156,7 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
     {error ? <p role="alert" className="text-xs text-red">{error}</p> : null}
     <div className="flex gap-2">
       {state === "idle" ? <button type="button" onClick={() => void start()} disabled={disabled} className="flex-1 rounded-lg bg-gold px-3 py-2 text-sm font-semibold text-ink disabled:opacity-50">Start live</button> : <button type="button" onClick={() => void stop()} className="flex-1 rounded-lg bg-red px-3 py-2 text-sm font-semibold text-white">End live</button>}
-      {state === "live" ? <button type="button" onClick={() => void shareScreen()} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body">Share screen</button> : null}
+      {state === "live" ? <button type="button" onClick={() => void shareScreen()} className="rounded-lg border border-mist bg-card px-3 py-2 text-sm font-medium text-body">{sharing ? "Stop sharing" : "Share screen + camera"}</button> : null}
     </div>
   </div>;
 }
