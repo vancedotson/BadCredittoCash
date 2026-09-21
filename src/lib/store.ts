@@ -1769,22 +1769,24 @@ export async function rescheduleBooking(id: string, startsAt: string): Promise<v
   } = await import("./google-calendar");
   let eventId = details.provider_event_id;
   let googleSyncError: unknown;
+  const admin = createAdminClient();
   try { await assertGoogleCalendarAvailable(starts, ends); }
   catch (calendarError) {
     if (calendarError instanceof (await import("./google-calendar")).GoogleCalendarConflictError) throw calendarError;
     googleSyncError = calendarError;
   }
-  const { error } = await createAdminClient().rpc("reschedule_booking_and_notify", {
+  if (details.provider_event_id) {
+    const { error: detachError } = await admin.rpc("clear_booking_google_event", { p_booking_id: id });
+    if (detachError) throw new Error(`Could not detach the existing calendar event before rescheduling: ${detachError.message}`);
+    eventId = details.provider_event_id;
+  }
+  const { error } = await admin.rpc("reschedule_booking_and_notify", {
     p_booking_id: id,
     p_starts_at: starts.toISOString(),
     p_ends_at: ends.toISOString(),
     p_reminder_at: reminderAt.toISOString(),
   });
   if (error) throw error;
-  if (googleSyncError && details.provider_event_id) {
-    await createAdminClient().rpc("clear_booking_google_event", { p_booking_id: id });
-    await createAdminClient().rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: details.contact_email, p_properties: { action: "booking", reason: "google_reschedule_sync_unavailable", source: "google_calendar_sync" }, p_client_event_id: null });
-  }
   if (!googleSyncError) {
     try {
       if (eventId) await updateGoogleCalendarEvent(eventId, { name: details.contact_name, email: details.contact_email, phone: details.contact_phone, startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone });
@@ -1793,10 +1795,13 @@ export async function rescheduleBooking(id: string, startsAt: string): Promise<v
         await attachGoogleEventToBooking(id, eventId);
       }
     } catch (calendarError) {
-      await createAdminClient().rpc("clear_booking_google_event", { p_booking_id: id });
-      await createAdminClient().rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: details.contact_email, p_properties: { action: "booking", reason: "google_reschedule_sync_failed", source: "google_calendar_sync" }, p_client_event_id: null });
+      const { error: warningError } = await admin.rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: details.contact_email, p_properties: { action: "booking", reason: "google_reschedule_sync_failed", source: "google_calendar_sync" }, p_client_event_id: null });
+      if (warningError) console.error("[crm/booking] calendar warning recording failed", { reason: warningError.message });
       console.error("[crm/booking] Google synchronization failed after reschedule", { reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
     }
+  } else if (details.provider_event_id) {
+    const { error: warningError } = await admin.rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: details.contact_email, p_properties: { action: "booking", reason: "google_reschedule_sync_unavailable", source: "google_calendar_sync" }, p_client_event_id: null });
+    if (warningError) console.error("[crm/booking] calendar warning recording failed", { reason: warningError.message });
   }
 }
 
@@ -1807,7 +1812,8 @@ export async function cancelBooking(id: string): Promise<void> {
   if (detailsError) throw detailsError;
   const details = (detailsData as Array<{ provider_event_id: string | null }> | null)?.[0];
   if (!details) throw new Error("Booking not found.");
-  const { error } = await createAdminClient().rpc("cancel_booking_and_notify", {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("cancel_booking_and_notify", {
     p_booking_id: id,
   });
   if (error) throw error;
@@ -1815,7 +1821,8 @@ export async function cancelBooking(id: string): Promise<void> {
     const { deleteGoogleCalendarEvent } = await import("./google-calendar");
     try { await deleteGoogleCalendarEvent(details.provider_event_id); }
     catch (calendarError) {
-      await createAdminClient().rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: undefined, p_properties: { action: "booking", reason: "google_cancel_sync_failed", source: "google_calendar_sync" }, p_client_event_id: null });
+      const { error: warningError } = await admin.rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: undefined, p_properties: { action: "booking", reason: "google_cancel_sync_failed", source: "google_calendar_sync" }, p_client_event_id: null });
+      if (warningError) console.error("[crm/booking] calendar warning recording failed", { reason: warningError.message });
       console.error("[crm/booking] Google event deletion unavailable after cancellation", { reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
     }
   }
