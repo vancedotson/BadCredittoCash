@@ -106,10 +106,11 @@ describe("live booking attribution and existing booking lifecycle", () => {
     expect(mocks.session).not.toHaveBeenCalled();
   });
 
-  it("retains conflict handling and cleans up the provisional calendar event", async () => {
+  it("retains conflict handling without creating an untracked calendar event", async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { code: "23505" } });
     expect((await POST(request({ ...booking, funnel: "live", sessionId }))).status).toBe(409);
-    expect(mocks.deleteEvent).toHaveBeenCalledWith("google-event-id");
+    expect(mocks.createEvent).not.toHaveBeenCalled();
+    expect(mocks.deleteEvent).not.toHaveBeenCalled();
     expect(mocks.booked).not.toHaveBeenCalled();
   });
 });

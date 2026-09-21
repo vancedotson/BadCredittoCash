@@ -16,6 +16,18 @@ import {
 } from "@/lib/google-calendar";
 import { GoogleCalendarConflictError } from "@/lib/google-calendar";
 
+async function recordCalendarSyncWarning(email: string, reason: string) {
+  try {
+    const { error } = await createAdminClient().rpc("record_funnel_event", {
+      p_event_key: "funnel_error", p_email: email,
+      p_properties: { action: "booking", reason, source: "google_calendar_sync" }, p_client_event_id: null,
+    });
+    if (error) console.error("[api/book] calendar warning recording failed", { reason: error.message });
+  } catch (error) {
+    console.error("[api/book] calendar warning recording failed", { reason: error instanceof Error ? error.message : "unknown_error" });
+  }
+}
+
 export async function GET() {
   const from = new Date();
   const to = new Date(from.getTime() + 45 * 24 * 60 * 60 * 1000);
@@ -116,10 +128,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    let googleEventId: string | null = null;
+    let googleConnected = false;
     try {
       await assertGoogleCalendarAvailable(startsAt, endsAt);
-      googleEventId = await createGoogleCalendarEvent({ name, email, phone: body.phone?.trim() || null, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), timezone });
+      googleConnected = true;
     } catch (calendarError) {
       if (calendarError instanceof GoogleCalendarConflictError) throw calendarError;
       console.error("[api/book] Google synchronization unavailable", { reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
@@ -138,19 +150,25 @@ export async function POST(request: Request) {
       ...(body.funnel === "live" ? { p_session_id: liveSessionId, p_registration_id: liveRegistrationId } : {}),
     });
     if (error || !data) {
-      if (googleEventId) await deleteGoogleCalendarEvent(googleEventId).catch((cleanupError) =>
-        console.error("[api/book] orphaned Google event cleanup failed", cleanupError));
       if (error?.code === "23505") return NextResponse.json({ error: "That time was just booked. Please choose another slot." }, { status: 409 });
       throw new Error(error?.message ?? "Could not save booking.");
     }
 
     const booking = (Array.isArray(data) ? data[0] : data) as { id?: string };
     if (!booking?.id) throw new Error("Booking ID was not returned.");
-    if (googleEventId) {
+    if (googleConnected) {
+      let googleEventId: string | null = null;
       try {
+        googleEventId = await createGoogleCalendarEvent({ name, email, phone: body.phone?.trim() || null, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), timezone });
         await attachGoogleEventToBooking(booking.id, googleEventId);
       } catch (calendarError) {
-        console.error("[api/book] Google event attachment failed after booking", { bookingId: booking.id, reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
+        console.error("[api/book] Google synchronization failed after booking", { reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
+        if (googleEventId) {
+          await deleteGoogleCalendarEvent(googleEventId).catch(async (cleanupError) => {
+            console.error("[api/book] orphaned Google event cleanup failed", { reason: cleanupError instanceof Error ? cleanupError.message : "unknown_error" });
+            await recordCalendarSyncWarning(email, "google_event_cleanup_failed");
+          });
+        } else await recordCalendarSyncWarning(email, "google_event_create_or_attach_failed");
       }
     }
     await onBooked(email, startsAt, timezone, booking.id);
