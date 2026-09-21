@@ -7,9 +7,9 @@ vi.mock("@/lib/supabase/public", () => ({ createPublicClient: mocks.publicClient
 vi.mock("@/lib/public-api", async (original) => ({ ...await original<typeof import("@/lib/public-api")>(), consumePublicRateLimit: mocks.rate }));
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstile: mocks.turnstile }));
 vi.mock("@/lib/automations", () => ({ onBooked: mocks.booked }));
-vi.mock("@/lib/google-calendar", () => ({ assertGoogleCalendarAvailable: mocks.available, createGoogleCalendarEvent: mocks.createEvent, deleteGoogleCalendarEvent: mocks.deleteEvent, attachGoogleEventToBooking: mocks.attachEvent, listGoogleBusyIntervals: mocks.busy }));
+vi.mock("@/lib/google-calendar", () => ({ GoogleCalendarConflictError: class GoogleCalendarConflictError extends Error {}, assertGoogleCalendarAvailable: mocks.available, createGoogleCalendarEvent: mocks.createEvent, deleteGoogleCalendarEvent: mocks.deleteEvent, attachGoogleEventToBooking: mocks.attachEvent, listGoogleBusyIntervals: mocks.busy }));
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const origin = "https://example.test";
 const sessionId = "20000000-0000-4000-8000-000000000001";
@@ -31,6 +31,32 @@ beforeEach(() => {
 });
 
 describe("live booking attribution and existing booking lifecycle", () => {
+  it("returns app-owned availability when Google Calendar is unavailable", async () => {
+    mocks.publicClient.mockReturnValue({ rpc: mocks.rpc });
+    mocks.rpc.mockResolvedValue({ data: [{ starts_at: "2030-10-14T12:00:00Z" }], error: null });
+    mocks.busy.mockRejectedValue(new Error("refresh token could not be decrypted"));
+    const response = await GET();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ startsAt: ["2030-10-14T12:00:00Z"], busy: [], calendarStatus: "unavailable" });
+  });
+
+  it("commits and confirms a booking when Google synchronization is unavailable", async () => {
+    mocks.available.mockRejectedValue(new Error("Google authorization expired"));
+    mocks.createEvent.mockRejectedValue(new Error("Google authorization expired"));
+    const response = await POST(request(booking));
+    expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("book_funnel_call_v2", expect.objectContaining({ p_email: booking.email }));
+    expect(mocks.booked).toHaveBeenCalledWith(booking.email, new Date(booking.startsAt), "UTC", "booking-id");
+    expect(mocks.attachEvent).not.toHaveBeenCalled();
+  });
+
+  it("keeps the booking when Google event attachment fails", async () => {
+    mocks.attachEvent.mockRejectedValue(new Error("calendar write failed"));
+    const response = await POST(request(booking));
+    expect(response.status).toBe(200);
+    expect(mocks.booked).toHaveBeenCalledWith(booking.email, new Date(booking.startsAt), "UTC", "booking-id");
+  });
+
   it("passes verified session participation to the authoritative live booking transaction", async () => {
     expect((await POST(request({ ...booking, funnel: "live", sessionId, registrationId: "forged" }))).status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledWith("book_live_funnel_call_v1", expect.objectContaining({ p_session_id: sessionId, p_registration_id: registrationId }));

@@ -14,6 +14,7 @@ import {
   deleteGoogleCalendarEvent,
   listGoogleBusyIntervals,
 } from "@/lib/google-calendar";
+import { GoogleCalendarConflictError } from "@/lib/google-calendar";
 
 export async function GET() {
   const from = new Date();
@@ -24,15 +25,18 @@ export async function GET() {
     p_to: to.toISOString(),
   });
   if (error) return NextResponse.json({ error: "Could not load availability." }, { status: 502 });
-  let busy;
+  let busy: Awaited<ReturnType<typeof listGoogleBusyIntervals>> = [];
+  let calendarStatus: "connected" | "unavailable" = "connected";
   try {
     busy = await listGoogleBusyIntervals(from, to);
   } catch (calendarError) {
-    console.error("[api/book] Google availability failed", calendarError);
-    return NextResponse.json({ error: "Could not load live calendar availability." }, { status: 502 });
+    calendarStatus = "unavailable";
+    console.error("[api/book] Google availability unavailable", {
+      reason: calendarError instanceof Error ? calendarError.message : "unknown_error",
+    });
   }
   return NextResponse.json(
-    { startsAt: (data ?? []).map((row: { starts_at: string }) => row.starts_at), busy },
+    { startsAt: (data ?? []).map((row: { starts_at: string }) => row.starts_at), busy, calendarStatus },
     { headers: { "Cache-Control": "public, max-age=30, s-maxage=30" } },
   );
 }
@@ -42,8 +46,8 @@ export async function GET() {
  * `call_booked` event against the lead and hands off to the automation map,
  * which stops the pitch sequences and starts onboarding (delivery stubbed).
  *
- * No real calendar yet — this captures the request; a real scheduler / Calendly
- * embed slots in later. Called by BookCallV4.
+ * Supabase owns the booking reservation. Google Calendar is an optional
+ * synchronization adapter when it is connected and responding.
  */
 export async function POST(request: Request) {
   type BookingBody = {
@@ -112,15 +116,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    await assertGoogleCalendarAvailable(startsAt, endsAt);
-    const googleEventId = await createGoogleCalendarEvent({
-      name,
-      email,
-      phone: body.phone?.trim() || null,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      timezone,
-    });
+    let googleEventId: string | null = null;
+    try {
+      await assertGoogleCalendarAvailable(startsAt, endsAt);
+      googleEventId = await createGoogleCalendarEvent({ name, email, phone: body.phone?.trim() || null, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), timezone });
+    } catch (calendarError) {
+      if (calendarError instanceof GoogleCalendarConflictError) throw calendarError;
+      console.error("[api/book] Google synchronization unavailable", { reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
+    }
     const supabase = createAdminClient();
     const { data, error } = await supabase.rpc(body.funnel === "live" ? "book_live_funnel_call_v1" : "book_funnel_call_v2", {
       p_name: name,
@@ -135,7 +138,7 @@ export async function POST(request: Request) {
       ...(body.funnel === "live" ? { p_session_id: liveSessionId, p_registration_id: liveRegistrationId } : {}),
     });
     if (error || !data) {
-      await deleteGoogleCalendarEvent(googleEventId).catch((cleanupError) =>
+      if (googleEventId) await deleteGoogleCalendarEvent(googleEventId).catch((cleanupError) =>
         console.error("[api/book] orphaned Google event cleanup failed", cleanupError));
       if (error?.code === "23505") return NextResponse.json({ error: "That time was just booked. Please choose another slot." }, { status: 409 });
       throw new Error(error?.message ?? "Could not save booking.");
@@ -143,7 +146,13 @@ export async function POST(request: Request) {
 
     const booking = (Array.isArray(data) ? data[0] : data) as { id?: string };
     if (!booking?.id) throw new Error("Booking ID was not returned.");
-    await attachGoogleEventToBooking(booking.id, googleEventId);
+    if (googleEventId) {
+      try {
+        await attachGoogleEventToBooking(booking.id, googleEventId);
+      } catch (calendarError) {
+        console.error("[api/book] Google event attachment failed after booking", { bookingId: booking.id, reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
+      }
+    }
     await onBooked(email, startsAt, timezone, booking.id);
 
     return NextResponse.json({
@@ -156,6 +165,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (err) {
+    if (err instanceof GoogleCalendarConflictError) return NextResponse.json({ error: err.message }, { status: 409 });
     console.error("[api/book] failed:", err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

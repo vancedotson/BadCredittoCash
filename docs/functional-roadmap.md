@@ -176,9 +176,9 @@ Problem: slots are generated locally and do not represent actual availability. A
 
 - [x] Choose calendar source: Google Calendar.
 - [x] Define the initial appointment rules: 30-minute calls, fixed offered hours, no same-day booking, bounded horizon, and explicit timezone storage.
-- [x] Query Google Calendar free/busy availability server-side and fail closed when it is unavailable.
+- [x] Query Google Calendar free/busy availability server-side when connected; retain app-owned availability when the optional adapter is unavailable.
 - [x] Protect final submission against races with a second live availability check and an atomic active-slot claim; temporary holds are intentionally unnecessary.
-- [x] Create the real Google Calendar event with the contact details.
+- [x] Create the real Google Calendar event with the contact details when the optional adapter is healthy; retain provider-less bookings when it is unavailable.
 - [x] Store provider event ID and booking status.
 - [x] Prevent duplicate CRM bookings transactionally and compensate by removing an orphaned Google event if persistence loses the race.
 - [x] Implement authenticated CRM reschedule and cancellation controls synchronized with Google Calendar.

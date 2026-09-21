@@ -120,6 +120,13 @@ class GoogleCalendarRequestError extends Error {
   }
 }
 
+export class GoogleCalendarConflictError extends Error {
+  constructor() {
+    super("That time is busy on the connected calendar.");
+    this.name = "GoogleCalendarConflictError";
+  }
+}
+
 type GoogleEventInput = {
   name: string;
   email: string;
@@ -171,7 +178,7 @@ export async function assertGoogleCalendarAvailable(startsAt: Date, endsAt: Date
   if (busy.some((interval) =>
     new Date(interval.start).getTime() < endsAt.getTime()
       && new Date(interval.end).getTime() > startsAt.getTime()
-  )) throw new Error("That time is busy on the connected calendar.");
+  )) throw new GoogleCalendarConflictError();
 }
 
 function eventBody(input: GoogleEventInput) {

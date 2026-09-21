@@ -86,8 +86,8 @@ Do not edit or delete an already-applied migration and do not attempt an unrevie
 ### Booking or Google Calendar fails
 
 1. Open CRM **System health** and run the checks again.
-2. Confirm Google Calendar reports Healthy.
-3. Check the booking alert and contact activity before asking the lead to retry.
+2. Confirm Google Calendar status in System health. Calendar is an optional synchronization adapter; an unavailable calendar must not prevent app-owned availability or booking.
+3. Check the booking alert and contact activity before asking the lead to retry. Provider-less bookings can still be rescheduled or cancelled in CRM.
 4. Inspect Cloudflare logs without exposing calendar credentials or client details.
 
 ## Incident record

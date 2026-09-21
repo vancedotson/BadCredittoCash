@@ -1767,18 +1767,18 @@ export async function rescheduleBooking(id: string, startsAt: string): Promise<v
     assertGoogleCalendarAvailable, attachGoogleEventToBooking,
     createGoogleCalendarEvent, updateGoogleCalendarEvent,
   } = await import("./google-calendar");
-  await assertGoogleCalendarAvailable(starts, ends);
   let eventId = details.provider_event_id;
-  if (eventId) {
-    await updateGoogleCalendarEvent(eventId, {
-      name: details.contact_name, email: details.contact_email, phone: details.contact_phone,
-      startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone,
-    });
-  } else {
-    eventId = await createGoogleCalendarEvent({
-      name: details.contact_name, email: details.contact_email, phone: details.contact_phone,
-      startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone,
-    });
+  try {
+    await assertGoogleCalendarAvailable(starts, ends);
+    if (eventId) {
+      await updateGoogleCalendarEvent(eventId, { name: details.contact_name, email: details.contact_email, phone: details.contact_phone, startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone });
+    } else {
+      eventId = await createGoogleCalendarEvent({ name: details.contact_name, email: details.contact_email, phone: details.contact_phone, startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone });
+    }
+  } catch (calendarError) {
+    if (calendarError instanceof (await import("./google-calendar")).GoogleCalendarConflictError) throw calendarError;
+    console.error("[crm/booking] Google synchronization unavailable during reschedule", { bookingId: id, reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });
+    eventId = null;
   }
   const { error } = await createAdminClient().rpc("reschedule_booking_and_notify", {
     p_booking_id: id,
@@ -1787,7 +1787,10 @@ export async function rescheduleBooking(id: string, startsAt: string): Promise<v
     p_reminder_at: reminderAt.toISOString(),
   });
   if (error) throw error;
-  if (!details.provider_event_id && eventId) await attachGoogleEventToBooking(id, eventId);
+  if (!details.provider_event_id && eventId) {
+    try { await attachGoogleEventToBooking(id, eventId); }
+    catch (calendarError) { console.error("[crm/booking] Google event attachment failed after reschedule", { bookingId: id, reason: calendarError instanceof Error ? calendarError.message : "unknown_error" }); }
+  }
 }
 
 export async function cancelBooking(id: string): Promise<void> {
@@ -1799,7 +1802,8 @@ export async function cancelBooking(id: string): Promise<void> {
   if (!details) throw new Error("Booking not found.");
   if (details.provider_event_id) {
     const { deleteGoogleCalendarEvent } = await import("./google-calendar");
-    await deleteGoogleCalendarEvent(details.provider_event_id);
+    try { await deleteGoogleCalendarEvent(details.provider_event_id); }
+    catch (calendarError) { console.error("[crm/booking] Google event deletion unavailable during cancellation", { bookingId: id, reason: calendarError instanceof Error ? calendarError.message : "unknown_error" }); }
   }
   const { error } = await createAdminClient().rpc("cancel_booking_and_notify", {
     p_booking_id: id,
