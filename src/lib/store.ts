@@ -1786,15 +1786,28 @@ export async function rescheduleBooking(id: string, startsAt: string): Promise<v
     p_ends_at: ends.toISOString(),
     p_reminder_at: reminderAt.toISOString(),
   });
-  if (error) throw error;
+  if (error) {
+    if (details.provider_event_id) {
+      const { error: restoreError } = await admin.rpc("set_booking_google_event", { p_booking_id: id, p_provider_event_id: details.provider_event_id });
+      if (restoreError) console.error("[crm/booking] failed to restore calendar link after reschedule failure", { reason: restoreError.message });
+    }
+    throw error;
+  }
   if (!googleSyncError) {
     try {
-      if (eventId) await updateGoogleCalendarEvent(eventId, { name: details.contact_name, email: details.contact_email, phone: details.contact_phone, startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone });
+      if (eventId) {
+        await updateGoogleCalendarEvent(eventId, { name: details.contact_name, email: details.contact_email, phone: details.contact_phone, startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone });
+        await attachGoogleEventToBooking(id, eventId);
+      }
       else {
         eventId = await createGoogleCalendarEvent({ name: details.contact_name, email: details.contact_email, phone: details.contact_phone, startsAt: starts.toISOString(), endsAt: ends.toISOString(), timezone: details.timezone });
         await attachGoogleEventToBooking(id, eventId);
       }
     } catch (calendarError) {
+      if (!details.provider_event_id && eventId) {
+        await (await import("./google-calendar")).deleteGoogleCalendarEvent(eventId).catch((cleanupError) =>
+          console.error("[crm/booking] orphaned reschedule event cleanup failed", { reason: cleanupError instanceof Error ? cleanupError.message : "unknown_error" }));
+      }
       const { error: warningError } = await admin.rpc("record_funnel_event", { p_event_key: "funnel_error", p_email: details.contact_email, p_properties: { action: "booking", reason: "google_reschedule_sync_failed", source: "google_calendar_sync" }, p_client_event_id: null });
       if (warningError) console.error("[crm/booking] calendar warning recording failed", { reason: warningError.message });
       console.error("[crm/booking] Google synchronization failed after reschedule", { reason: calendarError instanceof Error ? calendarError.message : "unknown_error" });

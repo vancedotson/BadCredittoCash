@@ -40,6 +40,21 @@ describe("authoritative booking synchronization", () => {
     const calls = mocks.rpc.mock.calls.map((call) => call[0]);
     expect(calls.indexOf("clear_booking_google_event")).toBeLessThan(calls.indexOf("reschedule_booking_and_notify"));
     expect(mocks.update).toHaveBeenCalledWith("old-event", expect.objectContaining({ startsAt: "2030-10-15T12:00:00.000Z" }));
+    expect(mocks.attach).toHaveBeenCalledWith("booking-id", "old-event");
+  });
+
+  it("restores the old provider link when CRM reschedule fails", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: [details], error: null }).mockResolvedValueOnce({ data: null, error: null }).mockResolvedValueOnce({ data: null, error: { message: "slot conflict" } }).mockResolvedValueOnce({ data: null, error: null });
+    await expect(rescheduleBooking("booking-id", "2030-10-15T12:00:00Z")).rejects.toThrow("slot conflict");
+    expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual(["get_booking_calendar_details", "clear_booking_google_event", "reschedule_booking_and_notify", "set_booking_google_event"]);
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it("warns and remains detached when reattachment fails", async () => {
+    mocks.attach.mockRejectedValue(new Error("attach failed"));
+    await rescheduleBooking("booking-id", "2030-10-15T12:00:00Z");
+    expect(mocks.attach).toHaveBeenCalledWith("booking-id", "old-event");
+    expect(mocks.rpc).toHaveBeenCalledWith("record_funnel_event", expect.objectContaining({ p_properties: expect.objectContaining({ reason: "google_reschedule_sync_failed" }) }));
   });
 
   it("keeps cancellation committed when external deletion and warning persistence fail", async () => {
