@@ -46,7 +46,7 @@ export function FunnelShell({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
           </header>
-          {children}
+          <main>{children}</main>
         </div>
       </div>
   );
