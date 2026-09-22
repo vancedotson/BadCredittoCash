@@ -8,6 +8,7 @@ import { getPublicLiveWebinarSession, liveWebinarsEnabled } from "@/lib/live-web
 import { createLiveParticipantToken, liveParticipantCookie, liveSigningSecret } from "@/lib/live-webinar-token";
 import { hasLiveContext, isTimezone, isUuid } from "@/lib/live-webinar-types";
 import { deliverLiveRegistrationConfirmation } from "@/lib/email";
+import { emailModeUnavailableResponse, isProductionEmailMode } from "@/lib/email-mode";
 
 const CONSENT_VERSION = "registration-marketing-v1";
 const CONSENT_TEXT = "Send me occasional follow-up tips and updates by email. Optional; unsubscribe anytime.";
@@ -46,6 +47,8 @@ function normalizePhone(value: unknown): string | null | undefined {
  * Called by the registration form (src/components/marketing/RegistrationForm.tsx).
  */
 export async function POST(request: Request) {
+  if (!isProductionEmailMode()) return emailModeUnavailableResponse();
+
   type LeadRequest = Partial<Lead> & {
     visitorId?: string;
     turnstileToken?: string;

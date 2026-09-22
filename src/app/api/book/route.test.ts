@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ session: vi.fn(), participant: vi.fn(), rpc: vi.fn(), admin: vi.fn(), publicClient: vi.fn(), rate: vi.fn(), turnstile: vi.fn(), booked: vi.fn(), available: vi.fn(), createEvent: vi.fn(), deleteEvent: vi.fn(), attachEvent: vi.fn(), busy: vi.fn() }));
 vi.mock("@/lib/live-webinars", () => ({ getPublicLiveWebinarSession: mocks.session, resolveLiveParticipant: mocks.participant }));
@@ -18,6 +18,7 @@ const booking = { name: "Booking Participant", email: "person@example.test", sta
 function request(body: unknown, headers: Record<string, string> = {}) { return new Request(`${origin}/api/book`, { method: "POST", headers: { origin, "content-type": "application/json", ...headers }, body: JSON.stringify(body) }); }
 
 beforeEach(() => {
+  vi.stubEnv("EMAIL_MODE", "production");
   vi.resetAllMocks();
   mocks.session.mockResolvedValue({ id: sessionId, status: "scheduled" });
   mocks.participant.mockResolvedValue({ registrationId, sessionId, email: booking.email });
@@ -28,6 +29,43 @@ beforeEach(() => {
   mocks.createEvent.mockResolvedValue("google-event-id");
   mocks.deleteEvent.mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+describe("email mode readiness gate", () => {
+  it.each(["test", "", "staging", undefined])("rejects malformed submissions before any side effect when EMAIL_MODE is %s", async (emailMode) => {
+    vi.stubEnv("EMAIL_MODE", emailMode);
+    const invalidJson = new Request(`${origin}/api/book`, {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: "not-json",
+    });
+
+    const response = await POST(invalidJson);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("retry-after")).toBe("300");
+    expect(await response.json()).toEqual({ error: "This service is temporarily unavailable. Please try again later." });
+    for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
+  });
+
+  it("keeps read-only availability available when email is in test mode", async () => {
+    vi.stubEnv("EMAIL_MODE", "test");
+    mocks.publicClient.mockReturnValue({ rpc: mocks.rpc });
+    mocks.rpc.mockResolvedValue({ data: [{ starts_at: "2030-10-14T12:00:00Z" }], error: null });
+    mocks.busy.mockResolvedValue([]);
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ startsAt: ["2030-10-14T12:00:00Z"], busy: [], calendarStatus: "connected" });
+    expect(mocks.rate).not.toHaveBeenCalled();
+    expect(mocks.turnstile).not.toHaveBeenCalled();
+    expect(mocks.admin).not.toHaveBeenCalled();
+    expect(mocks.booked).not.toHaveBeenCalled();
+  });
 });
 
 describe("live booking attribution and existing booking lifecycle", () => {

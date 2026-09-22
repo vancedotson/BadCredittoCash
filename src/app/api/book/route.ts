@@ -15,6 +15,7 @@ import {
   listGoogleBusyIntervals,
 } from "@/lib/google-calendar";
 import { GoogleCalendarConflictError } from "@/lib/google-calendar";
+import { emailModeUnavailableResponse, isProductionEmailMode } from "@/lib/email-mode";
 
 async function recordCalendarSyncWarning(email: string, reason: string) {
   try {
@@ -62,6 +63,8 @@ export async function GET() {
  * synchronization adapter when it is connected and responding.
  */
 export async function POST(request: Request) {
+  if (!isProductionEmailMode()) return emailModeUnavailableResponse();
+
   type BookingBody = {
     name?: string;
     email?: string;

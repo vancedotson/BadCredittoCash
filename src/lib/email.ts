@@ -10,6 +10,7 @@ import { createAdminClient } from "./supabase/admin";
 import { recordEvent } from "./store";
 import { LIVE_EMAIL_TEMPLATES, isLiveEmailTemplate, isLiveMarketingTemplate } from "@/config/live-sequences";
 import { mergeLiveEmailFields, type LiveMessagePayload } from "./live-email-fields";
+import { isProductionEmailMode } from "./email-mode";
 
 type ClaimedMessage = {
   id: string;
@@ -202,7 +203,7 @@ async function deliverClaimedMessage(
       return "skipped";
     }
   }
-  const testMode = (process.env.EMAIL_MODE ?? "test") !== "production";
+  const testMode = !isProductionEmailMode();
   const actualRecipient = testMode
     ? process.env.EMAIL_TEST_RECIPIENT
     : intendedRecipient;

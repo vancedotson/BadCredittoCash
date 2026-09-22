@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ enabled: vi.fn(), session: vi.fn(), rpc: vi.fn(), admin: vi.fn(), rate: vi.fn(), turnstile: vi.fn(), messages: vi.fn(), deliverLegacy: vi.fn(), deliverLive: vi.fn(), token: vi.fn(), secret: vi.fn() }));
 vi.mock("@/lib/live-webinars", () => ({ liveWebinarsEnabled: mocks.enabled, getPublicLiveWebinarSession: mocks.session }));
@@ -18,6 +18,7 @@ const liveLead = { name: "Returning Participant", email: "returning@example.test
 function request(body: unknown = liveLead, headers: Record<string, string> = {}) { return new Request(`${origin}/api/lead`, { method: "POST", headers: { origin, "content-type": "application/json", ...headers }, body: JSON.stringify(body) }); }
 
 beforeEach(() => {
+  vi.stubEnv("EMAIL_MODE", "production");
   vi.resetAllMocks();
   mocks.enabled.mockReturnValue(true);
   mocks.session.mockImplementation(async (id) => ({ id, status: "scheduled", timezone: "UTC", endsAt: "2030-10-12T13:00:00Z" }));
@@ -29,6 +30,27 @@ beforeEach(() => {
   mocks.token.mockReturnValue("signed-participant-token");
   mocks.secret.mockReturnValue("configured");
   vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+describe("email mode readiness gate", () => {
+  it.each(["test", "", "staging", undefined])("rejects malformed submissions before any side effect when EMAIL_MODE is %s", async (emailMode) => {
+    vi.stubEnv("EMAIL_MODE", emailMode);
+    const invalidJson = new Request(`${origin}/api/lead`, {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: "not-json",
+    });
+
+    const response = await POST(invalidJson);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("retry-after")).toBe("300");
+    expect(await response.json()).toEqual({ error: "This service is temporarily unavailable. Please try again later." });
+    for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
+  });
 });
 
 describe("live registration isolation", () => {

@@ -168,6 +168,7 @@ export function RegistrationFormV3({
 
     setStatus("loading");
     setError(null);
+    let retryableServiceUnavailable = false;
     try {
       const res = await fetch("/api/lead", {
         method: "POST",
@@ -186,6 +187,10 @@ export function RegistrationFormV3({
         }),
       });
       if (!res.ok) {
+        if (res.status === 503) {
+          retryableServiceUnavailable = true;
+          throw new Error("This service is temporarily unavailable. Please try again later.");
+        }
         const body = await res.json().catch(() => ({})) as {
           error?: string;
           fieldErrors?: Partial<Record<FieldKey, string>>;
@@ -217,11 +222,16 @@ export function RegistrationFormV3({
       if (source === "vance-live-webinar" && sessionId) destination.searchParams.set("session", sessionId);
       router.push(`${destination.pathname}${destination.search}${destination.hash}`);
     } catch (err) {
-      track(EVENTS.funnelError, { action: "registration", reason: "request_failed" });
+      if (!retryableServiceUnavailable) {
+        track(EVENTS.funnelError, { action: "registration", reason: "request_failed" });
+      }
       setStatus("error");
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setTurnstileToken(null);
       setTurnstileReset((value) => value + 1);
+      if (retryableServiceUnavailable) {
+        requestAnimationFrame(() => errorRef.current?.focus({ preventScroll: true }));
+      }
     }
   }
 
@@ -401,6 +411,7 @@ export function RegistrationFormV3({
         <div
           ref={errorRef}
           role="alert"
+          tabIndex={-1}
           className="rounded-sm border px-4 py-3"
           style={{ borderColor: "var(--v3-danger)", background: "rgba(239,68,68,0.08)" }}
         >

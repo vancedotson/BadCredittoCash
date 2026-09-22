@@ -82,6 +82,7 @@ export function BookingWizard({
   const startedRef = useRef(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
@@ -258,6 +259,7 @@ export function BookingWizard({
       return;
     }
     const ends = new Date(starts.getTime() + 30 * 60 * 1000);
+    let retryableServiceUnavailable = false;
     try {
       const res = await fetch("/api/book", {
         method: "POST",
@@ -278,6 +280,10 @@ export function BookingWizard({
         }),
       });
       if (!res.ok) {
+        if (res.status === 503) {
+          retryableServiceUnavailable = true;
+          throw new Error("This service is temporarily unavailable. Please try again later.");
+        }
         const b = await res.json().catch(() => ({}));
         throw new Error(b.error ?? "Booking failed.");
       }
@@ -295,7 +301,9 @@ export function BookingWizard({
       if (funnel === "live" && sessionId) destination.searchParams.set("session", sessionId);
       router.push(`${destination.pathname}${destination.search}${destination.hash}`);
     } catch (err) {
-      track(EVENTS.funnelError, { action: "booking", reason: "request_failed" }, email);
+      if (!retryableServiceUnavailable) {
+        track(EVENTS.funnelError, { action: "booking", reason: "request_failed" }, email);
+      }
       setStatus("error");
       const message = err instanceof Error ? err.message : "Something went wrong.";
       if (/just booked|choose another slot/i.test(message)) {
@@ -308,6 +316,9 @@ export function BookingWizard({
         );
       } else {
         setError(message);
+        if (retryableServiceUnavailable) {
+          requestAnimationFrame(() => errorRef.current?.focus({ preventScroll: true }));
+        }
       }
       setTurnstileToken(null);
       setTurnstileReset((value) => value + 1);
@@ -483,7 +494,7 @@ export function BookingWizard({
             ))}
           </div>
 
-          {error ? <p role="alert" style={{ fontSize: 14, color: "var(--v3-danger)" }}>{error}</p> : null}
+          {error ? <p ref={errorRef} role="alert" tabIndex={-1} style={{ fontSize: 14, color: "var(--v3-danger)" }}>{error}</p> : null}
           {status === "loading" ? (
             <p
               id="booking-loading-status"
