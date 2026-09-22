@@ -1,7 +1,11 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCrmUser } from "@/lib/auth";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { LoginForm } from "./LoginForm";
+import { noIndexNofollowMetadata } from "@/lib/route-metadata";
+
+export const metadata: Metadata = noIndexNofollowMetadata;
 
 export const dynamic = "force-dynamic";
 

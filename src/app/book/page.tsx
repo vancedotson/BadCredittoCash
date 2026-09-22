@@ -1,7 +1,9 @@
-"use client";
-
+import type { Metadata } from "next";
 import { FunnelShell } from "@/components/marketing-v4/FunnelShell";
 import { BookSchedulerV4 } from "@/components/marketing-v4/book/BookSchedulerV4";
+import { bookPageMetadata } from "@/lib/route-metadata";
+
+export const metadata: Metadata = bookPageMetadata;
 
 /**
  * /book — standalone strategy-call scheduler for non-webinar sequences (nurture,
