@@ -222,11 +222,11 @@ test("public routes emit canonical social metadata and a reachable large preview
       await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute("content", "630");
       await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
         "content",
-        "Brand artwork featuring Vance Dotson and Bad Credit to Cash",
+        "Text-and-shape Bad Credit to Cash brand graphic with an abstract card illustration",
       );
       await expect(page.locator('meta[name="twitter:image:alt"]')).toHaveAttribute(
         "content",
-        "Brand artwork featuring Vance Dotson and Bad Credit to Cash",
+        "Text-and-shape Bad Credit to Cash brand graphic with an abstract card illustration",
       );
 
       const metadataValues = await page.locator("head").evaluate((head) => {
