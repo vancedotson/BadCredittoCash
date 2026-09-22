@@ -202,7 +202,7 @@
 .cc-simple-card { padding: 32px 36px; background: #0e0f10; border: 1px solid #f2a93b45; border-top: 3px solid var(--v3-accent); box-shadow: 0 20px 55px #0003; }
 .cc-simple-step { color: var(--v3-accent); font-size: 10px; margin: 0 0 24px; }
 .cc-simple-card h2 { color: var(--v3-ink); font-size: 40px; line-height: 1.05; margin: 0; scroll-margin-top: 24px; }
-.cc-simple-card h2:focus { outline: none; }
+.cc-simple-card h2:focus-visible { outline: 3px solid var(--v3-accent); outline-offset: 6px; }
 .cc-simple-copy { color: #c4c1b9; font-size: 16px; line-height: 1.65; margin: 18px 0 23px; }
 .cc-simple-stop { display: flex; align-items: center; gap: 26px; }
 .cc-simple-stop p { color: #ffc0b1; font-size: 14px; line-height: 1.6; margin: 12px 0 0; }
