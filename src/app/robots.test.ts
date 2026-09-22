@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import robots from "./robots";
+import { publicUrl } from "@/config/public-site";
 
 describe("robots route rules", () => {
-  it("allows public crawling and excludes private and transaction paths without a domain-specific sitemap", () => {
+  it("allows public crawling, excludes private and transaction paths, and names the canonical sitemap", () => {
     expect(robots()).toEqual({
       rules: {
         userAgent: "*",
@@ -20,6 +21,7 @@ describe("robots route rules", () => {
           "/live/booked",
         ],
       },
+      sitemap: publicUrl("/sitemap.xml"),
     });
   });
 });

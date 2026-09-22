@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageShell, LegalSection } from "@/components/legal/LegalPageShell";
 import { site } from "@/config/site-v3";
+import { termsPageMetadata } from "@/lib/route-metadata";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description: "Terms governing access to and use of the Vance Dotson website, training, credit-check and report-upload features, and booking services.",
-};
+export const metadata: Metadata = termsPageMetadata;
 
 export default function TermsPage() {
   return (

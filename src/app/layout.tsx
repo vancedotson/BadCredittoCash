@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { site } from "@/config/site";
+import { PUBLIC_SITE_ORIGIN } from "@/config/public-site";
 import { PublicPageViewTracker } from "@/components/PublicPageViewTracker";
 import { ThemeBeforePaint } from "@/components/ThemeBeforePaint";
 import { inter, poppins, sourceSerif, staatliches } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(PUBLIC_SITE_ORIGIN),
   title: {
     default: site.seo.title,
     template: `%s — ${site.name}`,

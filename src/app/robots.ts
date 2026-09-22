@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { publicUrl } from "@/config/public-site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -18,5 +19,6 @@ export default function robots(): MetadataRoute.Robots {
         "/live/booked",
       ],
     },
+    sitemap: publicUrl("/sitemap.xml"),
   };
 }

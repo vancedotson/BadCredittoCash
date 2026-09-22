@@ -1,4 +1,8 @@
+import type { Metadata } from "next";
 import { V4Home } from "@/components/marketing-v4/V4Home";
+import { homePageMetadata } from "@/lib/route-metadata";
+
+export const metadata: Metadata = homePageMetadata;
 
 /**
  * Home (/) — the v4 "Case File" experience is now the main home page. The

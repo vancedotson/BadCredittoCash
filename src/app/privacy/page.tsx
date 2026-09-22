@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageShell, LegalSection } from "@/components/legal/LegalPageShell";
 import { site } from "@/config/site-v3";
+import { privacyPageMetadata } from "@/lib/route-metadata";
 
-export const metadata: Metadata = {
-  title: "Privacy Policy",
-  description: "How Vance Dotson collects, uses, shares, and protects information submitted through this website.",
-};
+export const metadata: Metadata = privacyPageMetadata;
 
 const privacyRequestHref = `mailto:${site.contact.email}?subject=Privacy%20request`;
 
