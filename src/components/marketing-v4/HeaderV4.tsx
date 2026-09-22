@@ -34,7 +34,7 @@ export function HeaderV4() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Primary navigation" className="hidden items-center gap-7 md:flex">
           {site.nav.map((n) => (
             <a
               key={n.href}
@@ -85,7 +85,7 @@ export function HeaderV4() {
       {/* mobile dropdown panel */}
       {open && (
         <div className="v4-navmenu md:hidden">
-          <nav className="v4-navmenu-links">
+          <nav aria-label="Mobile navigation" className="v4-navmenu-links">
             {site.nav.map((n) => (
               <a key={n.href} href={n.href} onClick={() => setOpen(false)}>
                 {n.label}

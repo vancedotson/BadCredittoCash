@@ -556,12 +556,12 @@
 }
 .v3-btn-primary {
   background: var(--v3-accent);
-  color: #16110a;
+  color: #0b0905;
   box-shadow: 0 10px 30px color-mix(in srgb, var(--v3-accent) 24%, transparent);
 }
 .v3-btn-primary:hover {
   transform: translateY(-2px);
-  background: color-mix(in srgb, var(--v3-accent) 88%, #fff);
+  background: var(--v3-accent-deep);
 }
 .v3-btn-ghost {
   background: transparent;

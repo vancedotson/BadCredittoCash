@@ -59,7 +59,7 @@
 .cc-version-menu button[aria-pressed="true"] { border-color: var(--v3-accent); background: var(--v3-accent); color: #141414; font-weight: 650; }
 .cc-two-step-form { width: min(100%, 790px); margin-inline: auto; }
 .cc-v2-progress { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--v3-line); }
-.cc-v2-progress > div { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; color: #797a76; font-size: 12px; }
+.cc-v2-progress > div { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; color: #80817d; font-size: 12px; }
 .cc-v2-progress > div + div { border-left: 1px solid var(--v3-line); }
 .cc-v2-progress span { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid #4a4b48; border-radius: 50%; font-family: var(--v3-mono); font-size: 10px; }
 .cc-v2-progress .is-current { color: var(--v3-ink); background: #f2a93b08; }

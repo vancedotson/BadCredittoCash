@@ -29,28 +29,30 @@ export function CaseFileV4Page() {
     <>
       <span id="top" />
       <HeaderV4 />
-      <HeroV4 />
-      <TrustStripSection />
-      <PainMirrorV4 />
-      <CollectorQuizV4 />
-      <ReframeGatherV4 />
-      <MeetVanceV4 />
-      <ReframeLawsV4 />
-      <MechanismPinnedV4 />
-      <EvidenceLockerV4 />
-      <ResultsLedger />
-      <TestimonialsSectionV4 />
-      <CollectorTacticsV4 />
-      <HowItWorksSectionV4 />
-      <RiskSectionV4 />
-      {/* Sticky reveal: urgency pins full-height, holds through a transparent
-          spacer (the dwell), then the register section scrolls up over it. */}
-      <div className="v4-stack">
-        <UrgencySectionV4 />
-        <div className="v4-stack-spacer" aria-hidden />
-        <RegisterSectionV4 />
-      </div>
-      <Faq />
+      <main id="main-content">
+        <HeroV4 />
+        <TrustStripSection />
+        <PainMirrorV4 />
+        <CollectorQuizV4 />
+        <ReframeGatherV4 />
+        <MeetVanceV4 />
+        <ReframeLawsV4 />
+        <MechanismPinnedV4 />
+        <EvidenceLockerV4 />
+        <ResultsLedger />
+        <TestimonialsSectionV4 />
+        <CollectorTacticsV4 />
+        <HowItWorksSectionV4 />
+        <RiskSectionV4 />
+        {/* Sticky reveal: urgency pins full-height, holds through a transparent
+            spacer (the dwell), then the register section scrolls up over it. */}
+        <div className="v4-stack">
+          <UrgencySectionV4 />
+          <div className="v4-stack-spacer" aria-hidden />
+          <RegisterSectionV4 />
+        </div>
+        <Faq />
+      </main>
       <Footer />
     </>
   );
