@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "./fixtures/local-safe-page";
 
 const privateRoutes = [
   { path: "/login?state=invalid-login", label: "login" },
@@ -24,17 +24,26 @@ async function isolateLocalPage(page: Page, testInfo: TestInfo) {
     throw new Error(`Refusing non-local browser traffic from indexing metadata tests: ${localOrigin}`);
   }
 
-  const blockedRequests: string[] = [];
+  const blockedRequests: Array<{
+    method: string;
+    url: string;
+    reason: "off-origin" | "api" | "unsafe-method";
+  }> = [];
   await page.route("**/*", async (route) => {
     const request = route.request();
     const requestURL = new URL(request.url());
 
-    if (
-      requestURL.origin !== localOrigin ||
-      !["GET", "HEAD"].includes(request.method()) ||
-      requestURL.pathname.startsWith("/api/")
-    ) {
-      blockedRequests.push(`${request.method()} ${requestURL.origin}${requestURL.pathname}`);
+    const reason =
+      requestURL.origin !== localOrigin
+        ? "off-origin"
+        : requestURL.pathname.startsWith("/api/")
+          ? "api"
+          : !["GET", "HEAD"].includes(request.method())
+            ? "unsafe-method"
+            : null;
+
+    if (reason) {
+      blockedRequests.push({ method: request.method(), url: request.url(), reason });
       await route.abort();
       return;
     }
@@ -52,8 +61,25 @@ async function expectNoindex(page: Page, routeLabel: string) {
   expect(directives, `${routeLabel} should emit robots noindex,nofollow`).toContain("nofollow");
 }
 
+function expectAccurateBlockReasons(
+  blockedRequests: Array<{ method: string; url: string; reason: "off-origin" | "api" | "unsafe-method" }>,
+  localOrigin: string,
+) {
+  const misclassifiedRequests = blockedRequests.filter(({ method, url, reason }) => {
+    const requestURL = new URL(url);
+    if (reason === "off-origin") return requestURL.origin === localOrigin;
+    if (reason === "api") return requestURL.origin !== localOrigin || !requestURL.pathname.startsWith("/api/");
+    return requestURL.origin !== localOrigin || requestURL.pathname.startsWith("/api/") || ["GET", "HEAD"].includes(method);
+  });
+
+  expect(
+    misclassifiedRequests,
+    `Blocked requests were assigned an incorrect safety reason. Offending method/URL/reason: ${JSON.stringify(misclassifiedRequests, null, 2)}. All blocked requests: ${JSON.stringify(blockedRequests, null, 2)}`,
+  ).toEqual([]);
+}
+
 test("private and post-conversion routes render noindex,nofollow in production HTML", async ({ page }, testInfo) => {
-  const { blockedRequests } = await isolateLocalPage(page, testInfo);
+  const { blockedRequests, localOrigin } = await isolateLocalPage(page, testInfo);
 
   for (const route of privateRoutes) {
     await test.step(route.label, async () => {
@@ -63,11 +89,11 @@ test("private and post-conversion routes render noindex,nofollow in production H
     });
   }
 
-  expect(blockedRequests.every((request) => request.startsWith("POST ") || request.includes("/api/"))).toBe(true);
+  expectAccurateBlockReasons(blockedRequests, localOrigin);
 });
 
 test("public routes stay indexable and /book and /live have route-specific metadata", async ({ page }, testInfo) => {
-  const { blockedRequests } = await isolateLocalPage(page, testInfo);
+  const { blockedRequests, localOrigin } = await isolateLocalPage(page, testInfo);
 
   for (const path of publicRoutes) {
     const response = await page.goto(path, { waitUntil: "domcontentloaded" });
@@ -93,7 +119,7 @@ test("public routes stay indexable and /book and /live have route-specific metad
     "Join a free online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
   );
   expect(liveDescription).not.toBe(bookDescription);
-  expect(blockedRequests.every((request) => request.startsWith("POST ") || request.includes("/api/"))).toBe(true);
+  expectAccurateBlockReasons(blockedRequests, localOrigin);
 });
 
 test("robots.txt allows public crawling and disallows only the requested private routes", async ({ page }, testInfo) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/local-safe-page";
 
 test("normal sign in is clear and keyboard ready", async ({ page }) => {
   await page.goto("/login");

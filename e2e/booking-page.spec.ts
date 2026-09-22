@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/local-safe-page";
+import { site } from "../src/config/site-v3";
 
 test("booking page selects a slot without creating a booking", async ({ page }) => {
   await page.route("**/api/book", async (route) => {
@@ -169,7 +170,10 @@ test("generic booking confirmation gives useful next steps without inventing app
     "href",
     "https://www.annualcreditreport.com/",
   );
-  await expect(page.getByRole("link", { name: /call \(405\) 555-0123/i })).toHaveAttribute("href", "tel:+14055550123");
+  await expect(page.getByRole("link", { name: `Call ${site.contact.phoneDisplay}` })).toHaveAttribute(
+    "href",
+    site.contact.phoneHref,
+  );
   await expect(page.getByRole("link", { name: "Back to the case file", exact: true })).toHaveAttribute("href", "/");
 });
 

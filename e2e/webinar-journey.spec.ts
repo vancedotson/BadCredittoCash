@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures/local-safe-page";
 
 test("idle player shows a clear start state without the booking offer", async ({ page }) => {
   await page.goto("/webinar/room");
