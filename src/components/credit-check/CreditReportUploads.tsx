@@ -105,7 +105,7 @@ export function CreditReportUploads() {
     <div className="cc-uploads">
       <p className="cc-simple-copy">Choose the matching PDF in each box, then press <strong>Submit to Vance.</strong> A check mark means that file was received.</p>
       {session.phase === "loading" && <p className="cc-upload-notice" role="status">Loading your upload slots…</p>}
-      {session.phase === "missing" && <div className="cc-upload-notice"><p>First, complete the quick check so we can attach these reports to your details. If you switched devices, use the personal link you copied.</p><Link href="/credit-check">Complete my quick check →</Link></div>}
+      {session.phase === "missing" && <div className="cc-upload-notice" role="status" aria-live="polite" aria-atomic="true"><p>First, complete the quick check so we can attach these reports to your details. If you switched devices, use the personal link you copied.</p><Link href="/credit-check">Complete my quick check →</Link></div>}
       {session.phase === "error" && <div className="cc-upload-notice" role="alert"><p>We couldn&apos;t load your upload slots. Please try again.</p><button type="button" onClick={() => void session.refresh()}>Try again</button></div>}
       {session.phase === "changed" && <div className="cc-upload-notice" role="alert"><p>This browser switched to another quick check. Reload this page or reopen your personal link before choosing your PDFs again.</p><button type="button" onClick={() => window.location.reload()}>Reload upload page</button></div>}
       {available && session.mode === "local" && <p className="cc-upload-local">Local preview · PDFs are saved on this computer. They are not sent to Vance&apos;s live CRM.</p>}
