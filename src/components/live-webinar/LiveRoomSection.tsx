@@ -257,9 +257,6 @@ function EndedState() {
         >
           {R.cta.buttonLabel}
         </Link>
-        <Link className="v3-btn v3-btn-ghost" href="/#register">
-          Watch the free training
-        </Link>
       </div>
     </div>
   );

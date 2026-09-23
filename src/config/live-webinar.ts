@@ -360,7 +360,7 @@ export const liveWebinar = {
       label: "STARTS IN",
       live: "Happening now — check your email for the joining link.",
       ended: "This session has ended.",
-      endedSub: "Watch the on-demand training, or book a free call.",
+      endedSub: "This session has ended. You can check back for another scheduled date or book a free call.",
     },
   },
 
@@ -397,13 +397,13 @@ export const liveWebinar = {
     expiredKicker: "REPLAY CLOSED",
     expiredHeading: "The replay window has closed.",
     expiredSub:
-      "This recording is no longer posted. The on-demand training covers the same ground, and a free call is open if you want your own situation looked at.",
+      "This recording is no longer available. You can book a free strategy call to discuss possible next steps.",
 
     /** Shown while `isPublished` is false. Says plainly that none exists. */
     unavailable: {
       kicker: "NO REPLAY POSTED",
       heading: "There's no recording of this one.",
-      sub: "The session runs live and isn't recorded. The on-demand training covers the same material and you can watch it right now.",
+      sub: "A replay is not currently available for this session. You can check back for updates or book a free strategy call.",
     },
 
     cta: {
@@ -532,7 +532,7 @@ export const liveWebinar = {
     ended: {
       kicker: "SESSION ENDED",
       heading: "That's a wrap.",
-      sub: "The live session is over. No replay was promised and none is posted — but the on-demand training is there, and a free call is open if you want to talk about your own situation.",
+      sub: "The live session is over. No replay was promised and none is posted. You can book a free call to discuss possible next steps.",
       /** Used instead of `sub` when `replay.isPublished` is true. */
       subWithReplay:
         "The live session is over. The recording is up for a limited time — watch it below, or book a free call if you want your own situation looked at.",

@@ -60,14 +60,10 @@ function Shell({
 }
 
 function FallbackLinks() {
-  const { href } = useLiveSession();
   return (
     <div className="mt-9 flex flex-wrap gap-3">
-      <Link className="v3-btn v3-btn-primary" href="/#register">
-        Watch the free training
-      </Link>
-      <Link className="v3-btn v3-btn-ghost" href={href(R.cta.href)}>
-        {R.cta.buttonLabel}
+      <Link className="v3-btn v3-btn-primary" href="/book">
+        Book a free strategy call
       </Link>
     </div>
   );
@@ -172,7 +168,7 @@ export function LiveReplaySection() {
   // No recording exists at all — the honest default.
   if (!session.replayPublished || !session.replayUrl || (now > 0 && now < Date.parse(session.endsAt))) {
     return (
-      <Shell kicker={R.unavailable.kicker} heading="No recording is posted yet." sub="A replay is not currently available for this session. You can watch the on-demand training or book a free call.">
+      <Shell kicker={R.unavailable.kicker} heading={R.unavailable.heading} sub={R.unavailable.sub}>
         {preview ? <PreviewBanner /> : null}
         <FallbackLinks />
       </Shell>

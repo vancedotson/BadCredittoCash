@@ -19,6 +19,39 @@ type Attribution = {
   lastTouch?: Record<string, unknown>;
 };
 
+type LeadRequest = Partial<Lead> & {
+  visitorId?: string;
+  turnstileToken?: string;
+  attribution?: Attribution;
+  marketingConsent?: boolean;
+  sessionId?: string;
+  webinarSessionId?: string;
+  timezone?: string;
+  funnel?: string;
+  preview?: boolean;
+};
+
+function isLiveLeadRequest(body: LeadRequest): boolean {
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
+  const landingPage = body.attribution?.lastTouch?.landing_page ?? body.utm?.landing_page;
+  const knownEvergreenSource = body.source === undefined || body.source === "vance-webinar";
+  const knownEvergreenFunnel = body.funnel === undefined || body.funnel === "evergreen";
+
+  return body.source === "vance-live-webinar"
+    || hasLiveContext({
+      funnel: body.funnel,
+      sessionId: body.sessionId,
+      webinarSessionId: body.webinarSessionId,
+      pagePath: landingPage,
+    })
+    // Presence itself is intent: null, malformed IDs, and unknown funnel/source
+    // values must never be silently reclassified into the evergreen sequence.
+    || has("sessionId")
+    || has("webinarSessionId")
+    || (has("funnel") && !knownEvergreenFunnel)
+    || (has("source") && !knownEvergreenSource);
+}
+
 function cleanTouch(value: unknown): Record<string, string> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const allowed = new Set([
@@ -48,19 +81,8 @@ function normalizePhone(value: unknown): string | null | undefined {
  * Called by the registration form (src/components/marketing/RegistrationForm.tsx).
  */
 export async function POST(request: Request) {
-  if (!evergreenTrainingEnabled()) return emailModeUnavailableResponse();
   if (!isProductionEmailMode()) return emailModeUnavailableResponse();
 
-  type LeadRequest = Partial<Lead> & {
-    visitorId?: string;
-    turnstileToken?: string;
-    attribution?: Attribution;
-    marketingConsent?: boolean;
-    sessionId?: string;
-    timezone?: string;
-    funnel?: string;
-    preview?: boolean;
-  };
   const parsed = await readLimitedJson<LeadRequest>(request);
   if (!parsed.ok) return NextResponse.json(
     { error: parsed.status === 413 ? "Request is too large." : "Invalid JSON." },
@@ -68,8 +90,7 @@ export async function POST(request: Request) {
   );
   const body = parsed.value;
   if (!body || typeof body !== "object" || Array.isArray(body)) return NextResponse.json({ error: "Invalid registration." }, { status: 400 });
-  const liveRequest = body.source === "vance-live-webinar" || body.funnel === "live" || body.sessionId !== undefined
-    || hasLiveContext({ pagePath: body.attribution?.lastTouch?.landing_page ?? body.utm?.landing_page });
+  const liveRequest = isLiveLeadRequest(body);
   if (liveRequest) {
     const referer = request.headers.get("referer");
     let preview = body.preview === true;
@@ -77,6 +98,8 @@ export async function POST(request: Request) {
     if (preview) return NextResponse.json({ error: "Registration is disabled in preview." }, { status: 409 });
     if (!liveWebinarsEnabled()) return NextResponse.json({ error: "Live registration is not open yet." }, { status: 503 });
     if (!isUuid(body.sessionId)) return NextResponse.json({ error: "Choose a scheduled live session." }, { status: 400 });
+  } else if (!evergreenTrainingEnabled()) {
+    return emailModeUnavailableResponse();
   }
 
   try {

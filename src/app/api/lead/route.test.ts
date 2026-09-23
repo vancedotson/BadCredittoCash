@@ -55,16 +55,10 @@ describe("email mode readiness gate", () => {
 });
 
 describe("evergreen training readiness gate", () => {
-  it.each(["false", "", "TRUE", "1", undefined])("rejects before parsing or side effects when evergreen training is disabled by %s", async (trainingMode) => {
-    vi.stubEnv("EMAIL_MODE", "production");
+  it.each(["false", "", "TRUE", "1", undefined])("rejects ordinary evergreen registration without side effects when disabled by %s", async (trainingMode) => {
     vi.stubEnv("EVERGREEN_TRAINING_ENABLED", trainingMode);
-    const invalidJson = new Request(`${origin}/api/lead`, {
-      method: "POST",
-      headers: { origin, "content-type": "application/json" },
-      body: "not-json",
-    });
 
-    const response = await POST(invalidJson);
+    const response = await POST(request({ name: liveLead.name, email: liveLead.email, source: "vance-webinar" }));
 
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("no-store");
@@ -101,6 +95,59 @@ describe("live registration isolation", () => {
     expect((await POST(request({ ...liveLead, sessionId: "placeholder" }))).status).toBe(400);
     expect(mocks.rpc).not.toHaveBeenCalled();
     expect(mocks.messages).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { source: "vance-live-webinar-typo" },
+    { source: "vance-webinar", funnel: "liv" },
+    { source: "vance-webinar", sessionId: null },
+    { source: "vance-webinar", webinarSessionId: sessionId },
+    { source: "vance-webinar", attribution: { lastTouch: { landing_page: "/live/confirmed" } } },
+  ])("treats malformed or unknown live markers as live, never evergreen: %o", async (context) => {
+    mocks.enabled.mockReturnValue(false);
+    vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "true");
+
+    const response = await POST(request({ name: liveLead.name, email: liveLead.email, ...context }));
+
+    expect(response.status).toBe(503);
+    expect(mocks.enabled).toHaveBeenCalledOnce();
+    expect(mocks.rate).not.toHaveBeenCalled();
+    expect(mocks.admin).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.messages).not.toHaveBeenCalled();
+    expect(mocks.deliverLegacy).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown live source as a malformed live registration when live is enabled", async () => {
+    const response = await POST(request({ name: liveLead.name, email: liveLead.email, source: "vance-live-webinar-typo" }));
+
+    expect(response.status).toBe(400);
+    expect(mocks.enabled).toHaveBeenCalledOnce();
+    expect(mocks.session).not.toHaveBeenCalled();
+    expect(mocks.rate).not.toHaveBeenCalled();
+    expect(mocks.admin).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.messages).not.toHaveBeenCalled();
+  });
+
+  it("allows a valid live registration when evergreen training is disabled", async () => {
+    vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "false");
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledOnce();
+    expect(mocks.rpc.mock.calls[0][0]).toBe("register_live_webinar_v1");
+    expect(mocks.rpc.mock.calls[0][1].p_session_id).toBe(sessionId);
+    expect(mocks.admin).toHaveBeenCalledOnce();
+    expect(mocks.rate).toHaveBeenCalledOnce();
+    expect(mocks.turnstile).toHaveBeenCalledOnce();
+    expect(mocks.session).toHaveBeenCalledWith(sessionId);
+    expect(mocks.deliverLive).toHaveBeenCalledOnce();
+    expect(mocks.secret).toHaveBeenCalledOnce();
+    expect(mocks.token).toHaveBeenCalledOnce();
+    expect(mocks.messages).not.toHaveBeenCalled();
+    expect(mocks.deliverLegacy).not.toHaveBeenCalled();
   });
 
   it("routes repeat registrations to the live transaction with their exact session", async () => {

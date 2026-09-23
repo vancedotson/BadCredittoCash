@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { site } from "@/config/site-v3";
 import { Kicker } from "@/components/marketing-v3/shared/primitives";
 import { LiveSessionLoading, useLiveSession } from "./LiveSessionProvider";
@@ -12,7 +13,7 @@ import { LiveSessionLoading, useLiveSession } from "./LiveSessionProvider";
  * Rather than publish a plausible-looking registration form for an event that
  * has not been scheduled — which would collect real emails against a promise
  * nobody can keep — the route says so plainly and sends visitors to the
- * evergreen training that does exist.
+ * free guide and strategy call remain available while visitors wait.
  *
  * Scheduling and publication are managed through the CRM.
  */
@@ -39,10 +40,12 @@ export function UnscheduledNotice() {
         <span style={{ color: "var(--v3-accent)" }}>isn&rsquo;t on the calendar yet.</span>
       </h1>
       <p className="mt-6" style={{ fontSize: 17, color: "var(--v3-mut)", lineHeight: 1.6 }}>
-        Rather than take your email for a date that doesn&rsquo;t exist, here&rsquo;s the
-        thing that does: the free on-demand training covers the same ground and you
-        can watch it right now.
+        Registration will open when a real session is scheduled. Please check back
+        for the date and joining details, or book a free strategy call in the meantime.
       </p>
+      <Link className="v3-btn v3-btn-primary mt-8" href="/book">
+        Book a free strategy call
+      </Link>
 
       <p className="v3-mono mt-10" style={{ fontSize: 11.5, color: "var(--v3-faint)", lineHeight: 1.8 }}>
         &gt; {site.ev.fileNo}
