@@ -7,6 +7,11 @@ import { PUBLIC_SITE_ORIGIN } from "@/config/public-site";
 type WranglerConfig = {
   vars?: {
     APP_BASE_URL?: string;
+    MARKETING_EMAILS_ENABLED?: string;
+    EMAIL_MODE?: string;
+    EVERGREEN_TRAINING_ENABLED?: string;
+    LIVE_WEBINAR_ENABLED?: string;
+    CLOUDFLARE_STREAM_ENABLED?: string;
   };
 };
 
@@ -33,5 +38,10 @@ describe("public site origin configuration", () => {
 
     expect(wranglerConfig.vars?.APP_BASE_URL).toBe(PUBLIC_SITE_ORIGIN);
     expect(wranglerConfig.vars?.APP_BASE_URL).not.toMatch(/\/$/);
+    expect(wranglerConfig.vars?.MARKETING_EMAILS_ENABLED).toBe("false");
+    expect(wranglerConfig.vars?.EMAIL_MODE).toBe("test");
+    expect(wranglerConfig.vars?.EVERGREEN_TRAINING_ENABLED).toBe("false");
+    expect(wranglerConfig.vars?.LIVE_WEBINAR_ENABLED).toBe("false");
+    expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_ENABLED).toBe("false");
   });
 });

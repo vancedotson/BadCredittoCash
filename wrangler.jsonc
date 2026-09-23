@@ -23,6 +23,7 @@
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_kUngQFloolk0SWmgkBRUYw_l44atY4F",
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEXg2qOJgmbI5TSP",
     "EMAIL_MODE": "test",
+    "MARKETING_EMAILS_ENABLED": "false",
     "EMAIL_TEST_RECIPIENT": "anadias.dev@gmail.com",
     "EVERGREEN_TRAINING_ENABLED": "false",
     "LIVE_WEBINAR_ENABLED": "false",

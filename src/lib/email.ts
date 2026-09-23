@@ -8,9 +8,15 @@ import { createUnsubscribeToken } from "./email-token";
 import { scheduledFor } from "./email-scheduling";
 import { createAdminClient } from "./supabase/admin";
 import { recordEvent } from "./store";
-import { LIVE_EMAIL_TEMPLATES, isLiveEmailTemplate, isLiveMarketingTemplate } from "@/config/live-sequences";
+import { isCrmDemoMode } from "./demo";
+import { LIVE_EMAIL_TEMPLATES, isLiveEmailTemplate } from "@/config/live-sequences";
 import { mergeLiveEmailFields, type LiveMessagePayload } from "./live-email-fields";
 import { isProductionEmailMode } from "./email-mode";
+import {
+  isOutboundEmailAllowed,
+  isOutboundEmailMarketing,
+} from "./outbound-email-policy";
+import { OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON } from "@/config/email-policy";
 
 type ClaimedMessage = {
   id: string;
@@ -37,7 +43,9 @@ type FailureOutcome = {
   retry_at: string | null;
 };
 
-type DeliveryOutcome = "sent" | "retrying" | "failed" | "skipped";
+type DeliveryOutcome = "sent" | "retrying" | "failed" | "skipped" | "cancelled";
+
+class PolicyCancellationPersistenceError extends Error {}
 
 function resolveSequence(sequenceId: string) {
   return SEQUENCES[sequenceId] ?? SEGMENT_SEQUENCES[sequenceId];
@@ -125,15 +133,6 @@ function emailHtml(body: string, unsubscribeLink?: string): string {
   </div>`;
 }
 
-function isMarketingTemplate(templateKey: string): boolean {
-  if (isLiveEmailTemplate(templateKey)) return isLiveMarketingTemplate(templateKey);
-  return templateKey !== "pre_webinar:1"
-    && !templateKey.startsWith("onboarding:")
-    && !templateKey.startsWith("booking_rescheduled:")
-    && !templateKey.startsWith("booking_reminder:")
-    && !templateKey.startsWith("booking_cancelled:");
-}
-
 async function claimMessage(email: string, templateKey: string): Promise<ClaimedMessage | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("claim_scheduled_email", {
@@ -142,6 +141,28 @@ async function claimMessage(email: string, templateKey: string): Promise<Claimed
   });
   if (error) throw new Error(error.message);
   return (data as ClaimedMessage[] | null)?.[0] ?? null;
+}
+
+async function cancelClaimedByPolicy(id: string): Promise<boolean> {
+  try {
+    const { data, error } = await createAdminClient()
+      .from("scheduled_messages")
+      .update({
+        status: "cancelled",
+        last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON,
+        provider_message_id: null,
+        sent_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("status", "sending")
+      .select("id")
+      .maybeSingle();
+    if (error) throw error;
+    return Boolean(data);
+  } catch {
+    throw new PolicyCancellationPersistenceError("Could not persist outbound email policy cancellation.");
+  }
 }
 
 async function markMessage(
@@ -190,14 +211,24 @@ async function deliverClaimedMessage(
   claimed: ClaimedMessage,
   intendedRecipient: string,
   templateKey: string,
-  message: SequenceEmail,
   payload: MessagePayload = {},
+  messageOverride?: SequenceEmail,
 ): Promise<DeliveryOutcome> {
+  if (!isOutboundEmailAllowed(templateKey)) {
+    return await cancelClaimedByPolicy(claimed.id) ? "cancelled" : "skipped";
+  }
+
+  const message = messageOverride ?? resolveTemplate(templateKey);
+  if (!message) {
+    await failMessage(claimed.id, "Email template could not be resolved", false);
+    return "failed";
+  }
+
   if (isLiveEmailTemplate(templateKey)) {
     const db = createAdminClient();
     const { data: eligible, error } = await db.rpc("email_message_is_eligible_v2", { p_message_id: claimed.id });
     if (error) throw new Error("Could not recheck live email eligibility.");
-    if (process.env.LIVE_WEBINAR_ENABLED !== "true" || eligible !== true) {
+    if (eligible !== true) {
       const { error: releaseError } = await db.rpc("release_scheduled_email_claim_v1", { p_message_id: claimed.id });
       if (releaseError) throw new Error("Could not release an ineligible live email.");
       return "skipped";
@@ -223,7 +254,7 @@ async function deliverClaimedMessage(
   try {
     subject = mergeFields(message.subject, payload, templateKey);
     content = mergeFields(message.body, payload, templateKey);
-    unsubscribeLink = isMarketingTemplate(templateKey)
+    unsubscribeLink = isOutboundEmailMarketing(templateKey)
       ? `${appBaseUrl()}/unsubscribe?token=${encodeURIComponent(createUnsubscribeToken(claimed.id))}` : undefined;
   } catch {
     // A malformed row must not strand later messages in the claimed batch.
@@ -301,6 +332,7 @@ export async function processDueEmails(limit = 10): Promise<{
   retrying: number;
   failed: number;
   skipped: number;
+  cancelled: number;
 }> {
   const safeLimit = Math.max(1, Math.min(10, Math.trunc(limit)));
   const includeLive = process.env.LIVE_WEBINAR_ENABLED === "true";
@@ -316,29 +348,35 @@ export async function processDueEmails(limit = 10): Promise<{
   let retrying = 0;
   let failed = 0;
   let skipped = 0;
+  let cancelled = 0;
   for (const claimed of due) {
     if (processed > 0) await new Promise((resolve) => setTimeout(resolve, 550));
     try {
-      const message = resolveTemplate(claimed.template_key);
-      if (!message) {
-        await failMessage(claimed.message_id, `Unknown template: ${claimed.template_key}`, false);
-        failed += 1;
-        processed += 1;
-        continue;
-      }
       const outcome = await deliverClaimedMessage(
         { id: claimed.message_id, template_key: claimed.template_key, payload: claimed.payload ?? {} },
         claimed.email,
         claimed.template_key,
-        message,
         claimed.payload ?? {},
       );
       if (outcome === "sent") sent += 1;
       else if (outcome === "retrying") retrying += 1;
       else if (outcome === "skipped") skipped += 1;
+      else if (outcome === "cancelled") cancelled += 1;
       else failed += 1;
       processed += 1;
-    } catch {
+    } catch (error) {
+      if (error instanceof PolicyCancellationPersistenceError) {
+        // Delivery stays blocked. Do not create a provider-failure record if the
+        // policy cancellation itself could not be persisted; stale-claim
+        // recovery can retry the compare-and-set later.
+        console.error("[email] blocked message cancellation could not be persisted", {
+          messageId: claimed.message_id,
+          templateKey: claimed.template_key,
+        });
+        skipped += 1;
+        processed += 1;
+        continue;
+      }
       // A live eligibility/storage problem must not stop unrelated booking or evergreen mail.
       try {
         const failure = await failMessage(claimed.message_id, "Email processing was interrupted before confirmed delivery", true);
@@ -353,23 +391,23 @@ export async function processDueEmails(limit = 10): Promise<{
     }
   }
 
-  return { claimed: due.length, processed, sent, retrying, failed, skipped };
+  return { claimed: due.length, processed, sent, retrying, failed, skipped, cancelled };
 }
 
 /** Claims the exact registration's joining message; repeat registration cannot replay a sent row. */
 export async function deliverLiveRegistrationConfirmation(registrationId: string, email: string): Promise<void> {
-  if (process.env.LIVE_WEBINAR_ENABLED !== "true") return;
+  if (!isOutboundEmailAllowed("live_confirmation:1")) return;
   const { data, error } = await createAdminClient().rpc("claim_live_webinar_email_v1", { p_registration_id: registrationId, p_template_key: "live_confirmation:1" });
   if (error) throw new Error("Could not claim the live joining email.");
   const claimed = (data as ClaimedMessage[] | null)?.[0];
-  if (claimed) await deliverClaimedMessage(claimed, email, claimed.template_key, LIVE_EMAIL_TEMPLATES[claimed.template_key], claimed.payload);
+  if (claimed) await deliverClaimedMessage(claimed, email, claimed.template_key, claimed.payload, LIVE_EMAIL_TEMPLATES[claimed.template_key]);
 }
 
 /** Drain small atomic batches with pacing and a wall-time budget for synchronized reminders. */
 export async function processEmailBacklog(maxBatches = 12, maxMs = 45_000) {
   const started = Date.now();
   let estimatedBatchMs = 9 * 550;
-  const total = { claimed: 0, processed: 0, sent: 0, retrying: 0, failed: 0, skipped: 0 };
+  const total = { claimed: 0, processed: 0, sent: 0, retrying: 0, failed: 0, skipped: 0, cancelled: 0 };
   for (let i = 0; i < maxBatches && Date.now() - started < maxMs; i++) {
     if (Date.now() - started + estimatedBatchMs > maxMs) break;
     const batchStarted = Date.now();
@@ -396,6 +434,7 @@ export async function enqueueSequence(
     return;
   }
   const messages = buildSequenceMessages(sequenceId, anchor, payload);
+  if (messages.some(({ templateKey }) => !isOutboundEmailAllowed(templateKey))) return;
   const supabase = createAdminClient();
   const { error } = await supabase.rpc("enqueue_funnel_sequence", {
     p_email: email,
@@ -443,14 +482,58 @@ export async function deliverImmediateSequenceMessage(
   const immediateIndex = seq.emails.findIndex((message) => message.delay === "immediately");
   if (immediateIndex >= 0) {
     const templateKey = `${seq.id}:${immediateIndex + 1}${bookingSuffix}`;
+    if (!isOutboundEmailAllowed(templateKey)) return;
     const claimed = await claimMessage(email, templateKey);
     if (!claimed) return;
     await deliverClaimedMessage(
       claimed,
       email,
       templateKey,
-      seq.emails[immediateIndex],
       claimed.payload ?? payload,
+      seq.emails[immediateIndex],
     );
   }
+}
+
+export type FailedMessageRetryResult = "scheduled" | "cancelled" | null;
+
+export async function retryFailedSequenceMessage(id: string): Promise<FailedMessageRetryResult> {
+  if (isCrmDemoMode()) return id === "demo-failure-1" ? "scheduled" : null;
+  const supabase = createAdminClient();
+  const { data: failedMessage, error: readError } = await supabase
+    .from("scheduled_messages")
+    .select("template_key")
+    .eq("id", id)
+    .eq("status", "failed")
+    .maybeSingle();
+  if (readError) throw new Error("Could not read the failed email for retry.");
+  if (!failedMessage) return null;
+
+  if (!isOutboundEmailAllowed(failedMessage.template_key)) {
+    const { data, error } = await supabase
+      .from("scheduled_messages")
+      .update({
+        status: "cancelled",
+        last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON,
+        provider_message_id: null,
+        sent_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("status", "failed")
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error("Could not cancel the email under the outbound policy.");
+    return data ? "cancelled" : null;
+  }
+
+  const { data, error } = await supabase
+    .from("scheduled_messages")
+    .update({ status: "scheduled", scheduled_for: new Date().toISOString(), attempts: 0, last_error: null, provider_message_id: null, sent_at: null })
+    .eq("id", id)
+    .eq("status", "failed")
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error("Could not queue the email for retry.");
+  return data ? "scheduled" : null;
 }

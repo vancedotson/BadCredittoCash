@@ -34,4 +34,22 @@ describe("sequence failure summary after clearing a limited batch", () => {
     expect(html).toContain("You’re all caught up. Refresh this page to check for new sending issues.");
     expect(html).not.toContain("Refresh this page to review them.");
   });
+
+  it("shows policy-cancelled queue items separately from provider failures", () => {
+    const html = renderToStaticMarkup(
+      <SequenceOperations
+        initialStats={{ activeEnrollments: 1, scheduledMessages: 0, retryingMessages: 0, sentMessages: 0, failedMessages: 0 }}
+        initialEnrollments={[{
+          id: "enrollment-1", contactId: "contact-1", contactName: "Test Contact", email: "test@example.test",
+          sequenceKey: "nurture", status: "active", enrolledAt: "2026-09-23T12:00:00Z", scheduledMessages: 0,
+          policyCancelledMessages: 2,
+        }]}
+        initialFailures={[]}
+      />,
+    );
+
+    expect(html).toContain("2 cancelled by launch policy");
+    expect(html).toContain("No failed emails.");
+    expect(html).not.toContain("Retry email");
+  });
 });

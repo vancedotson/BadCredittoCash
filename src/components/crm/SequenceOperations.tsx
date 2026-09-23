@@ -28,6 +28,7 @@ async function act(body: Record<string, string>) {
     const payload = await response.json().catch(() => null) as { error?: string } | null;
     throw new Error(payload?.error ?? "The sequence action failed.");
   }
+  return await response.json() as { status?: string };
 }
 
 function Avatar({ name }: { name: string }) {
@@ -88,11 +89,16 @@ export function SequenceOperations({ initialStats, initialEnrollments, initialFa
     if (!window.confirm("Retry " + failure.templateKey + " for " + failure.contactName + "? This queues the email to send again.")) return;
     if (!begin(failure.id)) return;
     try {
-      await act({ action: "retry", messageId: failure.id });
+      const result = await act({ action: "retry", messageId: failure.id });
       setFailures((current) => current.filter((item) => item.id !== failure.id));
-      // A manual retry clears attempts, so it joins Scheduled, not Retrying.
-      setStats((current) => ({ ...current, failedMessages: Math.max(0, current.failedMessages - 1), scheduledMessages: current.scheduledMessages + 1 }));
-      setMessage("Failed email queued for retry.");
+      if (result.status === "cancelled") {
+        setStats((current) => ({ ...current, failedMessages: Math.max(0, current.failedMessages - 1) }));
+        setMessage("Email cancelled by the outbound policy; no retry was queued.");
+      } else {
+        // A manual retry clears attempts, so it joins Scheduled, not Retrying.
+        setStats((current) => ({ ...current, failedMessages: Math.max(0, current.failedMessages - 1), scheduledMessages: current.scheduledMessages + 1 }));
+        setMessage("Failed email queued for retry.");
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The email could not be retried.");
     } finally { finish(failure.id); }
@@ -138,7 +144,7 @@ export function SequenceOperations({ initialStats, initialEnrollments, initialFa
                   <tr key={enrollment.id} data-enrollment-id={enrollment.id}>
                     <td className={styles.contactCell}><div className={styles.identity}><Avatar name={enrollment.contactName} /><div className={styles.identityText}><Link href={"/crm/contacts/" + enrollment.contactId} className={styles.contactName}>{enrollment.contactName}</Link><span className={styles.email} title={enrollment.email}>{enrollment.email}</span></div></div></td>
                     <td className={styles.sequenceCell}><div className={styles.sequenceName} title={sequenceNames[enrollment.sequenceKey] ?? enrollment.sequenceKey}>{shortNames[enrollment.sequenceKey] ?? sequenceNames[enrollment.sequenceKey] ?? enrollment.sequenceKey}</div>{enrollment.sessionId ? <Link href={"/crm/webinars?sessionId=" + encodeURIComponent(enrollment.sessionId)} className={styles.sessionLink}>Session: {enrollment.sessionTitle || enrollment.sessionId}</Link> : null}</td>
-                    <td className={styles.queueCell}><span>{enrollment.scheduledMessages} scheduled</span>{enrollment.nextScheduledAt ? <time suppressHydrationWarning dateTime={enrollment.nextScheduledAt} className={styles.nextSend}>Next {new Date(enrollment.nextScheduledAt).toLocaleString()}</time> : null}</td>
+                    <td className={styles.queueCell}><span>{enrollment.scheduledMessages} scheduled</span>{enrollment.nextScheduledAt ? <time suppressHydrationWarning dateTime={enrollment.nextScheduledAt} className={styles.nextSend}>Next {new Date(enrollment.nextScheduledAt).toLocaleString()}</time> : null}{enrollment.policyCancelledMessages ? <span className={styles.nextSend}>{enrollment.policyCancelledMessages} cancelled by launch policy</span> : null}</td>
                     <td className={styles.statusCell}><span className={styles.status} data-status={enrollment.status}>{enrollment.status === "active" ? "Active" : "Paused"}</span></td>
                     <td className={styles.actionCell}><button type="button" disabled={pending.has(enrollment.id)} aria-busy={pending.has(enrollment.id)} onClick={() => toggle(enrollment)} className={styles.secondaryButton}>{pending.has(enrollment.id) ? "Saving…" : enrollment.status === "active" ? "Pause" : "Resume"}</button></td>
                   </tr>

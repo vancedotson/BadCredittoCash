@@ -26,6 +26,7 @@ import { createClient as createServerSupabaseClient } from "./supabase/server";
 import { createAdminClient } from "./supabase/admin";
 import { isCrmDemoMode } from "./demo";
 import { readAllPages } from "./read-all-pages";
+import { OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON } from "@/config/email-policy";
 
 export type Lead = {
   id: string;
@@ -146,6 +147,7 @@ export type SequenceEnrollment = {
   status: "active" | "paused";
   enrolledAt: string;
   scheduledMessages: number;
+  policyCancelledMessages?: number;
   nextScheduledAt?: string;
   sessionId?: string;
   sessionTitle?: string;
@@ -1176,7 +1178,7 @@ export async function getSequenceEnrollments(limit = 12): Promise<SequenceEnroll
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("sequence_enrollments")
-    .select("id, sequence_key, status, enrolled_at, contact:contacts!sequence_enrollments_contact_id_fkey(id, name, email), messages:scheduled_messages(status, scheduled_for),registration:live_webinar_registrations(session_id,session:live_webinar_sessions(title))")
+    .select("id, sequence_key, status, enrolled_at, contact:contacts!sequence_enrollments_contact_id_fkey(id, name, email), messages:scheduled_messages(status, scheduled_for, last_error),registration:live_webinar_registrations(session_id,session:live_webinar_sessions(title))")
     .in("status", ["active", "paused"])
     .order("enrolled_at", { ascending: false })
     .limit(Math.max(1, Math.min(50, Math.trunc(limit))));
@@ -1184,11 +1186,12 @@ export async function getSequenceEnrollments(limit = 12): Promise<SequenceEnroll
   return (data ?? []).flatMap((row) => {
     const contact = Array.isArray(row.contact) ? row.contact[0] : row.contact;
     if (!contact) return [];
-    const messages = (row.messages ?? []) as Array<{ status: string; scheduled_for: string }>;
+    const messages = (row.messages ?? []) as Array<{ status: string; scheduled_for: string; last_error?: string | null }>;
     const scheduled = messages.filter((message) => message.status === "scheduled").sort((a, b) => a.scheduled_for.localeCompare(b.scheduled_for));
+    const policyCancelledMessages = messages.filter((message) => message.status === "cancelled" && message.last_error === OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON).length;
     const registration = (Array.isArray(row.registration) ? row.registration[0] : row.registration) as { session_id?: string; session?: { title?: string } | Array<{ title?: string }> } | null;
     const session = Array.isArray(registration?.session) ? registration.session[0] : registration?.session;
-    return [{ id: row.id, contactId: contact.id, contactName: contact.name, email: contact.email, sequenceKey: row.sequence_key, status: row.status === "paused" ? "paused" as const : "active" as const, enrolledAt: row.enrolled_at, scheduledMessages: scheduled.length, nextScheduledAt: scheduled[0]?.scheduled_for, sessionId: registration?.session_id, sessionTitle: session?.title }];
+    return [{ id: row.id, contactId: contact.id, contactName: contact.name, email: contact.email, sequenceKey: row.sequence_key, status: row.status === "paused" ? "paused" as const : "active" as const, enrolledAt: row.enrolled_at, scheduledMessages: scheduled.length, policyCancelledMessages, nextScheduledAt: scheduled[0]?.scheduled_for, sessionId: registration?.session_id, sessionTitle: session?.title }];
   });
 }
 
@@ -1196,14 +1199,6 @@ export async function setSequenceEnrollmentStatus(id: string, status: "active" |
   if (isCrmDemoMode()) { demoSequenceStatuses.set(id, status); return true; }
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase.from("sequence_enrollments").update({ status }).eq("id", id).in("status", ["active", "paused"]).select("id").maybeSingle();
-  if (error) throw new Error(error.message);
-  return Boolean(data);
-}
-
-export async function retryFailedSequenceMessage(id: string): Promise<boolean> {
-  if (isCrmDemoMode()) return id === "demo-failure-1";
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("scheduled_messages").update({ status: "scheduled", scheduled_for: new Date().toISOString(), attempts: 0, last_error: null, provider_message_id: null, sent_at: null }).eq("id", id).eq("status", "failed").select("id").maybeSingle();
   if (error) throw new Error(error.message);
   return Boolean(data);
 }

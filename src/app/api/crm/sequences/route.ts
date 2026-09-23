@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCrmApiUser } from "@/lib/auth";
-import { retryFailedSequenceMessage, setSequenceEnrollmentStatus } from "@/lib/store";
+import { retryFailedSequenceMessage } from "@/lib/email";
+import { setSequenceEnrollmentStatus } from "@/lib/store";
 import { recordAdminAudit } from "@/lib/audit";
 
 export async function POST(request: Request) {
@@ -24,10 +25,17 @@ export async function POST(request: Request) {
   if (action === "retry") {
     const messageId = typeof body.messageId === "string" ? body.messageId : "";
     if (!messageId) return NextResponse.json({ error: "Failed message is required." }, { status: 400 });
-    const changed = await retryFailedSequenceMessage(messageId);
-    if (!changed) return NextResponse.json({ error: "Failed message was not found or already retried." }, { status: 404 });
-    await recordAdminAudit({ actorId: String(auth.user.sub), action: "sequence.retry", entityType: "scheduled_message", entityId: messageId, afterState: { status: "scheduled", attempts: 0 } });
-    return NextResponse.json({ ok: true, status: "scheduled" });
+    const result = await retryFailedSequenceMessage(messageId);
+    if (!result) return NextResponse.json({ error: "Failed message was not found or already retried." }, { status: 404 });
+    const policyCancelled = result === "cancelled";
+    await recordAdminAudit({
+      actorId: String(auth.user.sub),
+      action: policyCancelled ? "sequence.retry_blocked_by_policy" : "sequence.retry",
+      entityType: "scheduled_message",
+      entityId: messageId,
+      afterState: policyCancelled ? { status: "cancelled", reason: "outbound_email_policy" } : { status: "scheduled", attempts: 0 },
+    });
+    return NextResponse.json({ ok: true, status: result });
   }
 
   return NextResponse.json({ error: "Unknown sequence action." }, { status: 400 });

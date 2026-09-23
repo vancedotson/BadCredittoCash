@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocked = vi.hoisted(() => ({ rpc: vi.fn(), send: vi.fn(), recordEvent: vi.fn() }));
-vi.mock("resend", () => ({ Resend: class { emails = { send: mocked.send }; } }));
-vi.mock("./supabase/admin", () => ({ createAdminClient: () => ({ rpc: mocked.rpc }) }));
+const mocked = vi.hoisted(() => ({
+  rpc: vi.fn(), send: vi.fn(), recordEvent: vi.fn(), from: vi.fn(),
+  resendConstructed: vi.fn(), createUnsubscribeToken: vi.fn(() => "mocked-token"),
+}));
+vi.mock("resend", () => ({ Resend: class { emails = { send: mocked.send }; constructor() { mocked.resendConstructed(); } } }));
+vi.mock("./supabase/admin", () => ({ createAdminClient: () => ({ rpc: mocked.rpc, from: mocked.from }) }));
 vi.mock("./store", () => ({ recordEvent: mocked.recordEvent }));
+vi.mock("./email-token", () => ({ createUnsubscribeToken: mocked.createUnsubscribeToken }));
 
-import { deliverImmediateSequenceMessage, deliverLiveRegistrationConfirmation, processDueEmails, processEmailBacklog, type MessagePayload } from "./email";
+import { deliverImmediateSequenceMessage, deliverLiveRegistrationConfirmation, enqueueSequence, processDueEmails, processEmailBacklog, retryFailedSequenceMessage, type MessagePayload } from "./email";
 import { verifyLiveParticipantToken } from "./live-webinar-token";
+import { OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON } from "@/config/email-policy";
 
 const REGISTRATION_A = "11111111-1111-4111-8111-111111111111";
 const REGISTRATION_B = "22222222-2222-4222-8222-222222222222";
@@ -21,6 +26,8 @@ let exactClaims: Map<string, Claimed>;
 let due: Due[];
 let eligible: boolean;
 let failureOutcome: { outcome: "retrying" | "failed"; attempts: number; retry_at: string | null };
+let messageStates: Map<string, { id: string; template_key: string; status: string; last_error?: string | null }>;
+let cancellationWriteFails: boolean;
 
 function payload(overrides: Partial<MessagePayload> = {}): MessagePayload {
   return { registrationId: REGISTRATION_A, sessionId: SESSION_A, accessVersion: 1, sessionVersion: 2,
@@ -30,6 +37,8 @@ function payload(overrides: Partial<MessagePayload> = {}): MessagePayload {
 
 function queue(template = "live_confirmation:1", content = payload(), id = "message-a") {
   due.push({ message_id: id, email: RECIPIENT, template_key: template, payload: content });
+  const existing = messageStates.get(id);
+  if (existing?.status !== "cancelled") messageStates.set(id, { id, template_key: template, status: "sending" });
 }
 
 function sentContent(index = 0) {
@@ -47,6 +56,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
   vi.stubEnv("LIVE_WEBINAR_ENABLED", "true");
+  vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "false");
+  vi.stubEnv("MARKETING_EMAILS_ENABLED", "false");
   vi.stubEnv("EMAIL_MODE", "production");
   vi.stubEnv("APP_BASE_URL", "https://example.test/");
   vi.stubEnv("RESEND_API_KEY", "mocked-resend-key");
@@ -56,10 +67,41 @@ beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   exactClaims = new Map();
   due = [];
+  messageStates = new Map();
+  cancellationWriteFails = false;
   eligible = true;
   failureOutcome = { outcome: "retrying", attempts: 1, retry_at: "2026-10-14T17:05:00Z" };
   mocked.send.mockResolvedValue({ data: { id: "provider-a" }, error: null });
   mocked.recordEvent.mockResolvedValue(undefined);
+  mocked.createUnsubscribeToken.mockReturnValue("mocked-token");
+  mocked.from.mockImplementation((tableName: string) => {
+    if (tableName !== "scheduled_messages") throw new Error(`Unexpected mocked table: ${tableName}`);
+    const query = (operation: "select" | "update", values?: Record<string, unknown>) => {
+      const filters: Array<[string, unknown]> = [];
+      const builder = {
+        eq: vi.fn((column: string, value: unknown) => { filters.push([column, value]); return builder; }),
+        select: vi.fn(() => builder),
+        maybeSingle: vi.fn(async () => {
+          if (operation === "update" && values?.status === "cancelled" && cancellationWriteFails) {
+            return { data: null, error: { message: "Synthetic cancellation persistence failure" } };
+          }
+          const id = String(filters.find(([column]) => column === "id")?.[1] ?? "");
+          const row = messageStates.get(id);
+          if (!row || filters.some(([column, value]) => (row as unknown as Record<string, unknown>)[column === "status" ? "status" : column] !== value)) {
+            return { data: null, error: null };
+          }
+          if (operation === "select") return { data: { template_key: row.template_key }, error: null };
+          Object.assign(row, values);
+          return { data: { id }, error: null };
+        }),
+      };
+      return builder;
+    };
+    return {
+      update: (values: Record<string, unknown>) => query("update", values),
+      select: () => query("select"),
+    };
+  });
   mocked.rpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
     if (name === "claim_live_webinar_email_v1") {
       const key = String(args.p_registration_id);
@@ -68,10 +110,13 @@ beforeEach(() => {
       return { data: claimed ? [claimed] : [], error: null };
     }
     if (name === "claim_due_scheduled_emails_v2" || name === "claim_due_scheduled_emails") {
-      const batch = due.splice(0);
+      const batch = due.splice(0).filter((message) => messageStates.get(message.message_id)?.status === "sending");
       return { data: batch, error: null };
     }
-    if (name === "claim_scheduled_email") return { data: [{ id: "legacy-message", template_key: args.p_template_key, payload: {} }], error: null };
+    if (name === "claim_scheduled_email") {
+      messageStates.set("legacy-message", { id: "legacy-message", template_key: String(args.p_template_key), status: "sending" });
+      return { data: [{ id: "legacy-message", template_key: args.p_template_key, payload: {} }], error: null };
+    }
     if (name === "email_message_is_eligible_v2") return { data: eligible, error: null };
     if (name === "release_scheduled_email_claim_v1" || name === "complete_scheduled_email") return { data: true, error: null };
     if (name === "fail_scheduled_email") return { data: [failureOutcome], error: null };
@@ -116,14 +161,33 @@ describe("live email delivery integration", () => {
       enabled ? { p_limit: 10, p_include_live: true } : { p_limit: 10 });
   });
 
-  it.each(["feature-disabled", "no-longer-eligible"])("releases a live claim without dispatch when %s", async (reason) => {
-    if (reason === "feature-disabled") vi.stubEnv("LIVE_WEBINAR_ENABLED", "false");
-    else eligible = false;
+  it("cancels a claimed live message when the live feature is disabled", async () => {
+    vi.stubEnv("LIVE_WEBINAR_ENABLED", "false");
     queue();
-    expect(await processDueEmails()).toMatchObject({ claimed: 1, processed: 1, skipped: 1, sent: 0, failed: 0 });
+    expect(await processDueEmails()).toMatchObject({ claimed: 1, processed: 1, cancelled: 1, sent: 0, failed: 0 });
+    expect(messageStates.get("message-a")).toMatchObject({ status: "cancelled" });
+    expect(mocked.from).toHaveBeenCalledWith("scheduled_messages");
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.rpc.mock.calls.some(([name]) => name === "release_scheduled_email_claim_v1" || name === "complete_scheduled_email" || name === "fail_scheduled_email")).toBe(false);
+  });
+
+  it("never turns a failed policy cancellation into a provider failure or sends anyway", async () => {
+    cancellationWriteFails = true;
+    queue("nurture:1", {}, "blocked-but-unpersisted");
+    expect(await processDueEmails()).toMatchObject({ claimed: 1, processed: 1, skipped: 1, cancelled: 0, failed: 0, sent: 0 });
+    expect(mocked.rpc.mock.calls.some(([name]) => name === "fail_scheduled_email")).toBe(false);
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.resendConstructed).not.toHaveBeenCalled();
+    expect(mocked.createUnsubscribeToken).not.toHaveBeenCalled();
+    expect(mocked.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it("continues to release an enabled but no-longer-eligible live message", async () => {
+    eligible = false;
+    queue();
+    expect(await processDueEmails()).toMatchObject({ claimed: 1, processed: 1, skipped: 1, cancelled: 0, sent: 0, failed: 0 });
     expect(mocked.rpc).toHaveBeenCalledWith("release_scheduled_email_claim_v1", { p_message_id: "message-a" });
     expect(mocked.send).not.toHaveBeenCalled();
-    expect(mocked.rpc.mock.calls.some(([name]) => name === "complete_scheduled_email" || name === "fail_scheduled_email")).toBe(false);
   });
 
   it("uses valid session joining and calendar URLs in both plain text and HTML", async () => {
@@ -149,6 +213,7 @@ describe("live email delivery integration", () => {
   });
 
   it("keeps replay routing and session sales links valid and supplies marketing unsubscribe headers", async () => {
+    vi.stubEnv("MARKETING_EMAILS_ENABLED", "true");
     queue("live_replay:1", payload(), "cccccccc-cccc-4ccc-8ccc-cccccccccccc");
     await processDueEmails();
     const message = sentContent();
@@ -163,6 +228,7 @@ describe("live email delivery integration", () => {
   });
 
   it("gives a replay published 120 days later a usable token and identical retry content from its durable send deadline", async () => {
+    vi.stubEnv("MARKETING_EMAILS_ENABLED", "true");
     const day = 86_400_000;
     const publishedAt = Date.parse(payload().endsAt!) + 120 * day;
     const sendDeadline = publishedAt + 7 * day;
@@ -194,13 +260,89 @@ describe("live email delivery integration", () => {
     expect(mocked.send.mock.calls[1][1]).toEqual(mocked.send.mock.calls[0][1]);
   });
 
-  it("keeps legacy immediate registration on its original claim, template, and training link", async () => {
+  it("blocks legacy immediate registration before claim while evergreen training is disabled", async () => {
     await deliverImmediateSequenceMessage(RECIPIENT, "pre_webinar");
-    expect(mocked.rpc).toHaveBeenCalledWith("claim_scheduled_email", { p_email: RECIPIENT, p_template_key: "pre_webinar:1" });
-    expect(sentContent().text).toContain("https://example.test/webinar/room");
-    expect(sentContent().text).not.toContain("/api/live/join");
-    expect(mocked.rpc.mock.calls.some(([name]) => name === "email_message_is_eligible_v2")).toBe(false);
-    expect(mocked.send.mock.calls[0][1]).toEqual({ idempotencyKey: "vance-legacy-message" });
+    expect(mocked.rpc).not.toHaveBeenCalled();
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.resendConstructed).not.toHaveBeenCalled();
+    expect(mocked.createUnsubscribeToken).not.toHaveBeenCalled();
+    expect(mocked.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it("blocks marketing sequence enqueue before DB, event, or immediate-claim side effects", async () => {
+    for (const sequence of ["pre_webinar", "nurture", "registered_no_show", "low_watch", "mid_watch", "high_watch", "offer_click_no_book", "booking_abandon"]) {
+      await enqueueSequence(RECIPIENT, sequence);
+    }
+    await deliverImmediateSequenceMessage(RECIPIENT, "booking_abandon");
+
+    expect(mocked.rpc).not.toHaveBeenCalled();
+    expect(mocked.recordEvent).not.toHaveBeenCalled();
+    expect(mocked.resendConstructed).not.toHaveBeenCalled();
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.createUnsubscribeToken).not.toHaveBeenCalled();
+  });
+
+  it("cancels blocked batch entries once, sends every allowed booking lifecycle template, and continues", async () => {
+    const bookingId = "11111111-1111-4111-8111-111111111111";
+    const eventA = "22222222-2222-4222-8222-222222222222";
+    const eventB = "33333333-3333-4333-8333-333333333333";
+    const eventC = "44444444-4444-4444-8444-444444444444";
+    queue("pre_webinar:1", {}, "blocked-evergreen");
+    queue(`onboarding:1:${bookingId}`, { startsAt: "2026-10-15T18:00:00Z", timezone: "America/New_York", bookingId }, "booking-confirmation");
+    queue(`booking_rescheduled:${bookingId}:${eventA}`, { startsAt: "2026-10-16T18:00:00Z", timezone: "America/New_York" }, "booking-rescheduled");
+    queue(`booking_reminder:${bookingId}:${eventB}`, { startsAt: "2026-10-17T18:00:00Z", timezone: "America/New_York" }, "booking-reminder");
+    queue(`booking_cancelled:${bookingId}:${eventC}`, { startsAt: "2026-10-18T18:00:00Z", timezone: "America/New_York" }, "booking-cancelled");
+    queue("nurture:1", {}, "blocked-nurture");
+
+    const processing = processDueEmails();
+    await vi.runAllTimersAsync();
+    const result = await processing;
+
+    expect(result).toMatchObject({ claimed: 6, processed: 6, sent: 4, cancelled: 2, failed: 0, skipped: 0 });
+    expect(mocked.send).toHaveBeenCalledTimes(4);
+    expect(mocked.resendConstructed).toHaveBeenCalledTimes(4);
+    expect(mocked.createUnsubscribeToken).not.toHaveBeenCalled();
+    expect(messageStates.get("blocked-evergreen")).toMatchObject({ status: "cancelled", last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON });
+    expect(messageStates.get("blocked-nurture")).toMatchObject({ status: "cancelled", last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON });
+    expect(mocked.rpc.mock.calls.some(([name]) => name === "fail_scheduled_email")).toBe(false);
+
+    const sent = mocked.send.mock.calls.map(([message]) => message as { subject: string; text: string; headers?: Record<string, string> });
+    expect(sent[0].text).toContain("October 15");
+    expect(sent[0].text).toContain("America/New_York");
+    expect(sent[0].text).not.toContain("{{");
+    expect(sent[1].text).toContain("October 16");
+    expect(sent[2].text).toContain("October 17");
+    expect(sent[3].text).toContain("October 18");
+    expect(sent.every((message) => !message.headers?.["List-Unsubscribe"])).toBe(true);
+    expect(mocked.recordEvent).toHaveBeenCalledTimes(4);
+    expect(mocked.recordEvent.mock.calls.every(([event]) => (event as { event: string }).event === "email_sent")).toBe(true);
+
+    queue("pre_webinar:1", {}, "blocked-evergreen");
+    expect(await processDueEmails()).toMatchObject({ claimed: 0, processed: 0, cancelled: 0, sent: 0 });
+    expect(mocked.send).toHaveBeenCalledTimes(4);
+  });
+
+  it("manual retry atomically cancels a disallowed marketing message and preserves booking retry", async () => {
+    messageStates.set("failed-marketing", { id: "failed-marketing", template_key: "booking_abandon:1", status: "failed", last_error: "provider rejected" });
+    messageStates.set("failed-booking", { id: "failed-booking", template_key: "onboarding:2", status: "failed", last_error: "provider rejected" });
+
+    expect(await retryFailedSequenceMessage("failed-marketing")).toBe("cancelled");
+    expect(messageStates.get("failed-marketing")).toMatchObject({ status: "cancelled", last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON });
+    expect(await retryFailedSequenceMessage("failed-booking")).toBe("scheduled");
+    expect(messageStates.get("failed-booking")).toMatchObject({ status: "scheduled", attempts: 0, last_error: null });
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.resendConstructed).not.toHaveBeenCalled();
+    expect(mocked.createUnsubscribeToken).not.toHaveBeenCalled();
+    expect(mocked.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it("keeps the development demo retry local without database or provider access", async () => {
+    vi.stubEnv("VANCE_ENABLE_DEMO_DATA", "true");
+    expect(await retryFailedSequenceMessage("demo-failure-1")).toBe("scheduled");
+    expect(await retryFailedSequenceMessage("other-demo-message")).toBeNull();
+    expect(mocked.from).not.toHaveBeenCalled();
+    expect(mocked.rpc).not.toHaveBeenCalled();
+    expect(mocked.send).not.toHaveBeenCalled();
   });
 
   it("routes test-mode delivery to the controlled address while recording the intended contact", async () => {
@@ -217,6 +359,7 @@ describe("live email delivery integration", () => {
     ["live_attended:1", true], ["live_no_show:1", true], ["live_replay:1", true],
     ["live_rescheduled:1", false], ["live_cancelled:1", false],
   ])("renders %s with complete fields and the correct promotional classification", async (template, promotional) => {
+    if (promotional) vi.stubEnv("MARKETING_EMAILS_ENABLED", "true");
     queue(String(template), payload(), "dddddddd-dddd-4ddd-8ddd-dddddddddddd");
     expect(await processDueEmails()).toMatchObject({ sent: 1, failed: 0 });
     const message = sentContent();
@@ -282,12 +425,12 @@ describe("live email delivery integration", () => {
     expect(mocked.rpc.mock.calls.some(([name]) => name === "fail_scheduled_email")).toBe(false);
   });
 
-  it("dead-letters an unknown template without invoking the provider", async () => {
-    failureOutcome = { outcome: "failed", attempts: 1, retry_at: null };
+  it("cancels an unknown template without invoking the provider", async () => {
     queue("live_unknown:1");
-    expect(await processDueEmails()).toMatchObject({ failed: 1, sent: 0 });
+    expect(await processDueEmails()).toMatchObject({ cancelled: 1, failed: 0, sent: 0 });
+    expect(messageStates.get("message-a")).toMatchObject({ status: "cancelled" });
     expect(mocked.send).not.toHaveBeenCalled();
-    expect(mocked.rpc).toHaveBeenCalledWith("fail_scheduled_email", expect.objectContaining({ p_retryable: false }));
+    expect(mocked.rpc.mock.calls.some(([name]) => name === "fail_scheduled_email")).toBe(false);
   });
 
   it("fails explicitly before provider dispatch when the provider key is missing", async () => {
@@ -302,14 +445,14 @@ describe("live email delivery integration", () => {
   it("dead-letters an invalid live rendering payload and continues to the next legacy delivery", async () => {
     failureOutcome = { outcome: "failed", attempts: 1, retry_at: null };
     queue("live_confirmation:1", { sessionId: SESSION_A });
-    queue("pre_webinar:1", {}, "legacy-next");
+    queue("onboarding:1", { startsAt: "2026-10-20T15:00:00Z", timezone: "America/Chicago" }, "booking-next");
     const processing = processDueEmails();
     const result = expect(processing).resolves.toMatchObject({ claimed: 2, processed: 2, failed: 1, sent: 1 });
     await vi.runAllTimersAsync();
     await result;
     expect(mocked.rpc).toHaveBeenCalledWith("fail_scheduled_email", expect.objectContaining({ p_message_id: "message-a", p_retryable: false }));
     expect(mocked.send).toHaveBeenCalledTimes(1);
-    expect(sentContent().text).toContain("/webinar/room");
+    expect(sentContent().text).toContain("October 20");
   });
 
   it.each([
@@ -334,13 +477,13 @@ describe("live email delivery integration", () => {
       return implementation(name, args);
     });
     queue();
-    queue("pre_webinar:1", {}, "legacy-next");
+    queue("onboarding:1", { startsAt: "2026-10-20T15:00:00Z", timezone: "America/Chicago" }, "booking-next");
     const processing = processDueEmails();
     const result = expect(processing).resolves.toMatchObject({ claimed: 2, processed: 2, retrying: 1, sent: 1, failed: 0 });
     await vi.runAllTimersAsync();
     await result;
     expect(mocked.send).toHaveBeenCalledTimes(1);
-    expect(sentContent().text).toContain("/webinar/room");
+    expect(sentContent().text).toContain("October 20");
     expect(mocked.rpc).toHaveBeenCalledWith("fail_scheduled_email", expect.objectContaining({ p_message_id: "message-a", p_retryable: true }));
   });
 
@@ -381,13 +524,15 @@ describe("live email delivery integration", () => {
     const result = await draining;
     expect(result.claimed).toBeGreaterThanOrEqual(10);
     expect(result.claimed).toBeLessThan(100);
-    expect(result).toMatchObject({ processed: result.claimed, sent: result.claimed - 1, retrying: 1, failed: 0 });
+    expect(result).toMatchObject({ processed: result.claimed, retrying: 1, failed: 0, skipped: 0 });
+    expect(result.cancelled).toBe(claimedIds.filter((id) => Number(id.split("-")[1]) % 2 === 1).length);
+    expect(result.sent).toBe(claimedIds.filter((id) => Number(id.split("-")[1]) % 2 === 0 && id !== "capacity-2").length);
     expect(Date.now() - startedAt).toBeLessThanOrEqual(45_000);
     expect(due).toHaveLength(100 - result.claimed);
     expect(new Set(claimedIds).size).toBe(claimedIds.length);
     expect(new Set(sentIds).size).toBe(sentIds.length);
-    expect(sentIds).toEqual(claimedIds.filter((id) => id !== "capacity-2"));
-    expect(claimedIds.filter((id) => Number(id.split("-")[1]) % 2 === 1).every((id) => sentIds.includes(id))).toBe(true);
+    expect(sentIds).toEqual(claimedIds.filter((id) => Number(id.split("-")[1]) % 2 === 0 && id !== "capacity-2"));
+    expect(claimedIds.filter((id) => Number(id.split("-")[1]) % 2 === 1).every((id) => !sentIds.includes(id))).toBe(true);
     for (let index = 1; index < sendTimes.length; index++) {
       expect(sendTimes[index] - sendTimes[index - 1]).toBeGreaterThanOrEqual(500);
     }

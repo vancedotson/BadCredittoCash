@@ -165,6 +165,25 @@ test("email retry requires confirmation, retains failures on error, and submits 
   expect(actions).toEqual([{ action: "retry", messageId: "demo-failure-1" }, { action: "retry", messageId: "demo-failure-1" }]);
 });
 
+test("policy-blocked manual retry is shown as cancelled rather than rescheduled", async ({ page }) => {
+  const actions: Array<Record<string, unknown>> = [];
+  await page.route("**/api/crm/sequences", async (route) => {
+    actions.push(route.request().postDataJSON());
+    await route.fulfill({ json: { ok: true, status: "cancelled" } });
+  });
+  await openSequences(page);
+  const retry = failures(page).getByRole("button", { name: "Retry email", exact: true });
+  page.once("dialog", (dialog) => dialog.accept());
+  await retry.click();
+
+  await expect(page.getByRole("status")).toContainText("Email cancelled by the outbound policy; no retry was queued.");
+  await expect(retry).toHaveCount(0);
+  const summary = page.getByRole("region", { name: "Sequence summary", exact: true });
+  await expect(summary.getByText("Scheduled", { exact: true }).locator("..")).toContainText("6");
+  await expect(summary.getByText("Failed", { exact: true }).locator("..")).toContainText("0");
+  expect(actions).toEqual([{ action: "retry", messageId: "demo-failure-1" }]);
+});
+
 test("all nine sequences retain their 24 email bodies, timing, routing, and merge references", async ({ page }) => {
   await openSequences(page);
   await expect(page.getByRole("link", { name: /View live webinars/ })).toHaveAttribute("href", "/crm/webinars");
