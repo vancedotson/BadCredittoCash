@@ -118,14 +118,6 @@ function HeroSignalRoom() {
           </Link>
         </div>
 
-        <div className="mt-7 flex items-center justify-center gap-3">
-          <span aria-hidden style={{ color: "var(--v3-accent-2)", letterSpacing: 2 }}>
-            ★★★★★
-          </span>
-          <span className="v3-mono" style={{ fontSize: 13, color: "var(--v3-mut)" }}>
-            {site.hero.rating.stars} · {site.hero.rating.count}
-          </span>
-        </div>
       </div>
     </section>
   );

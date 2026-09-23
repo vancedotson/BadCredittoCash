@@ -15,9 +15,9 @@ const publicOrigin = "https://badcredittocash.com";
 const publicMetadataRoutes = [
   {
     path: "/",
-    title: "Vance Dotson — Stop the collector calls. Hold them accountable.",
+    title: "FCRA & FDCPA Information | Vance Dotson",
     description:
-      "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. Explore a free credit-report guide or book a strategy call.",
+      "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
   },
   {
     path: "/credit-check",

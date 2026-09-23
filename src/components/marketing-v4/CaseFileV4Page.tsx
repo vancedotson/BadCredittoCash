@@ -6,10 +6,7 @@ import {
   Faq,
   Footer,
 } from "../marketing-v3/shared/sections";
-import { ResultsLedger } from "../marketing-v3/shared/signature";
 import { MechanismPinnedV4 } from "./mechanism/MechanismPinnedV4";
-import { EvidenceLockerV4 } from "./evidence/EvidenceLockerV4";
-import { TestimonialsSectionV4 } from "./testimonials/TestimonialsSectionV4";
 import { HowItWorksSectionV4 } from "./howitworks/HowItWorksSectionV4";
 import { TrustStripSection } from "./truststrip/TrustStripSection";
 import { PainMirrorV4 } from "./pain/PainMirrorV4";
@@ -38,9 +35,6 @@ export function CaseFileV4Page() {
         <MeetVanceV4 />
         <ReframeLawsV4 />
         <MechanismPinnedV4 />
-        <EvidenceLockerV4 />
-        <ResultsLedger />
-        <TestimonialsSectionV4 />
         <CollectorTacticsV4 />
         <HowItWorksSectionV4 />
         <RiskSectionV4 />

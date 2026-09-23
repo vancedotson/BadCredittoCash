@@ -6,7 +6,7 @@ import { site } from "@/config/site-v3";
 import { ArrowRightIcon, CheckIcon } from "@/components/marketing-v2/Icons";
 
 /**
- * v4 hero — based on Case File, with round-1 changes:
+ * v4 hero — launch information, guide/call choices, and the OKC image treatment:
  *  1. The OKC night skyline is far more present (higher opacity, less tint,
  *     a left-weighted scrim so the city clearly shows on the right).
  *  2. The file-number bar is dropped from the photo (cleaner, "black side"
@@ -64,8 +64,7 @@ export function HeroV4() {
             className="v3-display mt-6"
             style={{ fontSize: "clamp(36px,8vw,104px)", lineHeight: 0.9 }}
           >
-            The calls stop.{" "}
-            <span className="v3-accent-text">Challenge</span> what&apos;s inaccurate.
+            {site.hero.headline}
           </h1>
           <p
             className="v4-hero-copy mt-7"
@@ -87,7 +86,7 @@ export function HeroV4() {
             </Link>
           </div>
 
-          {/* evidence checks */}
+          {/* Topics and available next steps */}
           <ul className="mt-9 grid gap-2.5">
             {site.hero.bullets.map((b) => (
               <li key={b} className="flex items-center gap-3">
@@ -109,7 +108,7 @@ export function HeroV4() {
         >
           <Image
             src="/vance.png"
-            alt="Vance Dotson, consumer advocate"
+            alt="Vance Dotson"
             fill
             priority
             sizes="(min-width: 1024px) 44vw, 1px"

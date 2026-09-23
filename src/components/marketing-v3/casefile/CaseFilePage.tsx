@@ -73,16 +73,6 @@ function HeroCaseFile() {
             {site.hero.subhead}
           </p>
 
-          {/* rating token */}
-          <div className="mt-7 flex items-center gap-3">
-            <span aria-hidden style={{ color: "var(--v3-accent)", letterSpacing: 2 }}>
-              ★★★★★
-            </span>
-            <span className="v3-mono" style={{ fontSize: 13, color: "var(--v3-mut)" }}>
-              {site.hero.rating.stars} · {site.hero.rating.count}
-            </span>
-          </div>
-
           {/* CTAs */}
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link href={site.cta.primary.href} className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12 }}>

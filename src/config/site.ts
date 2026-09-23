@@ -19,9 +19,9 @@ export const site = {
   name: "Vance Dotson",
 
   seo: {
-    title: "Vance Dotson — Stop the collector calls. Hold them accountable.",
+    title: "FCRA & FDCPA Information | Vance Dotson",
     description:
-      "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. Watch how it works — free.",
+      "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
   },
 
   contact: {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { site } from "@/config/site-v3";
 
 /**
- * v4 header — the Case File nav PLUS the animated gold "beam" along the bottom
+ * v4 header — the launch navigation PLUS the animated gold "beam" along the bottom
  * edge. On phones (< md) the nav links / CTA / version toggle collapse into a
  * hamburger dropdown panel. Beam respects prefers-reduced-motion.
  */

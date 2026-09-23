@@ -3,8 +3,8 @@
 import { site } from "@/config/site-v3";
 
 /**
- * v4 trust strip — the "Combined" treatment (locked in): a fixed ON FILE tab +
- * two counter-scrolling lanes joined by `//`, with a seamless infinite loop
+ * v4 topic strip — the "Combined" treatment: a fixed FOCUS tab + two
+ * counter-scrolling lanes joined by `//`, with a seamless infinite loop
  * (content repeated so translateX(-50%) wraps with no jump). Hovering the strip
  * expands the band and grows the letters together; the word under the cursor
  * highlights in the accent (see `.v4-combo` rules in v3.css). Reduced-motion
@@ -12,12 +12,12 @@ import { site } from "@/config/site-v3";
  */
 const CREDS = site.trustBar;
 const TAGS = [
+  "Free strategy call",
+  "Credit-report guide",
+  "Oklahoma City, OK",
   "FCRA",
   "FDCPA",
-  "Real cases on tape",
-  "Since 2004",
-  "Real OKC office",
-  "Consumer advocate",
+  "Federal law information",
 ];
 
 const dup = <T,>(a: readonly T[]) => [...a, ...a];
@@ -102,7 +102,7 @@ export function TrustStripSection() {
             flex: "0 0 auto",
           }}
         />
-        ON FILE
+        FOCUS
       </div>
       <div
         className="min-w-0 flex-1"

@@ -5,7 +5,7 @@ import { Reveal } from "../../marketing-v3/shared/primitives";
 import { useRevealChildren, useScrollScene } from "../../marketing-v3/shared/hooks";
 
 /**
- * v4 "Statute // on the record" (the reframe gather scene). Scattered words
+ * v4 FCRA/FDCPA overview (the reframe gather scene). Scattered words
  * converge into "THE LAW IS ALREADY / ON YOUR SIDE" (line break after ALREADY).
  * Behind them: a drifting smoke layer + a fine line pattern. Once the words have
  * gathered (progress past the threshold) the container gets `.settled`, which

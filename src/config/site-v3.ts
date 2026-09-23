@@ -19,7 +19,7 @@ export const site = {
   seo: {
     title: "Vance Dotson: Challenge inaccurate credit information.",
     description:
-      "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. See the evidence, free.",
+      "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
   },
 
   contact: {
@@ -38,8 +38,9 @@ export const site = {
 
   nav: [
     { label: "The Law", href: "#reframe" },
-    { label: "Evidence", href: "#proof" },
+    { label: "How It Works", href: "#how" },
     { label: "FAQ", href: "#faq" },
+    { label: "Get Started", href: "#register" },
   ],
 
   announcement: {
@@ -52,29 +53,29 @@ export const site = {
   },
 
   trustBar: [
-    "Advocate since 2004",
-    "Real cases on tape",
-    "FCRA-focused support",
-    "Real OKC office",
+    "FCRA",
+    "FDCPA",
+    "Free credit-report guide",
+    "Oklahoma City, OK",
   ],
 
   // v3-only presentation chrome — the "Evidence Room" tech-noir dressing.
   // Purely cosmetic labels; no claims. ⚠️ case numbers are illustrative.
   ev: {
-    fileNo: "FILE No. FCRA-2004",
-    classification: "CONSUMER ADVOCACY // FEDERAL LAW",
-    established: "EST. 2004 · OKLAHOMA CITY",
+    fileNo: "FCRA + FDCPA",
+    classification: "FCRA + FDCPA // PUBLIC INFORMATION",
+    established: "OKLAHOMA CITY, OK",
     kickers: {
-      hero: "CASE FILE // OPEN",
-      pain: "EXHIBIT A // THE PATTERN",
-      reframe: "STATUTE // ON THE RECORD",
-      meet: "ON FILE // THE ADVOCATE",
-      mechanism: "PROCEDURE // 03 STEPS",
+      hero: "START HERE // FREE OPTIONS",
+      pain: "COLLECTIONS // COMMON CONCERNS",
+      reframe: "FCRA + FDCPA // OVERVIEW",
+      meet: "SERVICE FOCUS",
+      mechanism: "PROCESS // THREE STEPS",
       proofCalls: "EVIDENCE LOCKER // RECORDED CALLS",
       results: "LOG // DOCUMENTED OUTCOMES",
       testimonials: "STATEMENTS // ON THE RECORD",
       how: "INTAKE // GETTING STARTED",
-      faq: "CROSS-EXAMINATION // FAQ",
+      faq: "COMMON QUESTIONS // FAQ",
       risk: "TERMS // NO RISK",
       urgency: "CLOCK // TIME-SENSITIVE",
       register: "NEXT STEP // TWO FREE OPTIONS",
@@ -82,25 +83,23 @@ export const site = {
     // Hero "terminal" readout lines (decorative, factual).
     terminal: [
       "> statute: FCRA · FDCPA",
-      "> active since: 2004",
-      "> jurisdiction: Oklahoma City, OK",
-      "> status: taking cases",
+      "> options: credit-report guide · free call",
+      "> location: Oklahoma City, OK",
+      "> next step: yours to choose",
     ],
   },
 
   // SECTION 1 — Hero
   hero: {
-    headline: "The calls stop. Challenge what's inaccurate.",
+    headline: "Understand your options under federal law.",
     subhead:
-      "I'm Vance. Since 2004 I've gone after the bureaus and collectors who break the law, using the FCRA and FDCPA to challenge the inaccurate information wrecking your credit. Not weak letters. Real action.",
+      "The FCRA addresses credit-report accuracy, and the FDCPA addresses debt-collection practices. Start with the free credit-report guide or book a free strategy call to discuss possible next steps.",
     photoCaption: "Vance Dotson, Oklahoma City",
     bullets: [
-      "Stop the collector calls",
-      "Challenge the inaccurate items on your report",
-      "Challenge inaccurate, incomplete, or unverified information",
+      "Learn about credit-report accuracy under the FCRA",
+      "Learn about debt-collection practices under the FDCPA",
+      "Choose a free guide or strategy call",
     ],
-    // ⚠️ PLACEHOLDER — real aggregate proof (swap in Vance's true numbers).
-    rating: { stars: "4.9", count: "500+ Oklahomans helped" },
   },
 
   // SECTION 2 — Pain Mirror
@@ -150,7 +149,7 @@ export const site = {
       },
       {
         title: "You could push back this whole time.",
-        body: "Here's the part nobody says out loud: these laws already exist to protect you. No loophole. No trick. You just needed someone who knows how to use them, the way I have since 2004.",
+        body: "These federal laws address credit-report accuracy and debt-collection practices. A free guide and strategy call are available to discuss possible next steps.",
         imageHint: "Vance at his OKC office, reviewing a client's file",
       },
     ],
@@ -158,12 +157,12 @@ export const site = {
 
   // SECTION 4 — Meet Vance
   meetVance: {
-    heading: "I'm Vance Dotson.",
+    heading: "Credit-report and debt-collection information.",
     body: [
-      "I've been a consumer advocate since 2004. I've spoken at national consumer-advocate conferences. I know the FCRA and FDCPA cold, and I use them to go after the bureaus and collectors who think the rules don't apply to them.",
-      "I'm not a call center. I'm a real person, with a real office, who takes this personally.",
+      "The FCRA and FDCPA are federal laws concerning credit-report accuracy and debt-collection practices.",
+      "A free strategy call is available to discuss your situation and possible next steps. Vance Dotson is based in Oklahoma City, Oklahoma.",
     ],
-    signoff: "Real person. Real office. Real cases.",
+    signoff: "Free guide · Free strategy call · Oklahoma City, Oklahoma",
     stats: [
       { value: "20+", label: "years since 2004" },
       { value: "FCRA + FDCPA", label: "the laws I use" },
@@ -280,7 +279,7 @@ export const site = {
   faq: [
     {
       q: "Is this a scam?",
-      a: "Fair question. You've probably been burned before. I'm a real, named advocate who's been doing this since 2004, out of a real office in Oklahoma City. You don't have to trust me. Trust the recorded calls and the results.",
+      a: "Fair question. Start with the free credit-report guide or book a free strategy call to discuss your questions and possible next steps. There is no obligation to move forward.",
     },
     {
       q: "Is this even legal?",
@@ -296,7 +295,7 @@ export const site = {
     },
     {
       q: "Will I be judged?",
-      a: "Never. I've seen it all and none of it surprises me. You're not the problem here. The system broke its own rules.",
+      a: "The free strategy call is a chance to discuss your questions and possible next steps. You can decide whether to move forward.",
     },
   ],
 
@@ -305,7 +304,7 @@ export const site = {
     heading: "You've got nothing to lose by looking.",
     points: [
       "The strategy call is free.",
-      "No judgment. I've seen it all.",
+      "No judgment. Discuss only the questions you want to raise.",
       "No obligation.",
       "Worst case: you learn exactly where you stand.",
     ],

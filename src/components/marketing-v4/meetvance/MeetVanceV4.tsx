@@ -5,11 +5,7 @@ import { site } from "@/config/site-v3";
 import { Kicker, Reveal, SectionScan } from "../../marketing-v3/shared/primitives";
 import { useRevealChildren } from "../../marketing-v3/shared/hooks";
 
-/**
- * v4 "On file // The advocate" (Meet Vance). The left side is now a full-height
- * photo container that matches the hero's right-side treatment exactly (feathered
- * edges that dissolve into the page, a bottom/side gradient, a mono caption).
- */
+/** Factual overview of the public service focus and available call. */
 export function MeetVanceV4() {
   const ref = useRevealChildren<HTMLDivElement>();
   return (
@@ -42,7 +38,7 @@ export function MeetVanceV4() {
           {/* Vance on top, feathered on the sides + bottom so he melts into it */}
           <Image
             src="/vance2.png"
-            alt="Vance Dotson, consumer advocate"
+            alt="Vance Dotson"
             fill
             sizes="(min-width: 1024px) 42vw, 90vw"
             className="object-cover"
@@ -89,29 +85,6 @@ export function MeetVanceV4() {
               </p>
             </Reveal>
           ))}
-          <div
-            className="mt-8 grid gap-px sm:grid-cols-3"
-            style={{ background: "var(--v3-line-soft)" }}
-          >
-            {site.meetVance.stats.map((s, i) => (
-              <div
-                key={i}
-                className="v3-reveal px-4 py-5"
-                data-delay={((i % 3) + 1) as 1 | 2 | 3}
-                style={{ background: "var(--v3-bg)" }}
-              >
-                <div className="v3-display" style={{ fontSize: 30, color: "var(--v3-accent)" }}>
-                  {s.value}
-                </div>
-                <div
-                  className="v3-mono mt-2"
-                  style={{ fontSize: 10.5, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--v3-faint)" }}
-                >
-                  {s.label}
-                </div>
-              </div>
-            ))}
-          </div>
           <Reveal className="mt-6">
             <p className="v3-serif-em" style={{ fontSize: 20, color: "var(--v3-ink)" }}>
               {site.meetVance.signoff}

@@ -90,9 +90,6 @@ function HeroLedger() {
             >
               {site.cta.secondary.label} →
             </Link>
-            <span className="v3-mono" style={{ fontSize: 12.5, color: "var(--v3-mut)" }}>
-              ★★★★★ {site.hero.rating.stars} · {site.hero.rating.count}
-            </span>
           </div>
 
           <p

@@ -5,8 +5,8 @@ import { COLLECTORS } from "@/config/collector-quiz";
 import { site } from "@/config/site-v3";
 
 /**
- * "Know the playbook" — a two-column education section between the testimonials
- * ("on the record") and the getting-started/intake section. Left: how these
+ * "Know the playbook" — a two-column educational section before how-it-works.
+ * Left: how these
  * debt buyers operate (honest, no fake scarcity; general to the category, never
  * a claim about a specific company). Right: a bento of collector name-tiles that
  * wobble on hover, anchored by a feature CTA cell. (Swap tiles for real logo
