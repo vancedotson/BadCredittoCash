@@ -12,6 +12,8 @@ import { isCrmDemoMode } from "./demo";
 import { LIVE_EMAIL_TEMPLATES, isLiveEmailTemplate } from "@/config/live-sequences";
 import { mergeLiveEmailFields, type LiveMessagePayload } from "./live-email-fields";
 import { isProductionEmailMode } from "./email-mode";
+import { getBookingEmailConfiguration } from "./email-configuration";
+import { BOOKING_LIFECYCLE_EMAILS } from "@/config/booking-email-copy";
 import {
   isOutboundEmailAllowed,
   isOutboundEmailMarketing,
@@ -53,21 +55,9 @@ function resolveSequence(sequenceId: string) {
 
 function resolveTemplate(templateKey: string): SequenceEmail | null {
   if (isLiveEmailTemplate(templateKey)) return LIVE_EMAIL_TEMPLATES[templateKey];
-  if (templateKey.startsWith("booking_rescheduled:")) return {
-    delay: "immediately",
-    subject: "Your call has been rescheduled.",
-    body: "Your new call time is {{appointment_time}} ({{timezone}}). Have your reports and any collector messages handy. If anything else changes, reply to this email.",
-  };
-  if (templateKey.startsWith("booking_reminder:")) return {
-    delay: "1 day before",
-    subject: "Reminder: your call is coming up.",
-    body: "We're scheduled for {{appointment_time}} ({{timezone}}). Have your reports and any collector messages handy so we can make the most of the call.",
-  };
-  if (templateKey.startsWith("booking_cancelled:")) return {
-    delay: "immediately",
-    subject: "Your call has been cancelled.",
-    body: "Your call scheduled for {{appointment_time}} ({{timezone}}) has been cancelled. If you want to choose another time, use this link: {{call_link}}.",
-  };
+  if (templateKey.startsWith("booking_rescheduled:")) return BOOKING_LIFECYCLE_EMAILS.rescheduled;
+  if (templateKey.startsWith("booking_reminder:")) return BOOKING_LIFECYCLE_EMAILS.reminder;
+  if (templateKey.startsWith("booking_cancelled:")) return BOOKING_LIFECYCLE_EMAILS.cancelled;
   // Booking onboarding keys carry the booking ID so a repeat booking creates a
   // fresh provider idempotency key instead of replaying the first confirmation.
   const match = templateKey.match(/^(.+):(\d+)(?::.+)?$/);
@@ -238,11 +228,15 @@ async function deliverClaimedMessage(
   const actualRecipient = testMode
     ? process.env.EMAIL_TEST_RECIPIENT
     : intendedRecipient;
-  const from = process.env.EMAIL_FROM ?? "Bad Credit to Cash <updates@updates.badcredittocash.com>";
+  const emailConfiguration = getBookingEmailConfiguration();
   const apiKey = process.env.RESEND_API_KEY;
 
-  if (!apiKey || !actualRecipient) {
-    const reason = !apiKey ? "RESEND_API_KEY is not configured" : "EMAIL_TEST_RECIPIENT is not configured";
+  if (!apiKey || !actualRecipient || !emailConfiguration) {
+    const reason = !apiKey
+      ? "RESEND_API_KEY is not configured"
+      : !actualRecipient
+        ? "EMAIL_TEST_RECIPIENT is not configured"
+        : "EMAIL_FROM or EMAIL_REPLY_TO is missing or invalid";
     await failMessage(claimed.id, reason, false);
     console.error(`[email] ${reason}`);
     return "failed";
@@ -269,7 +263,8 @@ async function deliverClaimedMessage(
   try {
     const { data, error } = await resend.emails.send(
       {
-        from,
+        from: emailConfiguration.from,
+        replyTo: emailConfiguration.replyTo,
         to: actualRecipient,
         subject,
         text: body,

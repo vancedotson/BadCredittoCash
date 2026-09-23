@@ -29,6 +29,7 @@
     "LIVE_WEBINAR_ENABLED": "false",
     "CLOUDFLARE_STREAM_ENABLED": "false",
     "EMAIL_FROM": "Bad Credit to Cash <updates@updates.badcredittocash.com>",
+    "EMAIL_REPLY_TO": "vance@vancethecreditdoctor.com",
     "APP_BASE_URL": "https://badcredittocash.com",
     "GOOGLE_CALENDAR_ACCOUNT_EMAIL": "vancedotson84@gmail.com",
     "GOOGLE_CALENDAR_TIMEZONE": "America/Chicago",

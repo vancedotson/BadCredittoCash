@@ -79,9 +79,11 @@ Do not edit or delete an already-applied migration and do not attempt an unrevie
 
 1. Open CRM **System health** and **Sequences**.
 2. Check whether the queue is retrying or permanently failed.
-3. Check Resend delivery status and Cloudflare Worker logs.
-4. Suppress a contact before retrying if sending to that person would be unsafe.
-5. Do not resend restored pending messages automatically.
+3. Confirm the runtime `EMAIL_MODE`, `EMAIL_FROM`, and `EMAIL_REPLY_TO` settings are present and valid without copying values or secrets into logs or incident notes. The sender must be a Resend-authorized mailbox; booking replies are routed to the configured reply-to mailbox.
+4. Public booking creation returns a generic 503 before rate limiting, calendar reservation, CRM writes, or automation unless `EMAIL_MODE` is exactly `production` and both sender and reply-to are valid. Do not switch modes as an incident workaround; test mode is an intentional pre-launch block.
+5. Check Resend delivery status and Cloudflare Worker logs only when an authorized production delivery is already active.
+6. Suppress a contact before retrying if sending to that person would be unsafe.
+7. Do not resend restored pending messages automatically.
 
 ### Booking or Google Calendar fails
 

@@ -123,6 +123,8 @@ Acceptance criteria:
 
 Status: `[~] In progress — Resend delivery, durable scheduling, verified delivery/engagement webhooks, segment progression, and booking cancellation are live in safe test mode`
 
+Launch gate: the checked-in Worker remains in `EMAIL_MODE=test`; public booking POSTs therefore return 503 without side effects. Booking creation is enabled only when the mode is exactly `production` and both `EMAIL_FROM` and `EMAIL_REPLY_TO` are valid. The checked-in reply-to is `vance@vancethecreditdoctor.com`; every allowed transactional booking delivery includes it in the Resend payload. The only customer email family permitted by the current launch flags is booking/onboarding transaction mail; marketing, evergreen training, and webinar delivery remain disabled.
+
 Problem: sequence enrollment currently records an `email_queued` event only. Nothing schedules or sends.
 
 - [x] Connect Resend in safe testing mode (all messages redirect to Ana's verified Resend inbox).
@@ -142,6 +144,7 @@ Problem: sequence enrollment currently records an `email_queued` event only. Not
 Acceptance criteria:
 
 - Each qualifying contact receives the right message once and at the right time.
+- Do not activate booking until the sender is Resend-authorized, the reply mailbox is monitored, final booking copy is approved, and the explicit launch authorization is recorded.
 - Booking or unsubscribe cancels incompatible future messages.
 - Delivery state is visible on the contact timeline.
 - Bounces and complaints are suppressed automatically.

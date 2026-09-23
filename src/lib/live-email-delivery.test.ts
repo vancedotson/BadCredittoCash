@@ -43,7 +43,7 @@ function queue(template = "live_confirmation:1", content = payload(), id = "mess
 
 function sentContent(index = 0) {
   return mocked.send.mock.calls[index][0] as {
-    to: string; subject: string; text: string; html: string; headers?: Record<string, string>;
+    from: string; replyTo: string; to: string; subject: string; text: string; html: string; headers?: Record<string, string>;
   };
 }
 
@@ -59,6 +59,8 @@ beforeEach(() => {
   vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "false");
   vi.stubEnv("MARKETING_EMAILS_ENABLED", "false");
   vi.stubEnv("EMAIL_MODE", "production");
+  vi.stubEnv("EMAIL_FROM", "Bad Credit to Cash <updates@updates.badcredittocash.com>");
+  vi.stubEnv("EMAIL_REPLY_TO", "vance@vancethecreditdoctor.com");
   vi.stubEnv("APP_BASE_URL", "https://example.test/");
   vi.stubEnv("RESEND_API_KEY", "mocked-resend-key");
   vi.stubEnv("EMAIL_SIGNING_SECRET", "test-only-live-email-signing-secret-not-a-real-secret");
@@ -289,6 +291,7 @@ describe("live email delivery integration", () => {
     const eventC = "44444444-4444-4444-8444-444444444444";
     queue("pre_webinar:1", {}, "blocked-evergreen");
     queue(`onboarding:1:${bookingId}`, { startsAt: "2026-10-15T18:00:00Z", timezone: "America/New_York", bookingId }, "booking-confirmation");
+    queue(`onboarding:2:${bookingId}`, { startsAt: "2026-10-15T18:00:00Z", timezone: "America/New_York", bookingId }, "booking-onboarding-reminder");
     queue(`booking_rescheduled:${bookingId}:${eventA}`, { startsAt: "2026-10-16T18:00:00Z", timezone: "America/New_York" }, "booking-rescheduled");
     queue(`booking_reminder:${bookingId}:${eventB}`, { startsAt: "2026-10-17T18:00:00Z", timezone: "America/New_York" }, "booking-reminder");
     queue(`booking_cancelled:${bookingId}:${eventC}`, { startsAt: "2026-10-18T18:00:00Z", timezone: "America/New_York" }, "booking-cancelled");
@@ -298,28 +301,39 @@ describe("live email delivery integration", () => {
     await vi.runAllTimersAsync();
     const result = await processing;
 
-    expect(result).toMatchObject({ claimed: 6, processed: 6, sent: 4, cancelled: 2, failed: 0, skipped: 0 });
-    expect(mocked.send).toHaveBeenCalledTimes(4);
-    expect(mocked.resendConstructed).toHaveBeenCalledTimes(4);
+    expect(result).toMatchObject({ claimed: 7, processed: 7, sent: 5, cancelled: 2, failed: 0, skipped: 0 });
+    expect(mocked.send).toHaveBeenCalledTimes(5);
+    expect(mocked.resendConstructed).toHaveBeenCalledTimes(5);
     expect(mocked.createUnsubscribeToken).not.toHaveBeenCalled();
     expect(messageStates.get("blocked-evergreen")).toMatchObject({ status: "cancelled", last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON });
     expect(messageStates.get("blocked-nurture")).toMatchObject({ status: "cancelled", last_error: OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON });
     expect(mocked.rpc.mock.calls.some(([name]) => name === "fail_scheduled_email")).toBe(false);
 
     const sent = mocked.send.mock.calls.map(([message]) => message as { subject: string; text: string; headers?: Record<string, string> });
+    expect(mocked.send.mock.calls.map(([message]) => (message as { replyTo: string }).replyTo))
+      .toEqual(Array(5).fill("vance@vancethecreditdoctor.com"));
     expect(sent[0].text).toContain("October 15");
     expect(sent[0].text).toContain("America/New_York");
     expect(sent[0].text).not.toContain("{{");
-    expect(sent[1].text).toContain("October 16");
-    expect(sent[2].text).toContain("October 17");
-    expect(sent[3].text).toContain("October 18");
+    expect(sent[1].text).toContain("October 15");
+    expect(sent[2].text).toContain("October 16");
+    expect(sent[3].text).toContain("October 17");
+    expect(sent[4].text).toContain("October 18");
+    expect(sent.map(({ subject }) => subject)).toEqual([
+      "Your call is booked. Do these 3 things first.",
+      "Reminder: your call is coming up.",
+      "Your call has been rescheduled.",
+      "Reminder: your call is coming up.",
+      "Your call has been cancelled.",
+    ]);
+    expect(sent.every(({ text }) => !/\b(?:video|webinar|training|watch|recording|guarantee|erase|urgent|pay now)\b/i.test(text))).toBe(true);
     expect(sent.every((message) => !message.headers?.["List-Unsubscribe"])).toBe(true);
-    expect(mocked.recordEvent).toHaveBeenCalledTimes(4);
+    expect(mocked.recordEvent).toHaveBeenCalledTimes(5);
     expect(mocked.recordEvent.mock.calls.every(([event]) => (event as { event: string }).event === "email_sent")).toBe(true);
 
     queue("pre_webinar:1", {}, "blocked-evergreen");
     expect(await processDueEmails()).toMatchObject({ claimed: 0, processed: 0, cancelled: 0, sent: 0 });
-    expect(mocked.send).toHaveBeenCalledTimes(4);
+    expect(mocked.send).toHaveBeenCalledTimes(5);
   });
 
   it("manual retry atomically cancels a disallowed marketing message and preserves booking retry", async () => {
@@ -440,6 +454,22 @@ describe("live email delivery integration", () => {
     expect(await processDueEmails()).toMatchObject({ failed: 1, sent: 0 });
     expect(mocked.send).not.toHaveBeenCalled();
     expect(mocked.rpc).toHaveBeenCalledWith("fail_scheduled_email", expect.objectContaining({ p_retryable: false }));
+  });
+
+  it.each([
+    ["EMAIL_FROM", ""],
+    ["EMAIL_FROM", "Sender <invalid>"],
+    ["EMAIL_REPLY_TO", ""],
+    ["EMAIL_REPLY_TO", "not-an-address"],
+  ])("fails a queued booking before provider dispatch when %s is invalid", async (key, value) => {
+    vi.stubEnv(key, value);
+    failureOutcome = { outcome: "failed", attempts: 1, retry_at: null };
+    queue("onboarding:1", { startsAt: "2026-10-20T15:00:00Z", timezone: "America/Chicago" });
+
+    expect(await processDueEmails()).toMatchObject({ failed: 1, sent: 0 });
+    expect(mocked.resendConstructed).not.toHaveBeenCalled();
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.recordEvent).not.toHaveBeenCalled();
   });
 
   it("dead-letters an invalid live rendering payload and continues to the next legacy delivery", async () => {

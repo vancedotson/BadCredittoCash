@@ -19,6 +19,8 @@ function request(body: unknown, headers: Record<string, string> = {}) { return n
 
 beforeEach(() => {
   vi.stubEnv("EMAIL_MODE", "production");
+  vi.stubEnv("EMAIL_FROM", "Bad Credit to Cash <updates@updates.badcredittocash.com>");
+  vi.stubEnv("EMAIL_REPLY_TO", "vance@vancethecreditdoctor.com");
   vi.resetAllMocks();
   mocks.session.mockResolvedValue({ id: sessionId, status: "scheduled" });
   mocks.participant.mockResolvedValue({ registrationId, sessionId, email: booking.email });
@@ -48,6 +50,24 @@ describe("email mode readiness gate", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("retry-after")).toBe("300");
     expect(await response.json()).toEqual({ error: "This service is temporarily unavailable. Please try again later." });
+    for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["missing sender", undefined, "vance@vancethecreditdoctor.com"],
+    ["blank sender", "", "vance@vancethecreditdoctor.com"],
+    ["malformed sender", "Sender <invalid>", "vance@vancethecreditdoctor.com"],
+    ["missing reply-to", "Bad Credit to Cash <updates@updates.badcredittocash.com>", undefined],
+    ["malformed reply-to", "Bad Credit to Cash <updates@updates.badcredittocash.com>", "not-an-address"],
+    ["reply-to without a public domain", "Bad Credit to Cash <updates@updates.badcredittocash.com>", "reply@localhost"],
+  ])("rejects booking before every side effect when the %s configuration is unavailable", async (_name, from, replyTo) => {
+    vi.stubEnv("EMAIL_FROM", from);
+    vi.stubEnv("EMAIL_REPLY_TO", replyTo);
+
+    const response = await POST(request(booking));
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
     for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
   });
 

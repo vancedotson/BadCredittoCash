@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { parse } from "comment-json";
 import { describe, expect, it } from "vitest";
 import { PUBLIC_SITE_ORIGIN } from "@/config/public-site";
+import { isBookingEmailConfigurationReady } from "@/lib/email-configuration";
 
 type WranglerConfig = {
   vars?: {
@@ -12,6 +13,8 @@ type WranglerConfig = {
     EVERGREEN_TRAINING_ENABLED?: string;
     LIVE_WEBINAR_ENABLED?: string;
     CLOUDFLARE_STREAM_ENABLED?: string;
+    EMAIL_FROM?: string;
+    EMAIL_REPLY_TO?: string;
   };
 };
 
@@ -38,8 +41,11 @@ describe("public site origin configuration", () => {
 
     expect(wranglerConfig.vars?.APP_BASE_URL).toBe(PUBLIC_SITE_ORIGIN);
     expect(wranglerConfig.vars?.APP_BASE_URL).not.toMatch(/\/$/);
+    expect(isBookingEmailConfigurationReady(wranglerConfig.vars)).toBe(true);
     expect(wranglerConfig.vars?.MARKETING_EMAILS_ENABLED).toBe("false");
     expect(wranglerConfig.vars?.EMAIL_MODE).toBe("test");
+    expect(wranglerConfig.vars?.EMAIL_REPLY_TO).toBe("vance@vancethecreditdoctor.com");
+    expect(wranglerConfig.vars?.EMAIL_FROM).toMatch(/^Bad Credit to Cash <[^<>\s]+@[^<>\s]+>$/);
     expect(wranglerConfig.vars?.EVERGREEN_TRAINING_ENABLED).toBe("false");
     expect(wranglerConfig.vars?.LIVE_WEBINAR_ENABLED).toBe("false");
     expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_ENABLED).toBe("false");
