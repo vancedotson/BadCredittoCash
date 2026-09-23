@@ -6,6 +6,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({
 import { findCreditReportSession, saveCreditReport, type CreditReportSession } from "./credit-reports";
 
 const session: CreditReportSession = { id: "891e5660-352e-4487-aeae-aeb9b9b1c100", submissionId: "891e5660-352e-4487-aeae-aeb9b9b1c101", contactId: "891e5660-352e-4487-aeae-aeb9b9b1c102", tokenHash: "a".repeat(64), mode: "live", expiresAt: "2099-01-01T00:00:00Z" };
+const previousObjectPath = `${session.contactId}/${session.id}/891e5660-352e-4487-aeae-aeb9b9b1c103.pdf`;
 const pdf = new TextEncoder().encode("%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n");
 function query(data: unknown, error: unknown = null) {
   const result = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data, error }), upsert: vi.fn().mockResolvedValue({ data: null, error }) };
@@ -18,31 +19,33 @@ describe("private live report persistence", () => {
     mocks.upload.mockResolvedValue({ data: {}, error: null }); mocks.remove.mockResolvedValue({ data: [], error: null }); mocks.rpc.mockResolvedValue({ data: true, error: null });
   });
   afterEach(() => { vi.unstubAllEnvs(); });
-  it("stores the private PDF before committing metadata, then removes only the replaced object", async () => {
-    const previous = query({ object_path: "previous-private.pdf" }); const commit = query(null);
+  it("stores the private PDF, queues only the replaced object, then commits new metadata", async () => {
+    const previous = query({ object_path: previousObjectPath }); const commit = query(null);
     mocks.from.mockReturnValueOnce(previous).mockReturnValueOnce(commit);
     const saved = await saveCreditReport(session, "equifax", "report.pdf", pdf);
     expect(saved.bureau).toBe("equifax");
     expect(mocks.upload).toHaveBeenCalledWith(expect.stringContaining(`${session.contactId}/${session.id}/`), pdf, expect.objectContaining({ upsert: false, contentType: "application/pdf" }));
     expect(mocks.upload.mock.invocationCallOrder[0]).toBeLessThan(commit.upsert.mock.invocationCallOrder[0]);
-    expect(commit.upsert.mock.invocationCallOrder[0]).toBeLessThan(mocks.remove.mock.invocationCallOrder[0]);
-    expect(mocks.remove).toHaveBeenCalledWith(["previous-private.pdf"]);
+    expect(mocks.rpc).toHaveBeenNthCalledWith(2, "enqueue_credit_report_obsolete_object_v1", { p_contact_id: session.contactId, p_object_path: previousObjectPath });
+    expect(mocks.rpc.mock.invocationCallOrder[1]).toBeLessThan(commit.upsert.mock.invocationCallOrder[0]);
+    expect(mocks.remove).not.toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, "begin_credit_report_upload_v1", expect.objectContaining({ p_session_id: session.id }));
-    expect(mocks.rpc).toHaveBeenNthCalledWith(2, "finish_credit_report_upload_v1", expect.objectContaining({ p_attempt_id: saved.id }));
+    expect(mocks.rpc).toHaveBeenNthCalledWith(3, "finish_credit_report_upload_v1", expect.objectContaining({ p_attempt_id: saved.id }));
     expect(mocks.rpc.mock.invocationCallOrder[0]).toBeLessThan(mocks.upload.mock.invocationCallOrder[0]);
   });
   it("does not publish metadata or remove the previous report if the file write fails", async () => {
-    const previous = query({ object_path: "previous-private.pdf" });
+    const previous = query({ object_path: previousObjectPath });
     mocks.from.mockReturnValue(previous); mocks.upload.mockResolvedValue({ data: null, error: { message: "failed upload" } });
     await expect(saveCreditReport(session, "transunion", "report.pdf", pdf)).rejects.toThrow("could not be stored");
     expect(previous.upsert).not.toHaveBeenCalled(); expect(mocks.remove).not.toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
   });
   it("preserves the previous file after metadata failure and does not delete an ambiguously committed new file", async () => {
-    mocks.from.mockReturnValueOnce(query({ object_path: "previous-private.pdf" })).mockReturnValueOnce(query(null, { message: "write failed" }));
+    mocks.from.mockReturnValueOnce(query({ object_path: previousObjectPath })).mockReturnValueOnce(query(null, { message: "write failed" }));
     await expect(saveCreditReport(session, "experian", "report.pdf", pdf)).rejects.toThrow("receipt could not be saved");
     expect(mocks.remove).not.toHaveBeenCalled();
-    expect(mocks.rpc).toHaveBeenLastCalledWith("finish_credit_report_upload_v1", expect.any(Object));
+    expect(mocks.rpc).toHaveBeenLastCalledWith("enqueue_credit_report_obsolete_object_v1", expect.any(Object));
+    expect(mocks.rpc).not.toHaveBeenCalledWith("finish_credit_report_upload_v1", expect.any(Object));
   });
   it("rejects a capability for a deleted/trashed contact even while its metadata is retained", async () => {
     mocks.from.mockReturnValueOnce(query({ id: session.id, submission_id: session.submissionId, contact_id: session.contactId, token_hash: session.tokenHash, expires_at: session.expiresAt })).mockReturnValueOnce(query(null));

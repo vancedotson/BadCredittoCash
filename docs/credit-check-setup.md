@@ -134,8 +134,17 @@ operator verifies that the remote write has finished, reconciles any private
 object, and marks the attempt complete. Do not expire or clear pending attempts
 on a timer: doing so could permit a late write after a purported deletion.
 
-CRM JSON backups and privacy JSON exports do not contain PDF bytes. Back up private
-Storage separately with its receipt metadata when designing the live backup plan.
+The CRM relational JSON backup and privacy JSON exports exclude PDF bytes and
+credit-report receipt metadata. The project currently has no independent recovery
+guarantee for uploaded reports. Do not represent the CRM JSON as a full-system
+backup; a separate report-file recovery plan requires a later client decision.
+
+Interrupted report uploads are reconciled only after 24 hours without activity and
+an expired upload lease. Recent or uncertain attempts continue to block permanent
+contact deletion. The maintenance cron and admin-only bounded reconciliation
+endpoint inspect/remove only registered exact object paths; do not manually clear
+attempts or disable the workflow to bypass a purge blocker. See the operations
+runbook for safe dry-run and escalation instructions.
 
 The dedicated `submit_credit_check_v1` RPC atomically adds a new contact when needed,
 an event containing the submitted contact details and selected companies, and a

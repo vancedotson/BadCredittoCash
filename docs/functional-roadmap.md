@@ -85,8 +85,8 @@ Data behavior:
 - [x] Use transactions for lead registration, event recording, and automation enrollment. Registration, identity aliasing, event creation, and durable pre-webinar enrollment now commit in one database transaction.
 - [~] Implement migrations and a repeatable local/test seed separate from production. Migrations are live; an optional local-only seed remains.
 - [~] Replace every in-memory store function without changing callers unnecessarily. Contact CRUD, pipeline moves, ownership, notes, tasks, recurrence creation, tags, and bulk contact mutations now use Supabase; settings, sequences, booking, and automation remain.
-- [x] Add backup/export and restore procedures. Full relational JSON backup, validation preview, and atomic restore verified on 2026-08-11.
-- [x] Define data retention and deletion behavior. Contact suppression, privacy export, recoverable Trash, permanent deletion, and backup/restore behavior are implemented and verified.
+- [x] Add CRM database export and restore procedures. Relational JSON export, validation preview, and atomic database restore verified on 2026-08-11. The export excludes credit-report PDFs and their report metadata; those files currently have no independent recovery guarantee.
+- [x] Define CRM data retention and deletion behavior. Contact suppression, privacy export, recoverable Trash, permanent deletion, and relational backup/restore behavior are implemented and verified. Credit-report file retention remains as currently implemented pending a client decision; independent file recovery is not guaranteed.
 
 Acceptance criteria:
 

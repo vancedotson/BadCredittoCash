@@ -1624,7 +1624,7 @@ export async function getStoreStatus(): Promise<StoreStatus> {
   };
 }
 
-/** Everything in the store, for a full JSON export/backup. */
+/** CRM relational data for the JSON export; private credit-report files/metadata are excluded. */
 export async function exportAllData(): Promise<{ leads: Lead[]; events: BehaviourEvent[]; notes: Note[]; tasks: Task[]; settings: CrmSettings }> {
   await hydrateStore();
   await getSettings();

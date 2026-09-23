@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "./supabase/admin";
+import { reconcileCreditReportArtifacts } from "./credit-report-reconciliation";
 
 const CONTACT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BUCKET = "credit-reports";
@@ -15,13 +16,24 @@ export async function hasContactReportPurgeStarted(contactId: string): Promise<b
 export async function removeContactCreditReportFiles(contactId: string): Promise<boolean> {
   if (!CONTACT_ID.test(contactId)) throw new Error("Invalid contact identifier.");
   const supabase = createAdminClient();
-  const { data: preparation, error: prepareError } = await supabase.rpc("begin_credit_report_purge_v1", { p_contact_id: contactId });
+  const preparePurge = async () => supabase.rpc("begin_credit_report_purge_v1", { p_contact_id: contactId });
+  let { data: preparation, error: prepareError } = await preparePurge();
   if (prepareError || !preparation || typeof preparation.found !== "boolean" || typeof preparation.pending !== "number") {
     throw new Error("Could not prepare report deletion. Nothing has been permanently deleted.");
   }
   if (!preparation.found) return false;
   if (preparation.pending > 0) {
-    throw new Error("A report upload is still finishing. Please retry deletion after it finishes.");
+    // Purge has already blocked new sessions. Reconcile only stale registered
+    // attempts; recent/in-flight work remains a blocker and fails closed.
+    await reconcileCreditReportArtifacts({ limit: 25, contactId });
+    ({ data: preparation, error: prepareError } = await preparePurge());
+    if (prepareError || !preparation || typeof preparation.found !== "boolean" || typeof preparation.pending !== "number") {
+      throw new Error("Could not prepare report deletion. Nothing has been permanently deleted.");
+    }
+    if (!preparation.found) return false;
+    if (preparation.pending > 0) {
+      throw new Error("A recent or uncertain report upload is still finishing. Please retry deletion later.");
+    }
   }
 
   const storage = supabase.storage.from(BUCKET);

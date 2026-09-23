@@ -491,10 +491,10 @@ export function DataManagement({ status }: { status: Status }) {
         <a href="/api/crm/export" className={BTN_GHOST}>Export contacts (CSV)</a>
       </div></div>
       <p className="rounded-lg border border-mist bg-cloud/50 p-3 text-xs text-slate">
-        This backup contains CRM records and settings. Uploaded credit-report PDFs need a separate storage backup. Passwords, API keys, and Google credentials are never included.
+        This relational CRM JSON backup contains the included database records and settings only. It excludes credit-report PDF files and their report metadata; those files currently have no independent recovery guarantee. Passwords, API keys, and Google credentials are never included.
       </p>
       <div className="space-y-3 rounded-xl border border-red/30 bg-red/5 p-4">
-        <div><div className="mb-1 inline-flex rounded-full bg-red/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red">Danger zone</div><h3 className="text-sm font-semibold text-heading">Restore a full backup</h3><p className="mt-1 text-xs text-slate">Validation is read-only. The final restore replaces current CRM records in one database transaction.</p></div>
+        <div><div className="mb-1 inline-flex rounded-full bg-red/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-red">Danger zone</div><h3 className="text-sm font-semibold text-heading">Restore a CRM database backup</h3><p className="mt-1 text-xs text-slate">This relational JSON snapshot does not restore credit-report PDFs or their report metadata. Validation is read-only; the final restore replaces its included CRM records in one database transaction.</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <input type="file" accept="application/json,.json" aria-label="Choose backup file" onChange={(event) => { setFile(event.target.files?.[0] ?? null); setPreview(null); setBackup(null); setConfirmation(""); setError(""); }} className="max-w-full text-sm text-body file:mr-3 file:rounded-lg file:border file:border-mist file:bg-card file:px-3 file:py-2 file:text-sm file:text-body" />
           <button type="button" disabled={!file || working} onClick={previewRestore} className={BTN_GHOST}>{working && !preview ? "Validating…" : "Validate backup"}</button>

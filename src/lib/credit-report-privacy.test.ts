@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), storageFrom: vi.fn(), list: vi.fn(), remove: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), storageFrom: vi.fn(), list: vi.fn(), remove: vi.fn(), reconcile: vi.fn() }));
 vi.mock("./supabase/admin", () => ({ createAdminClient: () => ({ rpc: mocks.rpc, storage: { from: mocks.storageFrom } }) }));
+vi.mock("./credit-report-reconciliation", () => ({ reconcileCreditReportArtifacts: mocks.reconcile }));
 
 import { purgeContact } from "./contact-privacy";
 
@@ -11,6 +12,7 @@ const sessionId = "22222222-2222-4222-8222-222222222222";
 describe("permanent credit report deletion", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.reconcile.mockResolvedValue({ failed: 0 });
     mocks.rpc.mockImplementation(async (name: string) => name === "begin_credit_report_purge_v1"
       ? { data: { found: true, pending: 0 }, error: null }
       : { data: true, error: null });
@@ -35,8 +37,23 @@ describe("permanent credit report deletion", () => {
   it("preserves the contact and metadata while an upload outcome is pending", async () => {
     mocks.rpc.mockResolvedValue({ data: { found: true, pending: 1 }, error: null });
     await expect(purgeContact(contactId)).rejects.toThrow("still finishing");
+    expect(mocks.reconcile).toHaveBeenCalledWith({ limit: 25, contactId });
     expect(mocks.storageFrom).not.toHaveBeenCalled();
-    expect(mocks.rpc).toHaveBeenCalledOnce();
+    expect(mocks.rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it("reconciles stale attempts after purge revocation, then continues only when no pending attempt remains", async () => {
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "begin_credit_report_purge_v1") {
+        return { data: { found: true, pending: mocks.rpc.mock.calls.filter(([called]) => called === name).length === 1 ? 1 : 0 }, error: null };
+      }
+      if (name === "purge_crm_contact_v1") return { data: true, error: null };
+      return { data: true, error: null };
+    });
+    expect(await purgeContact(contactId)).toBe(true);
+    expect(mocks.reconcile).toHaveBeenCalledWith({ limit: 25, contactId });
+    expect(mocks.storageFrom).toHaveBeenCalledWith("credit-reports");
+    expect(mocks.rpc.mock.calls.at(-1)?.[0]).toBe("purge_crm_contact_v1");
   });
 
   it("does not report success or erase metadata if Storage refuses a file deletion", async () => {

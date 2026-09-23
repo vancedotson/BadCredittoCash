@@ -8,6 +8,7 @@ import { reconcileGoogleCalendarBookings } from "@/lib/google-calendar";
 import { syncCrmNotifications } from "@/lib/store";
 import { cleanupAnonymousAnalytics } from "@/lib/analytics-retention";
 import { sendDailyOverdueDigest } from "@/lib/overdue-digest";
+import { reconcileCreditReportArtifacts } from "@/lib/credit-report-reconciliation";
 
 function authorized(request: Request): boolean {
   const expected = process.env.CRON_SECRET;
@@ -25,12 +26,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [emailResult, calendarResult, notificationResult, retentionResult, digestResult, liveResult] = await Promise.allSettled([
+    const [emailResult, calendarResult, notificationResult, retentionResult, digestResult, reconciliationResult, liveResult] = await Promise.allSettled([
       processEmailBacklog(),
       reconcileGoogleCalendarBookings(25),
       syncCrmNotifications(),
       cleanupAnonymousAnalytics(500),
       sendDailyOverdueDigest(),
+      reconcileCreditReportArtifacts({ limit: 25 }),
       (async () => {
         if (process.env.LIVE_WEBINAR_ENABLED !== "true") return { enabled: false };
         const { data, error } = await createAdminClient().rpc("sync_live_webinar_messages_v1", { p_limit: 500 });
@@ -53,15 +55,20 @@ export async function POST(request: Request) {
     const digest = digestResult.status === "fulfilled"
       ? digestResult.value
       : { error: digestResult.reason instanceof Error ? digestResult.reason.message : "unknown_error" };
+    const creditReports = reconciliationResult.status === "fulfilled"
+      ? reconciliationResult.value
+      : { error: "Credit-report reconciliation failed." };
     const ok = emailResult.status === "fulfilled"
       && liveResult.status === "fulfilled"
       && calendarResult.status === "fulfilled"
       && notificationResult.status === "fulfilled"
       && retentionResult.status === "fulfilled"
-      && digestResult.status === "fulfilled";
+      && digestResult.status === "fulfilled"
+      && reconciliationResult.status === "fulfilled"
+      && reconciliationResult.value.failed === 0;
     const live = liveResult.status === "fulfilled" ? liveResult.value : { error: "Live webinar scheduling failed." };
-    console.log("[maintenance-cron] completed", { ok, email, calendar, notifications, retention, digest, live });
-    return NextResponse.json({ ok, email, calendar, notifications, retention, digest, live });
+    console.log("[maintenance-cron] completed", { ok, email, calendar, notifications, retention, digest, creditReports, live });
+    return NextResponse.json({ ok, email, calendar, notifications, retention, digest, creditReports, live });
   } catch (error) {
     console.error("[maintenance-cron] failed", {
       error: error instanceof Error ? error.message : "unknown_error",

@@ -80,6 +80,7 @@ export async function saveCreditReport(session: CreditReportSession, bureau: Cre
   if (session.mode === "local" && isCreditCheckLocalMode()) return (await import("./credit-reports-local")).saveLocalCreditReport(session, bureau, fileName, bytes);
   requireDatabase();
   const supabase = createAdminClient();
+  if (!session.contactId) throw new Error("Report contact is unavailable.");
   const { data: previous, error: previousError } = await supabase.from("credit_report_uploads").select("object_path").eq("session_id", session.id).eq("bureau", bureau).maybeSingle();
   if (previousError) throw new Error("Report storage is unavailable.");
   const id = randomUUID();
@@ -88,20 +89,42 @@ export async function saveCreditReport(session: CreditReportSession, bureau: Cre
   // files are gone while a registered storage request could still write one.
   const { data: begun, error: beginError } = await supabase.rpc("begin_credit_report_upload_v1", { p_attempt_id: id, p_session_id: session.id, p_object_path: objectPath });
   if (beginError || begun !== true) throw new Error("Report storage is unavailable.");
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(objectPath, bytes, { contentType: "application/pdf", cacheControl: "0", upsert: false });
-  // An uncertain storage failure keeps the attempt pending for reconciliation.
-  if (uploadError) throw new Error("The report file could not be stored.");
   const row = { id, session_id: session.id, submission_id: session.submissionId, contact_id: session.contactId, bureau, file_name: fileName, byte_size: bytes.byteLength, uploaded_at: new Date().toISOString(), object_path: objectPath };
+  const storage = supabase.storage.from(BUCKET);
+  let receiptCommitted = false;
+  const heartbeat = setInterval(() => {
+    void Promise.resolve(supabase.rpc("renew_credit_report_upload_v1", { p_attempt_id: id }))
+      .then(({ data, error }) => {
+        if (error || data !== true) console.warn("[credit-report-upload] upload lease renewal was not confirmed");
+      })
+      .catch(() => console.warn("[credit-report-upload] upload lease renewal was not confirmed"));
+  }, 5 * 60_000);
   try {
+    const { error: uploadError } = await storage.upload(objectPath, bytes, { contentType: "application/pdf", cacheControl: "0", upsert: false });
+    // An uncertain storage failure keeps the attempt pending for reconciliation.
+    if (uploadError) throw new Error("The report file could not be stored.");
+    if (previous?.object_path) {
+      const { error: queueError } = await supabase.rpc("enqueue_credit_report_obsolete_object_v1", {
+        p_contact_id: session.contactId,
+        p_object_path: previous.object_path,
+      });
+      if (queueError) {
+        console.warn("[credit-report-upload] replaced report cleanup could not be queued");
+        throw new Error("The report receipt could not be saved.");
+      }
+    }
     const { error } = await supabase.from("credit_report_uploads").upsert(row, { onConflict: "session_id,bureau" });
     // An ambiguous metadata failure may have committed. Keep the private object
     // for reconciliation; never delete a file that a committed receipt may name.
     if (error) throw new Error("The report receipt could not be saved.");
-    if (previous?.object_path) await supabase.storage.from(BUCKET).remove([previous.object_path]).catch(() => {});
+    receiptCommitted = true;
     return receipt(row);
   } finally {
-    const { data: finished, error: finishError } = await supabase.rpc("finish_credit_report_upload_v1", { p_attempt_id: id });
-    if (finishError || finished !== true) throw new Error("The upload could not be finalized.");
+    clearInterval(heartbeat);
+    if (receiptCommitted) {
+      const { data: finished, error: finishError } = await supabase.rpc("finish_credit_report_upload_v1", { p_attempt_id: id });
+      if (finishError || finished !== true) throw new Error("The upload could not be finalized.");
+    }
   }
 }
 /** Callers must authorize access to the active CRM contact before using this helper. */

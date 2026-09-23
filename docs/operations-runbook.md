@@ -9,8 +9,8 @@ Public health check: `https://vance-dotson.vancedotson.workers.dev/api/health`
 ## Before any planned deployment or database migration
 
 1. Sign in to the CRM and open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.
-2. In **Backups**, click **Download full backup (JSON)**.
-3. Store the downloaded file somewhere private. It contains client CRM data and must not be committed to Git or shared publicly.
+2. In **Backups**, click **Download CRM database backup (JSON)**.
+3. Store the downloaded file somewhere private. It contains CRM data and must not be committed to Git or shared publicly. This relational snapshot excludes credit-report PDF files and their report metadata; those files currently have no independent recovery guarantee.
 4. Confirm `https://vance-dotson.vancedotson.workers.dev/api/health` returns `{"ok":true}`.
 5. Run the project tests, TypeScript check, lint, and production build.
 6. Apply reviewed database migrations before deploying code that depends on them.
@@ -32,13 +32,13 @@ Then verify:
 
 Important: a Worker rollback changes application code only. It does not reverse Supabase migrations or restore database records.
 
-## Restore a CRM backup
+## Restore a CRM database backup
 
-Only restore when current CRM data must be replaced by a known-good full backup.
+Only restore when the included CRM database records must be replaced by a known-good relational JSON snapshot. This restore does not restore credit-report PDFs or their report metadata, and must not be treated as a complete application or report-file recovery.
 
 1. First download a fresh backup of the current state, even if it may be damaged.
 2. Open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.
-3. Under **Restore a full backup**, choose the private JSON backup file.
+3. Under **Restore a CRM database backup**, choose the private JSON backup file.
 4. Click **Validate backup**. Validation does not change data.
 5. Check the displayed export time and record counts.
 6. Type `RESTORE VANCE CRM` exactly.
@@ -46,6 +46,22 @@ Only restore when current CRM data must be replaced by a known-good full backup.
 8. Reload Contacts, Tasks, Calendar, Sequences, and System health.
 
 The restore is transactional: it either completes or leaves the existing CRM unchanged. Pending or sending emails from the restored snapshot are cancelled so old messages are not sent accidentally.
+
+## Credit-report artifact reconciliation
+
+Credit-report uploads remain enabled and private. This operational path is available only after the reconciliation migration has been reviewed/applied and the matching application version is deployed. Do not apply migrations or run mutation requests as part of an incident check without the usual explicit approval.
+
+The built-in maintenance cron invokes reconciliation with a fixed maximum batch of 25. It handles two exact-path work sets: attempts quiet for at least 24 hours with an expired 30-minute upload lease, and report objects queued as obsolete after a replacement receipt is prepared. Upload handlers renew their lease every five minutes while Storage is working. A recent or claimed attempt continues to block contact purge; uncertainty is fail-closed. Abandoned attempt rows are restricted tombstones and are checked again hourly to catch a late object completion. These minimal IDs/paths are retained as operational recovery state until a separately reviewed cleanup policy exists; they are not PDF bytes or a PDF retention policy.
+
+An authorized signed-in CRM admin can inspect the next bounded batch without mutation by sending same-origin `POST /api/crm/credit-report-reconciliation` with JSON `{"dryRun":true,"limit":25}`. Dry-run reports aggregate counts only; it does not inspect Storage. To execute the bounded reconciliation, use `{"dryRun":false,"limit":25}` only after confirming the reported work is expected and an authorized operator approves the action. Limits outside 1–25 are rejected. The response and logs intentionally omit object keys, contact IDs, filenames, and provider error details. Staff, readonly users, and anonymous requests are denied. The existing internal maintenance path remains protected by `CRON_SECRET`.
+
+The reconciler uses the Storage API only on the exact path already recorded in the protected attempt/obsolete queue. Before removal it checks that no current report receipt references that path; database finalization independently confirms the object is absent. A missing object is marked abandoned, never successful. Storage/database errors release the reconciliation claim for a later retry. If a failure persists, stop retries for that incident, preserve only the safe aggregate status/reason, and escalate to the application/database operator. Do not query/list customer objects manually, copy paths into logs, or mark an attempt complete by hand.
+
+Contact purge blocks new sessions first, then reconciles eligible stale attempts. Recent/uncertain attempts still stop deletion. Do not bypass this blocker. A failed obsolete-object cleanup stays queued and is retried; the next purge also checks the entire exact contact prefix before database deletion.
+
+## Credit-report recovery limitation
+
+The downloadable CRM JSON is a relational database export, not a full-system backup. It excludes uploaded credit-report PDFs and the related receipt/session/attempt metadata. The project currently has no independent recovery guarantee for those files. Do not promise report-file restore or claim that the CRM export covers it. The database migration does not add an external backup provider or change this limitation; a storage backup/recovery decision remains pending with the client.
 
 ## Database migration failure
 
