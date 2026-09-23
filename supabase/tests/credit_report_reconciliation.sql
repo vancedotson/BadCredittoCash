@@ -5,6 +5,7 @@ declare
   c uuid := gen_random_uuid();
   c_recent uuid := gen_random_uuid();
   submission uuid := gen_random_uuid();
+  other_submission uuid := gen_random_uuid();
   session_id uuid := gen_random_uuid();
   other_session_id uuid := gen_random_uuid();
   attempt_id uuid := gen_random_uuid();
@@ -22,10 +23,12 @@ begin
   insert into public.contacts(id,email,name) values(c, 'reconcile-fixture@example.test', 'Reconcile Fixture');
   insert into public.events(id,event_key,contact_id,email,client_event_id)
     values(submission,'credit_check_submitted',c,'reconcile-fixture@example.test','reconcile-fixture');
+  insert into public.events(id,event_key,contact_id,email,client_event_id)
+    values(other_submission,'credit_check_submitted',c,'reconcile-fixture@example.test','reconcile-other-session');
   insert into public.credit_report_upload_sessions(id,submission_id,contact_id,token_hash,expires_at)
     values(session_id,submission,c,repeat('a',64),now()+interval '2 days');
   insert into public.credit_report_upload_sessions(id,submission_id,contact_id,token_hash,expires_at)
-    values(other_session_id,submission,c,repeat('c',64),now()+interval '2 days');
+    values(other_session_id,other_submission,c,repeat('c',64),now()+interval '2 days');
   path := c::text || '/' || session_id::text || '/' || attempt_id::text || '.pdf';
 
   -- A canonical-looking receipt without a registered attempt is rejected.
@@ -45,7 +48,7 @@ begin
   rejected := false;
   begin
     insert into public.credit_report_uploads(id,session_id,submission_id,contact_id,bureau,file_name,object_path,byte_size)
-      values(attempt_id,other_session_id,submission,c,'equifax','wrong-session.pdf',path,100);
+      values(attempt_id,other_session_id,other_submission,c,'equifax','wrong-session.pdf',path,100);
   exception when others then rejected := true;
   end;
   if not rejected then raise exception 'ASSERT: receipt with a mismatched session was accepted'; end if;
