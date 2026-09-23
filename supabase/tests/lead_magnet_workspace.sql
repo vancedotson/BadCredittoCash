@@ -48,19 +48,36 @@ from (values
   ('91300000-0000-4000-8000-000000000305','purging','91300000-0000-4000-8000-000000000105','5')
 ) fixture(session_id,label,contact_id,token_digit) join lead_magnet_test_ids test on test.label=fixture.label;
 
-insert into public.credit_report_uploads(id,session_id,submission_id,contact_id,bureau,file_name,object_path,byte_size,uploaded_at)
-select fixture.report_id::uuid, session.id, session.submission_id, session.contact_id,
-  fixture.bureau,fixture.file_name,'sql-private/'||fixture.report_id||'.pdf',1024,now()-make_interval(days=>fixture.days)
-from (values
-  ('91300000-0000-4000-8000-000000000201','91300000-0000-4000-8000-000000000301','transunion','old-transunion.pdf',40),
-  ('91300000-0000-4000-8000-000000000202','91300000-0000-4000-8000-000000000302','transunion','latest-transunion.pdf',1),
-  ('91300000-0000-4000-8000-000000000203','91300000-0000-4000-8000-000000000301','equifax','earlier-session-equifax.pdf',40),
-  ('91300000-0000-4000-8000-000000000204','91300000-0000-4000-8000-000000000302','experian','latest-experian.pdf',1),
-  ('91300000-0000-4000-8000-000000000205','91300000-0000-4000-8000-000000000303','transunion','partial-transunion.pdf',2),
-  ('91300000-0000-4000-8000-000000000206','91300000-0000-4000-8000-000000000304','equifax','trashed-equifax.pdf',4),
-  ('91300000-0000-4000-8000-000000000207','91300000-0000-4000-8000-000000000305','experian','purging-experian.pdf',5)
-) fixture(report_id,session_id,bureau,file_name,days)
-join public.credit_report_upload_sessions session on session.id=fixture.session_id::uuid;
+do $$
+declare
+  fixture record;
+  session_row public.credit_report_upload_sessions%rowtype;
+  object_path text;
+begin
+  for fixture in select * from (values
+    ('91300000-0000-4000-8000-000000000201','91300000-0000-4000-8000-000000000301','transunion','old-transunion.pdf',40),
+    ('91300000-0000-4000-8000-000000000202','91300000-0000-4000-8000-000000000302','transunion','latest-transunion.pdf',1),
+    ('91300000-0000-4000-8000-000000000203','91300000-0000-4000-8000-000000000301','equifax','earlier-session-equifax.pdf',40),
+    ('91300000-0000-4000-8000-000000000204','91300000-0000-4000-8000-000000000302','experian','latest-experian.pdf',1),
+    ('91300000-0000-4000-8000-000000000205','91300000-0000-4000-8000-000000000303','transunion','partial-transunion.pdf',2),
+    ('91300000-0000-4000-8000-000000000206','91300000-0000-4000-8000-000000000304','equifax','trashed-equifax.pdf',4),
+    ('91300000-0000-4000-8000-000000000207','91300000-0000-4000-8000-000000000305','experian','purging-experian.pdf',5)
+  ) uploads(report_id,session_id,bureau,file_name,days)
+  loop
+    select * into session_row from public.credit_report_upload_sessions where id=fixture.session_id::uuid;
+    if not found then raise exception 'ASSERT: fixture upload session missing'; end if;
+    object_path := session_row.contact_id::text||'/'||session_row.id::text||'/'||fixture.report_id||'.pdf';
+    if not public.begin_credit_report_upload_v1(fixture.report_id::uuid,session_row.id,object_path) then
+      raise exception 'ASSERT: fixture upload attempt was not registered';
+    end if;
+    insert into public.credit_report_uploads(id,session_id,submission_id,contact_id,bureau,file_name,object_path,byte_size,uploaded_at)
+    values (fixture.report_id::uuid,session_row.id,session_row.submission_id,session_row.contact_id,
+      fixture.bureau,fixture.file_name,object_path,1024,now()-make_interval(days=>fixture.days));
+    if not public.finish_credit_report_upload_v1(fixture.report_id::uuid) then
+      raise exception 'ASSERT: fixture upload attempt was not completed';
+    end if;
+  end loop;
+end; $$;
 insert into public.credit_report_purge_blocks(contact_id) values ('91300000-0000-4000-8000-000000000105');
 
 set local role authenticated;

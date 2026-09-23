@@ -6,11 +6,13 @@ declare
   c_recent uuid := gen_random_uuid();
   submission uuid := gen_random_uuid();
   session_id uuid := gen_random_uuid();
+  other_session_id uuid := gen_random_uuid();
   attempt_id uuid := gen_random_uuid();
   path text;
   claim record;
   counts jsonb;
   purge jsonb;
+  rejected boolean;
 begin
   if has_function_privilege('anon', 'public.claim_credit_report_attempts_v1(integer,uuid)', 'execute')
     or has_function_privilege('authenticated', 'public.finish_credit_report_attempt_reconciliation_v1(uuid,uuid,boolean,boolean)', 'execute') then
@@ -22,10 +24,38 @@ begin
     values(submission,'credit_check_submitted',c,'reconcile-fixture@example.test','reconcile-fixture');
   insert into public.credit_report_upload_sessions(id,submission_id,contact_id,token_hash,expires_at)
     values(session_id,submission,c,repeat('a',64),now()+interval '2 days');
+  insert into public.credit_report_upload_sessions(id,submission_id,contact_id,token_hash,expires_at)
+    values(other_session_id,submission,c,repeat('c',64),now()+interval '2 days');
   path := c::text || '/' || session_id::text || '/' || attempt_id::text || '.pdf';
+
+  -- A canonical-looking receipt without a registered attempt is rejected.
+  rejected := false;
+  begin
+    insert into public.credit_report_uploads(id,session_id,submission_id,contact_id,bureau,file_name,object_path,byte_size)
+      values(gen_random_uuid(),session_id,submission,c,'transunion','unregistered.pdf',
+        c::text||'/'||session_id::text||'/'||gen_random_uuid()::text||'.pdf',100);
+  exception when others then rejected := true;
+  end;
+  if not rejected then raise exception 'ASSERT: receipt without a registered upload attempt was accepted'; end if;
+
+  -- A valid attempt cannot be replayed under another session or object key.
   if not public.begin_credit_report_upload_v1(attempt_id,session_id,path) then
     raise exception 'ASSERT: upload attempt was not registered';
   end if;
+  rejected := false;
+  begin
+    insert into public.credit_report_uploads(id,session_id,submission_id,contact_id,bureau,file_name,object_path,byte_size)
+      values(attempt_id,other_session_id,submission,c,'equifax','wrong-session.pdf',path,100);
+  exception when others then rejected := true;
+  end;
+  if not rejected then raise exception 'ASSERT: receipt with a mismatched session was accepted'; end if;
+  rejected := false;
+  begin
+    insert into public.credit_report_uploads(id,session_id,submission_id,contact_id,bureau,file_name,object_path,byte_size)
+      values(attempt_id,session_id,submission,c,'equifax','wrong-path.pdf',c::text||'/wrong/path.pdf',100);
+  exception when others then rejected := true;
+  end;
+  if not rejected then raise exception 'ASSERT: receipt with a mismatched object path was accepted'; end if;
 
   -- A deliberately old started_at is not stale while a recent activity lease exists.
   update public.credit_report_upload_attempts set started_at=now()-interval '2 days', last_activity_at=now(), upload_lease_until=now()+interval '30 minutes' where id=attempt_id;
