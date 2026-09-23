@@ -14,35 +14,18 @@ async function installLocalTurnstile(page: Page) {
   });
 }
 
-test("registration 503 keeps details, focuses retry guidance, and does not emit failure analytics", async ({ page }) => {
-  const postedApiPaths: string[] = [];
+test("public homepage omits the retired registration form and does not submit lead data", async ({ page }) => {
+  const leadPosts: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;
-    if (request.method() === "POST" && path.startsWith("/api/")) postedApiPaths.push(path);
+    if (request.method() === "POST" && path === "/api/lead") leadPosts.push(path);
   });
-  await installLocalTurnstile(page);
-  await page.route("**/api/lead", (route) => route.fulfill({
-    status: 503,
-    contentType: "application/json",
-    body: JSON.stringify({ error: unavailableMessage }),
-  }));
-
   await page.goto("/#register");
-  const email = page.getByRole("textbox", { name: "Email", exact: true });
-  const name = page.getByRole("textbox", { name: "Name", exact: true });
-  await email.fill("local-safe@example.test");
-  await name.fill("Local Safe Test");
-  const requestsBeforeSubmit = postedApiPaths.length;
-
-  await page.getByRole("button", { name: /send me the free training/i }).click();
-
-  const alert = page.getByRole("alert").filter({ hasText: unavailableMessage });
-  await expect(alert).toBeVisible();
-  await expect(alert).toBeFocused();
-  await expect(email).toHaveValue("local-safe@example.test");
-  await expect(name).toHaveValue("Local Safe Test");
-  await expect(page).toHaveURL(/#register$/);
-  expect(postedApiPaths.slice(requestsBeforeSubmit)).toEqual(["/api/lead"]);
+  await expect(page.locator("#register form")).toHaveCount(0);
+  await expect(page.locator("#register").getByRole("link", { name: /check my credit report, free/i })).toHaveAttribute("href", "/credit-check");
+  await expect(page.locator("#register").getByRole("link", { name: /book a free strategy call/i })).toHaveAttribute("href", "/book");
+  await expect(page.getByRole("textbox", { name: "Email", exact: true })).toHaveCount(0);
+  expect(leadPosts).toEqual([]);
 });
 
 test("booking 503 preserves contact and appointment details without emitting failure analytics", async ({ page }) => {

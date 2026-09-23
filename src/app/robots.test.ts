@@ -16,6 +16,7 @@ describe("robots route rules", () => {
           "/api/",
           "/credit-check/thank-you",
           "/webinar/confirmed",
+          "/webinar/room",
           "/webinar/booked",
           "/live/confirmed",
           "/live/booked",

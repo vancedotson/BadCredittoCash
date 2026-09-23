@@ -14,6 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         "/api/",
         "/credit-check/thank-you",
         "/webinar/confirmed",
+        "/webinar/room",
         "/webinar/booked",
         "/live/confirmed",
         "/live/booked",

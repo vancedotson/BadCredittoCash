@@ -4,7 +4,6 @@ const privateRoutes = [
   { path: "/login?state=invalid-login", label: "login" },
   { path: "/forgot-password?state=reset-sent", label: "forgot password" },
   { path: "/auth/update-password?state=invalid-link", label: "password update" },
-  { path: "/webinar/confirmed?state=quiz-1", label: "webinar confirmation" },
   { path: "/webinar/booked?state=booking-generic", label: "webinar booking confirmation" },
   { path: "/live/confirmed?preview=1", label: "live webinar confirmation" },
   { path: "/live/booked?preview=1", label: "live booking confirmation" },
@@ -18,7 +17,7 @@ const publicMetadataRoutes = [
     path: "/",
     title: "Vance Dotson — Stop the collector calls. Hold them accountable.",
     description:
-      "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. Watch how it works — free.",
+      "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. Explore a free credit-report guide or book a strategy call.",
   },
   {
     path: "/credit-check",
@@ -176,6 +175,7 @@ test("robots.txt allows public crawling and disallows only the requested private
     "/api/",
     "/credit-check/thank-you",
     "/webinar/confirmed",
+    "/webinar/room",
     "/webinar/booked",
     "/live/confirmed",
     "/live/booked",

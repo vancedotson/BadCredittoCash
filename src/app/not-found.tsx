@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { site } from "@/config/site";
+import { site as publicSite } from "@/config/site-v3";
 
 /**
  * Branded 404. Leans on the site's case-file / dossier motif and the navy+gold
@@ -26,16 +27,16 @@ export default function NotFound() {
 
       <div className="mt-9 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
         <Link
-          href="/"
+          href={publicSite.cta.primary.href}
           className="inline-flex items-center justify-center rounded-full bg-gold px-7 py-3.5 font-heading text-base font-semibold text-ink transition-colors hover:bg-gold-deep"
         >
-          Back to home
+          {publicSite.cta.primary.label}
         </Link>
         <Link
-          href="/v4"
+          href={publicSite.cta.secondary.href}
           className="inline-flex items-center justify-center rounded-full border border-white/25 px-7 py-3.5 font-heading text-base font-semibold text-white transition-colors hover:bg-white/10"
         >
-          Watch the free training
+          {publicSite.cta.secondary.label}
         </Link>
       </div>
 

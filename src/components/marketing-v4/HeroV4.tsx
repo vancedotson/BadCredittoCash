@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { site } from "@/config/site-v3";
-import { PlayIcon, CheckIcon } from "@/components/marketing-v2/Icons";
+import { ArrowRightIcon, CheckIcon } from "@/components/marketing-v2/Icons";
 
 /**
  * v4 hero — based on Case File, with round-1 changes:
@@ -78,7 +78,7 @@ export function HeroV4() {
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link href={site.cta.primary.href} className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12 }}>
               <span className="v3-btn-badge">
-                <PlayIcon className="h-4 w-4" />
+                <ArrowRightIcon className="h-4 w-4" />
               </span>
               {site.cta.primary.label}
             </Link>

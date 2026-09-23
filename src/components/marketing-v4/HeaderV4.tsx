@@ -55,6 +55,13 @@ export function HeaderV4() {
           >
             {site.cta.primary.label}
           </Link>
+          <Link
+            href={site.cta.secondary.href}
+            className="v3-btn v3-btn-primary hidden lg:inline-flex"
+            style={{ minHeight: 42, fontSize: 13, padding: "0 18px" }}
+          >
+            {site.cta.secondary.label}
+          </Link>
           {/* hamburger — mobile only (display handled in v3.css; Tailwind's
               `hidden` can't override .v4-navburger's own display) */}
           <button
@@ -99,6 +106,14 @@ export function HeaderV4() {
             onClick={() => setOpen(false)}
           >
             {site.cta.primary.label}
+          </Link>
+          <Link
+            href={site.cta.secondary.href}
+            className="v3-btn v3-btn-ghost mt-3"
+            style={{ width: "100%" }}
+            onClick={() => setOpen(false)}
+          >
+            {site.cta.secondary.label}
           </Link>
         </div>
       )}

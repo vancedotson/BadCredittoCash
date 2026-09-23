@@ -19,7 +19,7 @@ import { ReframeGatherV4, ReframeLawsV4 } from "./reframe/ReframeGatherV4";
 import { MeetVanceV4 } from "./meetvance/MeetVanceV4";
 import { RiskSectionV4 } from "./risk/RiskSectionV4";
 import { UrgencySectionV4 } from "./urgency/UrgencySectionV4";
-import { RegisterSectionV4 } from "./register/RegisterSectionV4";
+import { LaunchChoicesSectionV4 } from "./LaunchChoicesSectionV4";
 
 /* v4 — the chosen "Case File" direction, iterated. Reuses the shared v3
    section library; overrides only the header (adds the gold beam) and the hero
@@ -49,7 +49,7 @@ export function CaseFileV4Page() {
         <div className="v4-stack">
           <UrgencySectionV4 />
           <div className="v4-stack-spacer" aria-hidden />
-          <RegisterSectionV4 />
+          <LaunchChoicesSectionV4 />
         </div>
         <Faq />
       </main>

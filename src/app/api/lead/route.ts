@@ -9,6 +9,7 @@ import { createLiveParticipantToken, liveParticipantCookie, liveSigningSecret } 
 import { hasLiveContext, isTimezone, isUuid } from "@/lib/live-webinar-types";
 import { deliverLiveRegistrationConfirmation } from "@/lib/email";
 import { emailModeUnavailableResponse, isProductionEmailMode } from "@/lib/email-mode";
+import { evergreenTrainingEnabled } from "@/lib/evergreen-training";
 
 const CONSENT_VERSION = "registration-marketing-v1";
 const CONSENT_TEXT = "Send me occasional follow-up tips and updates by email. Optional; unsubscribe anytime.";
@@ -47,6 +48,7 @@ function normalizePhone(value: unknown): string | null | undefined {
  * Called by the registration form (src/components/marketing/RegistrationForm.tsx).
  */
 export async function POST(request: Request) {
+  if (!evergreenTrainingEnabled()) return emailModeUnavailableResponse();
   if (!isProductionEmailMode()) return emailModeUnavailableResponse();
 
   type LeadRequest = Partial<Lead> & {

@@ -11,7 +11,7 @@ import { site } from "@/config/site-v3";
  * "The 60-second collector check" — dark case-file skin of the lead-magnet quiz
  * (content + logic in src/config/collector-quiz). Same behavior as the light
  * home skin; styled with the v3 tokens so the accent tracks the V1/V2/V3 toggle.
- * Routes to the live session (site.cta.secondary). Compliance-safe.
+ * Routes results to the two active launch choices. Compliance-safe.
  */
 
 function optionStyle(sel: boolean) {
@@ -136,13 +136,16 @@ function ResultsV4({ answers, onRestart, onBack }: { answers: QuizAnswers; onRes
       ) : null}
 
       <p className="mx-auto mt-7" style={{ maxWidth: 600, fontSize: 19, lineHeight: 1.6, color: "var(--v3-mut)" }}>
-        From what you shared, you may have protections under the FCRA and FDCPA. Join the free live session to see where the line is, how to document it, and what you can do next.
+        From what you shared, you may have protections under the FCRA and FDCPA. Start with the free credit-report guide or book a strategy call to talk through possible next steps.
       </p>
 
-      <div className="mt-9 flex flex-col items-center gap-3">
-        <Link href={site.cta.secondary.href} className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12, fontSize: 16 }}>
+      <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <Link href={site.cta.primary.href} className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12, fontSize: 16 }}>
           <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
-          {site.cta.secondary.label}
+          {site.cta.primary.label}
+        </Link>
+        <Link href={site.cta.secondary.href} className="v3-btn v3-btn-ghost">
+          {site.cta.secondary.label} →
         </Link>
         <p className="v3-mono" style={{ fontSize: 13.5, color: "var(--v3-faint)" }}>Free. No obligation.</p>
       </div>

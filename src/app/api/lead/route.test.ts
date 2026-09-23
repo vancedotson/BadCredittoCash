@@ -19,6 +19,7 @@ function request(body: unknown = liveLead, headers: Record<string, string> = {})
 
 beforeEach(() => {
   vi.stubEnv("EMAIL_MODE", "production");
+  vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "true");
   vi.resetAllMocks();
   mocks.enabled.mockReturnValue(true);
   mocks.session.mockImplementation(async (id) => ({ id, status: "scheduled", timezone: "UTC", endsAt: "2030-10-12T13:00:00Z" }));
@@ -37,6 +38,26 @@ afterEach(() => vi.unstubAllEnvs());
 describe("email mode readiness gate", () => {
   it.each(["test", "", "staging", undefined])("rejects malformed submissions before any side effect when EMAIL_MODE is %s", async (emailMode) => {
     vi.stubEnv("EMAIL_MODE", emailMode);
+    const invalidJson = new Request(`${origin}/api/lead`, {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: "not-json",
+    });
+
+    const response = await POST(invalidJson);
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("retry-after")).toBe("300");
+    expect(await response.json()).toEqual({ error: "This service is temporarily unavailable. Please try again later." });
+    for (const mock of Object.values(mocks)) expect(mock).not.toHaveBeenCalled();
+  });
+});
+
+describe("evergreen training readiness gate", () => {
+  it.each(["false", "", "TRUE", "1", undefined])("rejects before parsing or side effects when evergreen training is disabled by %s", async (trainingMode) => {
+    vi.stubEnv("EMAIL_MODE", "production");
+    vi.stubEnv("EVERGREEN_TRAINING_ENABLED", trainingMode);
     const invalidJson = new Request(`${origin}/api/lead`, {
       method: "POST",
       headers: { origin, "content-type": "application/json" },

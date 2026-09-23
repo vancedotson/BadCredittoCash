@@ -30,12 +30,10 @@ export const site = {
     officeAddress: "425 W. Wilshire Blvd Ste E, Oklahoma City, OK 73116",
   },
 
-  // Main page CTAs. Primary goes to the credit-check lead magnet; secondary to
-  // the live webinar funnel. Every home-page button reads from here — including
-  // the header, the quiz result and the collector-tactics card.
+  // Main page CTAs. Both approved launch paths read from this shared config.
   cta: {
     primary: { label: "Check my credit report, free", href: "/credit-check" },
-    secondary: { label: "Join the live session", href: "/live" },
+    secondary: { label: "Book a free strategy call", href: "/book" },
   },
 
   nav: [
@@ -48,9 +46,9 @@ export const site = {
     message:
       "Thinking of disputing it yourself? That's exactly what didn't work last time.",
     messageShort: "About to dispute it yourself?",
-    ctaLabel: "See what actually works, free",
+    ctaLabel: "Get my free credit-report guide",
     scarcity: "It's just me, so spots are limited.",
-    href: "#register",
+    href: "/credit-check",
   },
 
   trustBar: [
@@ -79,7 +77,7 @@ export const site = {
       faq: "CROSS-EXAMINATION // FAQ",
       risk: "TERMS // NO RISK",
       urgency: "CLOCK // TIME-SENSITIVE",
-      register: "SUBMIT // OPEN YOUR CASE",
+      register: "NEXT STEP // TWO FREE OPTIONS",
     },
     // Hero "terminal" readout lines (decorative, factual).
     terminal: [
@@ -272,7 +270,7 @@ export const site = {
   howItWorks: {
     heading: "Getting started is simple:",
     steps: [
-      { title: "Book a free call (or watch first)", body: "No cost, no obligation." },
+      { title: "Choose your starting point", body: "Get the free credit-report guide or book a free strategy call." },
       { title: "We review your case and find the violations", body: "You'll know exactly where you stand." },
       { title: "We go to work, you take back control", body: "I handle the bureaus and collectors so you don't have to." },
     ],
@@ -330,11 +328,13 @@ export const site = {
     heading: "You've been carrying this alone. You don't have to anymore.",
   },
 
-  // Registration / booking section (serves the dual CTA)
+  // Public launch choices (replaces the retired homepage registration form).
   register: {
-    heading: "Open your case, or talk to me now.",
-    body: "Watch the free training to see exactly how this works, or if the calls won't stop and you want help today, reach out directly.",
-    webinarNote: "Free online training · watch on any device",
+    heading: "Choose a next step that feels right.",
+    body: "Start with the free credit-report guide or book a free strategy call. No obligation.",
+    primaryDescription: "Use the free intake to get a guide for pulling your credit reports.",
+    secondaryDescription: "Talk through the calls or report concerns and possible next steps.",
+    webinarNote: "Choose a free guide or strategy call.",
   },
 
   // WEBINAR FUNNEL — evergreen, on-demand training whose end action is booking

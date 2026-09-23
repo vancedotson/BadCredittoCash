@@ -47,7 +47,7 @@ export const homePageMetadata = publicRouteMetadata({
   path: "/",
   title: "Vance Dotson — Stop the collector calls. Hold them accountable.",
   description:
-    "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. Watch how it works — free.",
+    "A veteran consumer advocate who uses federal law (FCRA & FDCPA) to challenge inaccurate credit reporting and stop debt-collector harassment. Explore a free credit-report guide or book a strategy call.",
 });
 
 export const creditCheckPageMetadata = publicRouteMetadata({

@@ -24,6 +24,7 @@
     "NEXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAEXg2qOJgmbI5TSP",
     "EMAIL_MODE": "test",
     "EMAIL_TEST_RECIPIENT": "anadias.dev@gmail.com",
+    "EVERGREEN_TRAINING_ENABLED": "false",
     "LIVE_WEBINAR_ENABLED": "false",
     "CLOUDFLARE_STREAM_ENABLED": "false",
     "EMAIL_FROM": "Bad Credit to Cash <updates@updates.badcredittocash.com>",

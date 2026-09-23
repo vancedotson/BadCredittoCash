@@ -4,7 +4,7 @@ import Link from "next/link";
 import { site } from "@/config/site-v3";
 import { Kicker, Reveal } from "../../marketing-v3/shared/primitives";
 import { useRevealChildren } from "../../marketing-v3/shared/hooks";
-import { PlayIcon } from "@/components/marketing-v2/Icons";
+import { ArrowRightIcon } from "@/components/marketing-v2/Icons";
 
 const kicker = site.ev.kickers.risk;
 const points = site.riskReversal.points;
@@ -43,7 +43,7 @@ export function RiskPanel() {
             style={{ paddingLeft: 12 }}
           >
             <span className="v3-btn-badge">
-              <PlayIcon className="h-4 w-4" />
+              <ArrowRightIcon className="h-4 w-4" />
             </span>
             {site.cta.primary.label}
           </Link>
