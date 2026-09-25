@@ -175,16 +175,20 @@ The evergreen recording/player backlog above remains open and is independent of 
 
 ### 4a. Live webinar — code path implemented; activation blocked
 
-The live webinar is a separate, feature-gated product path. The application code prepares Cloudflare Stream live inputs for admin users, uses native WebRTC/WHEP playback for registered attendees, signs playback URLs for a short access window, and configures new inputs with recording disabled. Public session responses omit the raw input ID, conceal playback from nonparticipants, and strip legacy replay fields. CRM edits do not overwrite legacy replay columns. The public replay route is a permanent no-recording notice.
+The live webinar is a separate, feature-gated product path. An authenticated, current participant may request a Cloudflare-signed WHEP playback bearer URL during the session window; Cloudflare validates the input-scoped signature and its 120-second expiration, not the attendee identity. The signed URL is exposed to that attendee's browser and can be shared/reused by anyone who obtains it before expiry; it is not cryptographically bound to a person or one-time use. Session issuance re-checks registration, the API response is `no-store`/`no-referrer`, the URL is not persisted, and the player keeps an active WHEP connection stable as refreshed URLs arrive. These controls reduce exposure but do not eliminate bearer-token sharing or revoke already established playback. New inputs have recording disabled. Public session responses omit the raw input ID and legacy replay fields; CRM edits do not overwrite legacy replay columns; the public replay route is a permanent no-recording notice.
+
+The exact non-secret `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` must be configured as `https://customer-<account-code>.cloudflarestream.com` before Stream setup can be considered configured. It is used as the sole Cloudflare Stream `connect-src`; absent/invalid values omit Cloudflare from the policy and Stream setup fails closed. WHEP uses the configured origin for its SDP fetch and session cleanup; the media arrives over WebRTC, so generic HTTPS `media-src` access is not needed.
 
 - [x] Keep live registrations and confirmations separate from evergreen training readiness and enrollment.
 - [x] Require exact live feature and live-email approval gates; keep marketing follow-up behind its separate approval.
 - [x] Restrict live-input preparation to CRM admins and validate Cloudflare WHEP endpoints.
 - [x] Make recording/replay unavailable for new sessions without purging legacy database fields.
-- [x] Test registration isolation, endpoint validation, signing, participant playback access, admin authorization, and replay suppression locally.
+- [x] Test registration isolation, endpoint validation, signing, participant playback access, admin authorization, replay suppression, credential TTL/tampering, CSP allow/deny, and unsupported WebRTC fallback locally.
+- [x] Keep the focused live E2E suite credential-free and local-only; test CRM manager roles and Stream preparation authorization with mocked component/API coverage.
 - [ ] Verify the existing `20260916140000_cloudflare_stream_live.sql` migration has been reviewed and applied in each target environment. This code task does not apply migrations.
 - [ ] Confirm the client-owned Cloudflare Stream subscription is eligible and approve any provider usage before preparing a live input.
 - [ ] Configure and independently verify Stream API and signing-key secrets; never store their values in source control or this roadmap.
+- [ ] Configure and verify `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` as the exact `https://customer-<account-code>.cloudflarestream.com` origin. It is non-secret Worker configuration, not a wildcard; without it CSP blocks WHEP and Stream setup remains unavailable.
 - [ ] Confirm the final `APP_BASE_URL`/allowed origin after domain and redirect decisions; custom-domain/DNS work remains a separate launch item.
 - [ ] Obtain final approval for live email copy and legal/content claims; configure `LIVE_WEBINAR_EMAILS_APPROVED` only after that approval.
 - [ ] Complete a separately authorized non-production rehearsal, including host broadcast, attendee access, browser compatibility, and the no-recording behavior.

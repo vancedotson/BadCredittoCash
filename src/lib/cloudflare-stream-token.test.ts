@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { cloudflareStreamPlaybackSigningConfigured, createCloudflareLivePlaybackUrl } from "./cloudflare-stream-token";
+import { CLOUDFLARE_STREAM_PLAYBACK_TOKEN_TTL_SECONDS, cloudflareStreamPlaybackSigningConfigured, createCloudflareLivePlaybackUrl } from "./cloudflare-stream-token";
 
 const inputId = "0123456789abcdef0123456789abcdef";
 let privateKey: CryptoKey;
@@ -27,6 +27,7 @@ beforeEach(async () => {
   publicKey = pair.publicKey;
   vi.stubEnv("CLOUDFLARE_STREAM_SIGNING_KEY_ID", "test-key-1");
   vi.stubEnv("CLOUDFLARE_STREAM_SIGNING_KEY_JWK", btoa(JSON.stringify(await crypto.subtle.exportKey("jwk", privateKey))));
+  vi.stubEnv("CLOUDFLARE_STREAM_CUSTOMER_ORIGIN", "https://customer-ab12.cloudflarestream.com");
 });
 
 afterEach(() => vi.unstubAllEnvs());
@@ -44,14 +45,43 @@ describe("signed Cloudflare Stream WHEP playback URLs", () => {
     expect(url.origin).toBe("https://customer-ab12.cloudflarestream.com");
     expect(url.pathname).toBe(`/${token}/webRTC/play`);
     expect(header).toMatchObject({ alg: "RS256", kid: "test-key-1", typ: "JWT" });
-    expect(claims).toMatchObject({ sub: inputId, kid: "test-key-1", nbf: now / 1000 - 30, exp: now / 1000 + 900 });
+    expect(claims).toMatchObject({ sub: inputId, kid: "test-key-1", nbf: now / 1000 - 10, exp: now / 1000 + 120 });
+    expect(CLOUDFLARE_STREAM_PLAYBACK_TOKEN_TTL_SECONDS).toBe(120);
+    expect(claims.jti).toEqual(expect.any(String));
     expect(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey, toArrayBuffer(decodeBase64Url(signaturePart)), toArrayBuffer(new TextEncoder().encode(`${headerPart}.${payloadPart}`)))).toBe(true);
+  });
+
+  it("keeps the bearer replay window short and gives separate issuances distinct credentials", async () => {
+    const now = Date.parse("2026-09-25T12:00:00Z");
+    const issue = () => createCloudflareLivePlaybackUrl({
+      endpoint: `https://customer-ab12.cloudflarestream.com/${inputId}/webRTC/play`, liveInputId: inputId, now,
+    });
+    const first = new URL(await issue()).pathname.split("/")[1];
+    const second = new URL(await issue()).pathname.split("/")[1];
+    const firstClaims = decodeJson(first.split(".")[1]);
+    expect(first).not.toBe(second);
+    expect(firstClaims.exp * 1000).toBe(now + CLOUDFLARE_STREAM_PLAYBACK_TOKEN_TTL_SECONDS * 1000);
+    expect(now < firstClaims.exp * 1000).toBe(true);
+    expect(now + CLOUDFLARE_STREAM_PLAYBACK_TOKEN_TTL_SECONDS * 1000 >= firstClaims.exp * 1000).toBe(true);
+  });
+
+  it("detects a tampered signed playback credential", async () => {
+    const url = new URL(await createCloudflareLivePlaybackUrl({
+      endpoint: `https://customer-ab12.cloudflarestream.com/${inputId}/webRTC/play`, liveInputId: inputId,
+    }));
+    const token = url.pathname.split("/")[1];
+    const [headerPart, payloadPart, signaturePart] = token.split(".");
+    const tamperedSignature = `${signaturePart[0] === "A" ? "B" : "A"}${signaturePart.slice(1)}`;
+    expect(await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey,
+      toArrayBuffer(decodeBase64Url(tamperedSignature)),
+      toArrayBuffer(new TextEncoder().encode(`${headerPart}.${payloadPart}`)))).toBe(false);
   });
 
   it.each([
     { endpoint: `https://customer-ab12.cloudflarestream.com/${inputId}/iframe`, liveInputId: inputId },
     { endpoint: `https://customer-ab12.cloudflarestream.com.evil.example/${inputId}/webRTC/play`, liveInputId: inputId },
     { endpoint: `https://customer-ab12.cloudflarestream.com/${inputId}/webRTC/play?redirect=1`, liveInputId: inputId },
+    { endpoint: `https://customer-other.cloudflarestream.com/${inputId}/webRTC/play`, liveInputId: inputId },
     { endpoint: `https://customer-ab12.cloudflarestream.com/${inputId}/webRTC/play`, liveInputId: "invalid" },
   ])("rejects unsafe endpoint and identity combinations %j", async (input) => {
     await expect(createCloudflareLivePlaybackUrl(input)).rejects.toThrow();

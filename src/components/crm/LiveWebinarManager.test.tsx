@@ -25,5 +25,13 @@ describe("live webinar CRM role and activation display", () => {
     expect(html).toContain("Session emails disabled");
     expect(html).toContain("Recording disabled");
     expect(html).not.toContain("Replay page");
+    expect(html).not.toContain("Broadcast studio");
+  });
+
+  it("shows Stream preparation controls to an administrator when Stream is configured", () => {
+    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[session]} initialNow="2026-09-12T17:00:00Z" canWrite canManageBroadcasts siteEnabled={false} streamConfigured />);
+    expect(html).toContain("Broadcast studio");
+    expect(html).toContain("Test camera &amp; mic");
+    expect(html).toContain("Start live");
   });
 });

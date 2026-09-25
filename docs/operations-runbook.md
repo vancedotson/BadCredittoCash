@@ -15,10 +15,30 @@ Before a separately approved activation:
 1. Confirm the target Worker version and environment, and verify the existing `supabase/migrations/20260916140000_cloudflare_stream_live.sql` migration has been reviewed and applied there. Do not infer migration status from source control.
 2. Confirm the client-owned Cloudflare account is eligible for Stream Live and that the owner has approved anticipated provider usage. Preparing inputs or rehearsals can consume paid service resources; do not create one without that approval.
 3. Have an authorized operator configure the Stream API token, signing-key ID, and private RSA JWK as Worker secrets. Never place secret values in Wrangler variables, source control, shell transcripts, logs, tickets, or this runbook.
-4. Confirm `APP_BASE_URL` is the final HTTPS attendee origin. The input is restricted to that hostname; a custom domain, redirect, or canonical-origin change requires a separate review and verification.
-5. Approve live confirmation/reminder copy and legal/content claims. Only then may an authorized operator set the live email approval gate. Marketing follow-up remains separately gated.
-6. Keep global registration and Stream preparation disabled until the owner explicitly authorizes a rehearsal/activation. When authorized, an admin prepares an input through CRM Broadcast Studio; independently verify recording mode is off and that attendees need their personal registration link for playback.
-7. Conduct any host broadcast/rehearsal only under separate explicit authorization. Verify attendee playback, mobile/browser behavior, connection/offline states, and that no replay or recording is created. Do not send test emails to real recipients.
+4. Configure the non-secret Worker variable `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` to the exact `https://customer-<account-code>.cloudflarestream.com` origin provisioned by Stream. Do not include a path, wildcard, credentials, or trailing slash. Without a valid value, the browser CSP omits Stream from `connect-src` and Stream preparation fails closed. WHEP SDP/session requests use this origin; WebRTC media itself does not require a broad `media-src` allowlist.
+5. Confirm `APP_BASE_URL` is the final HTTPS attendee origin. The live input's `allowedOrigins` is restricted to that hostname; a custom domain, redirect, or canonical-origin change requires a separate review and verification.
+6. Approve live confirmation/reminder copy and legal/content claims. Only then may an authorized operator set the live email approval gate. Marketing follow-up remains separately gated.
+7. Keep global registration and Stream preparation disabled until the owner explicitly authorizes a rehearsal/activation. When authorized, an admin prepares an input through CRM Broadcast Studio; independently verify recording mode is off and that participants request playback with their personal registration link.
+8. Conduct any host broadcast/rehearsal only under separate explicit authorization. Verify attendee playback, mobile/browser behavior, connection/offline states, and that no replay or recording is created. Do not send test emails to real recipients.
+
+Playback-token security model: the app validates an active participant and session on each issuance, returns a two-minute Cloudflare-signed URL with a 10-second not-before clock-skew allowance, marks the response `private, no-store`/`no-referrer`, and does not store or log the URL. A random JWT ID distinguishes issuances but is not a one-time-use/replay defense. Cloudflare's token authorizes the live input, not a specific registrant: anyone who obtains the URL may use it during its validity, and the app cannot revoke an already-established WHEP connection. This is an explicit residual bearer-token risk, not attendee-bound playback. Do not promise strict per-attendee media enforcement without a separately designed proxy/authorization architecture.
+
+The focused browser suite uses synthetic API and WHEP mocks only. CRM UI/admin checks use static component tests and mocked API role tests, so no Supabase account is needed. In PowerShell, start the local app in one terminal:
+
+```powershell
+$env:CLOUDFLARE_STREAM_CUSTOMER_ORIGIN = "https://customer-ab12.cloudflarestream.com"
+npm.cmd run dev -- --hostname 127.0.0.1 --port 3006
+```
+
+Then run the focused, local-only Chromium suite and CRM/API boundary tests in another terminal:
+
+```powershell
+$env:E2E_BASE_URL = "http://127.0.0.1:3006"
+npm.cmd run test:e2e -- e2e/live-webinar.spec.ts --project=chromium
+npm.cmd test -- middleware.test.ts src/lib/cloudflare-stream-origin.test.ts src/lib/cloudflare-stream-token.test.ts src/lib/cloudflare-stream.test.ts src/app/api/live/session/route.test.ts "src/app/api/crm/live-webinars/[id]/stream/route.test.ts" src/components/crm/LiveWebinarManager.test.tsx
+```
+
+Expected checks include public versus participant playback, different-session and unauthenticated issuance denial, expired/tampered short-lived bearer-token claims, CSP allow/deny policy, unsupported WebRTC constructors, admin-only Stream controls, and no evergreen form/replay. The live registration test stubs external APIs and succeeds without requiring Google Calendar; CRM admin/staff/readonly/anonymous decisions are tested with mocked roles because no local auth fixture is configured. The suite refuses non-local browser origins; never point these tests at production or real Stream. Provider rehearsal is still a separate, explicitly authorized launch gate.
 
 If the feature is paused after activation, an authorized operator should first close registration/email gates and follow the approved Cloudflare resource-retention decision. Do not delete inputs, recordings, or related database rows as an improvised rollback. Worker rollback does not reverse database changes. This repository task does not enable flags, create a Stream input, change secrets, run a rehearsal, or send email.
 

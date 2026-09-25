@@ -8,7 +8,10 @@ import { liveWebinar } from "@/config/live-webinar";
 export async function GET(request: Request) {
   try {
     const session = await getPublicLiveWebinarSession(new URL(request.url).searchParams.get("session"));
-    const participant = session ? await resolveLiveParticipant(session.id) : null;
+    const resolvedParticipant = session ? await resolveLiveParticipant(session.id) : null;
+    const participant = session && resolvedParticipant?.sessionId === session.id && resolvedParticipant.registrationId
+      ? resolvedParticipant
+      : null;
     let playbackUrl: string | null = null;
     const now = Date.now();
     if (session && participant && session.status === "scheduled" && session.streamProvider === "cloudflare"
@@ -32,7 +35,7 @@ export async function GET(request: Request) {
       cloudflareLiveInputId: null,
     } : null;
     return NextResponse.json({ session: publicSession, participant: participant ? { registrationId: participant.registrationId, sessionId: participant.sessionId } : null }, {
-      headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" },
+      headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer", Vary: "Cookie" },
     });
   } catch {
     return NextResponse.json({ error: "The live session could not be loaded. Please try again." }, { status: 503, headers: { "Cache-Control": "no-store" } });

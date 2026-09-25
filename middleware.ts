@@ -3,14 +3,11 @@ import { updateSession } from "@/lib/supabase/proxy";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { liveWebinar } from "@/config/live-webinar";
 import { LIVE_PLAYER_ORIGINS } from "@/lib/live-webinar-types";
+import { cloudflareStreamCustomerOrigin } from "@/lib/cloudflare-stream-origin";
 
 const isDev = process.env.NODE_ENV === "development";
 
-/**
- * The live room uses Cloudflare Stream WHEP over a cross-origin SDP fetch.
- * Allow only Stream customer subdomains for that connection; participant
- * checks and signed URLs remain the authorization boundary.
- */
+/** WHEP's SDP POST and session DELETE use this one configured customer origin. */
 function originOf(url: string | null): string | null {
   if (!url) return null;
   try {
@@ -30,24 +27,31 @@ const frameSrc = [
     ].filter((value): value is string => Boolean(value)),
   ),
 ].join(" ");
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://gulidnxltrgomjyctjlp.supabase.co wss://gulidnxltrgomjyctjlp.supabase.co https://challenges.cloudflare.com https://*.cloudflarestream.com",
-  `frame-src ${frameSrc}`,
-  "media-src 'self' blob: https:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
+function createContentSecurityPolicy() {
+  const streamOrigin = cloudflareStreamCustomerOrigin();
+  const connectSources = [
+    "'self'", "https://gulidnxltrgomjyctjlp.supabase.co", "wss://gulidnxltrgomjyctjlp.supabase.co",
+    "https://challenges.cloudflare.com", ...(streamOrigin ? [streamOrigin] : []),
+  ];
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    `connect-src ${connectSources.join(" ")}`,
+    `frame-src ${frameSrc}`,
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "upgrade-insecure-requests",
+  ].join("; ");
+}
 
 function secure(response: NextResponse, privateData = false) {
-  response.headers.set("Content-Security-Policy", contentSecurityPolicy);
+  response.headers.set("Content-Security-Policy", createContentSecurityPolicy());
   if (!response.headers.has("Referrer-Policy")) response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");

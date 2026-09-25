@@ -41,6 +41,18 @@ describe("public live session playback access", () => {
     expect(mocks.sign).not.toHaveBeenCalled();
     expect(response.headers.get("cache-control")).toContain("no-store");
     expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(response.headers.get("vary")).toContain("Cookie");
+  });
+
+  it("withholds playback when the resolved participant belongs to a different session", async () => {
+    mocks.participant.mockResolvedValue({ registrationId: "registration-other", sessionId: "30000000-0000-4000-8000-000000000001" });
+    const response = await GET(request());
+    const body = await response.json();
+    expect(body.session.embedUrl).toBeNull();
+    expect(body.participant).toBeNull();
+    expect(mocks.sign).not.toHaveBeenCalled();
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
   });
 
   it("mints a signed WHEP URL only for a registered attendee during the open session window", async () => {

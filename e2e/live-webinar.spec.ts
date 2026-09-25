@@ -15,7 +15,7 @@ function session(overrides: Partial<PublicLiveWebinarSession> = {}): PublicLiveW
     scheduleVersion: 1, ...overrides };
 }
 
-async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | null, linked = true) {
+async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | null, linked = true, unsupportedWebRtc: "peer" | "media" | null = null, rotatePlaybackEndpoint = false) {
   let current = initial;
   let failNextQuestion = false;
   let failNextSession = false;
@@ -24,9 +24,11 @@ async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | nu
   const activities: Activity[] = [];
   const leads: Record<string, unknown>[] = [];
   const bookings: Record<string, unknown>[] = [];
+  const whepReferrers: string[] = [];
   let whepPosts = 0;
+  let issuedPlaybackUrls = 0;
   await page.clock.install({ time: now });
-  await page.addInitScript(() => {
+  await page.addInitScript((unavailableApi) => {
     window.turnstile = {
       render: (_element, options) => { queueMicrotask(() => options.callback("mocked-local-token")); return "mock"; },
       remove: () => {},
@@ -44,7 +46,9 @@ async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | nu
       close() { this.connectionState = "closed"; }
     }
     Object.defineProperty(window, "RTCPeerConnection", { configurable: true, value: MockPeerConnection });
-  });
+    if (unavailableApi === "peer") Object.defineProperty(window, "RTCPeerConnection", { configurable: true, value: undefined });
+    if (unavailableApi === "media") Object.defineProperty(window, "MediaStream", { configurable: true, value: undefined });
+  }, unsupportedWebRtc);
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     const method = route.request().method();
@@ -54,7 +58,12 @@ async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | nu
         await route.fulfill({ status: 503, json: { error: "Session temporarily unavailable" } });
         return;
       }
-      await route.fulfill({ json: { session: current ? { ...current, embedUrl: participantLinked ? current.embedUrl : null,
+      const embedUrl = current && participantLinked
+        ? rotatePlaybackEndpoint
+          ? `${new URL(current.embedUrl!).origin}/signed-${++issuedPlaybackUrls}/webRTC/play`
+          : current.embedUrl
+        : null;
+      await route.fulfill({ json: { session: current ? { ...current, embedUrl,
         replayUrl: null, replayPublished: false, replayAvailableUntil: null, cloudflareLiveInputId: null } : null, participant: participantLinked && current ? {
         sessionId: current.id, registrationId: `registration-${current.id}`,
       } : null } });
@@ -80,16 +89,25 @@ async function mockPublicApis(page: Page, initial: PublicLiveWebinarSession | nu
       await route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, DELETE", "Access-Control-Allow-Headers": "Content-Type" } });
     } else if (route.request().method() === "POST") {
       whepPosts += 1;
+      whepReferrers.push(route.request().headers().referer ?? "");
       await route.fulfill({ status: 201, headers: { "Access-Control-Allow-Origin": "*", Location: "https://customer-ab12.cloudflarestream.com/session/mock" }, body: "v=0\\r\\n" });
     } else await route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "*" } });
   });
-  return { activities, leads, bookings, setSession: (value: PublicLiveWebinarSession | null) => { current = value; },
+  return { activities, leads, bookings, whepReferrers, setSession: (value: PublicLiveWebinarSession | null) => { current = value; },
     whepPosts: () => whepPosts,
+    playbackUrlsIssued: () => issuedPlaybackUrls,
     setParticipantLinked: (value: boolean) => { participantLinked = value; },
     setSessionUnavailable: (value: boolean) => { sessionUnavailable = value; },
     rejectNextSession: () => { failNextSession = true; },
     rejectNextQuestion: () => { failNextQuestion = true; } };
 }
+
+test.beforeEach(async ({ baseURL, page }) => {
+  if (!baseURL || !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)) {
+    throw new Error("Live-webinar browser tests are local-only; set E2E_BASE_URL to localhost or 127.0.0.1.");
+  }
+  await page.route("**/api/track", (route) => route.fulfill({ json: { ok: true } }));
+});
 
 test("an unscheduled live page presents no actions", async ({ page }) => {
   await page.route("**/api/live/session**", (route) => route.fulfill({ json: { session: null, participant: null } }));
@@ -238,7 +256,39 @@ test("registered attendees receive native WHEP playback; the room does not embed
   await expect(page.locator("video[aria-label='Live webinar video']")).toBeVisible();
   await expect(page.getByText("LIVE NOW", { exact: true })).toBeVisible();
   expect(mocks.whepPosts()).toBeGreaterThan(0);
+  expect(mocks.whepReferrers.every((referrer) => referrer === "")).toBe(true);
   await expect(page.locator("iframe")).toHaveCount(0);
+});
+
+test("fresh participant-gated playback tokens do not restart an active WHEP connection during polling", async ({ page }) => {
+  const mocks = await mockPublicApis(page, session(), true, null, true);
+  await page.goto(`/live/room?session=${sessionA}`);
+  await expect(page.getByText("LIVE NOW", { exact: true })).toBeVisible();
+  const initialPosts = mocks.whepPosts();
+  await page.clock.fastForward(60_000);
+  await expect.poll(() => mocks.playbackUrlsIssued()).toBeGreaterThan(1);
+  await expect.poll(() => mocks.whepPosts()).toBe(initialPosts);
+  await expect(page.getByText("LIVE NOW", { exact: true })).toBeVisible();
+});
+
+test("uses an accessible unsupported-browser state when RTCPeerConnection is absent", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await mockPublicApis(page, session(), true, "peer");
+  await page.goto(`/live/room?session=${sessionA}`);
+  await expect(page.getByRole("status").filter({ hasText: "This browser can’t play the live stream." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("uses an accessible unsupported-browser state when MediaStream is absent", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await mockPublicApis(page, session(), true, "media");
+  await page.goto(`/live/room?session=${sessionA}`);
+  await expect(page.getByRole("status").filter({ hasText: "This browser can’t play the live stream." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test("published legacy replay metadata stays unavailable", async ({ page }) => {
@@ -318,15 +368,14 @@ test("shared evergreen booking keeps its original request and destination", asyn
   expect(mocks.activities).toEqual([]);
 });
 
-test("shared evergreen registration keeps its original source and destination", async ({ page }) => {
+test("homepage presents the active guide and booking choices, not retired evergreen registration", async ({ page }) => {
   const mocks = await mockPublicApis(page, session());
   await page.goto("/");
-  await page.getByRole("textbox", { name: "Email", exact: true }).first().fill("alex@example.com");
-  await page.getByRole("textbox", { name: "Name", exact: true }).first().fill("Alex Test");
-  const form = page.locator("form").filter({ has: page.getByRole("textbox", { name: "Email", exact: true }).first() });
-  await form.locator('button[type="submit"]').click();
-  await expect(page).toHaveURL(/\/webinar\/confirmed$/);
-  expect(mocks.leads).toHaveLength(1);
-  expect(mocks.leads[0]).toMatchObject({ source: "vance-webinar" });
-  expect(mocks.leads[0]).not.toHaveProperty("sessionId");
+  await expect(page.getByRole("heading", { name: "Choose a next step that feels right." })).toBeVisible();
+  const choices = page.getByRole("navigation", { name: "Choose how to get started" });
+  await expect(choices.getByRole("link").nth(0)).toHaveAttribute("href", "/credit-check");
+  await expect(choices.getByRole("link").nth(1)).toHaveAttribute("href", "/book");
+  await expect(page.locator("form")).toHaveCount(0);
+  expect(mocks.leads).toEqual([]);
+  expect(mocks.bookings).toEqual([]);
 });

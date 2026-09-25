@@ -1,6 +1,7 @@
 import "server-only";
+import { isConfiguredCloudflareStreamUrl } from "./cloudflare-stream-origin";
 
-const TOKEN_LIFETIME_SECONDS = 15 * 60;
+export const CLOUDFLARE_STREAM_PLAYBACK_TOKEN_TTL_SECONDS = 2 * 60;
 
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
@@ -43,6 +44,11 @@ export function cloudflareStreamPlaybackSigningConfigured(): boolean {
   return Boolean(keyId && /^[A-Za-z0-9_-]{1,128}$/.test(keyId) && configuredPrivateJwk());
 }
 
+/**
+ * Creates a short-lived input-scoped bearer URL. Participant authorization is
+ * enforced by the caller before issuance; Cloudflare does not bind this token
+ * to that participant or make it one-time-use.
+ */
 export async function createCloudflareLivePlaybackUrl(input: {
   endpoint: string;
   liveInputId: string;
@@ -56,13 +62,20 @@ export async function createCloudflareLivePlaybackUrl(input: {
 
   const endpoint = new URL(input.endpoint);
   if (endpoint.protocol !== "https:" || !/^customer-[a-z0-9]+\.cloudflarestream\.com$/i.test(endpoint.hostname)
+    || !isConfiguredCloudflareStreamUrl(endpoint.toString())
     || endpoint.pathname !== `/${input.liveInputId}/webRTC/play` || endpoint.search || endpoint.hash) {
     throw new Error("Cloudflare Stream returned an invalid playback endpoint.");
   }
 
   const now = Math.floor((input.now ?? Date.now()) / 1000);
   const encodedHeader = encodeJson({ alg: "RS256", kid: keyId, typ: "JWT" });
-  const encodedPayload = encodeJson({ sub: input.liveInputId, kid: keyId, nbf: now - 30, exp: now + TOKEN_LIFETIME_SECONDS });
+  const encodedPayload = encodeJson({
+    sub: input.liveInputId,
+    kid: keyId,
+    nbf: now - 10,
+    exp: now + CLOUDFLARE_STREAM_PLAYBACK_TOKEN_TTL_SECONDS,
+    jti: crypto.randomUUID(),
+  });
   const signingInput = `${encodedHeader}.${encodedPayload}`;
   const key = await crypto.subtle.importKey(
     "jwk",

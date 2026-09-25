@@ -1,5 +1,6 @@
 import "server-only";
 import { cloudflareStreamPlaybackSigningConfigured } from "./cloudflare-stream-token";
+import { cloudflareStreamCustomerOrigin } from "./cloudflare-stream-origin";
 
 type CloudflareLiveInput = {
   uid: string;
@@ -16,6 +17,7 @@ export function cloudflareStreamConfigured(): boolean {
   return process.env.CLOUDFLARE_STREAM_ENABLED === "true"
     && Boolean(process.env.CLOUDFLARE_ACCOUNT_ID)
     && Boolean(process.env.CLOUDFLARE_STREAM_API_TOKEN)
+    && Boolean(cloudflareStreamCustomerOrigin())
     && cloudflareStreamPlaybackSigningConfigured();
 }
 
@@ -45,7 +47,8 @@ function readLiveInput(value: unknown): CloudflareLiveInput {
   }
   for (const candidate of [webRTC.url, playback.url]) {
     const url = new URL(candidate);
-    if (url.protocol !== "https:" || !/^customer-[a-z0-9]+\.cloudflarestream\.com$/i.test(url.hostname)) {
+    if (url.protocol !== "https:" || !/^customer-[a-z0-9]+\.cloudflarestream\.com$/i.test(url.hostname)
+      || !cloudflareStreamCustomerOrigin() || url.origin !== cloudflareStreamCustomerOrigin()) {
       throw new Error("Cloudflare Stream returned an unexpected endpoint.");
     }
   }

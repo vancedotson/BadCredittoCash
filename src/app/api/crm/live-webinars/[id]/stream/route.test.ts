@@ -24,7 +24,7 @@ function request() { return new Request(`https://example.test/api/crm/live-webin
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.auth.mockResolvedValue({ user: { sub: "staff", crmRole: "staff" }, response: null });
+  mocks.auth.mockResolvedValue({ user: { sub: "staff", crmRole: "staff" }, response: Response.json({ error: "Administrator access required." }, { status: 403 }) });
   mocks.demo.mockReturnValue(false);
   mocks.prepare.mockResolvedValue(stream);
   mocks.client.mockResolvedValue({ from: mocks.from });
@@ -36,10 +36,14 @@ beforeEach(() => {
 });
 
 describe("Cloudflare broadcast preparation authorization", () => {
-  it("requires admin-write before reading a session or calling the provider", async () => {
-    mocks.auth.mockResolvedValue({ user: null, response: Response.json({ error: "Admin access required." }, { status: 403 }) });
+  it.each([
+    { label: "non-admin CRM writer", user: { sub: "staff", crmRole: "staff" }, status: 403 },
+    { label: "read-only CRM user", user: { sub: "reader", crmRole: "readonly" }, status: 403 },
+    { label: "unauthenticated visitor", user: null, status: 401 },
+  ])("rejects $label before reading a session or calling the provider", async ({ user, status }) => {
+    mocks.auth.mockResolvedValue({ user, response: Response.json({ error: "Not authorized." }, { status }) });
     const input = request();
-    expect((await POST(input, { params: Promise.resolve({ id: sessionId }) })).status).toBe(403);
+    expect((await POST(input, { params: Promise.resolve({ id: sessionId }) })).status).toBe(status);
     expect(mocks.auth).toHaveBeenCalledWith(input, "admin-write");
     expect(mocks.client).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
@@ -57,6 +61,7 @@ describe("Cloudflare broadcast preparation authorization", () => {
   });
 
   it("rejects malformed session identifiers before database or provider access", async () => {
+    mocks.auth.mockResolvedValue({ user: { sub: "admin", crmRole: "admin" }, response: null });
     expect((await POST(request(), { params: Promise.resolve({ id: "invalid" }) })).status).toBe(400);
     expect(mocks.client).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();

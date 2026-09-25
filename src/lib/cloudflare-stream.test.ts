@@ -19,6 +19,7 @@ function configure() {
   vi.stubEnv("CLOUDFLARE_STREAM_API_TOKEN", "test-only-token");
   vi.stubEnv("CLOUDFLARE_STREAM_SIGNING_KEY_ID", "test-key");
   vi.stubEnv("CLOUDFLARE_STREAM_SIGNING_KEY_JWK", "test-key-material");
+  vi.stubEnv("CLOUDFLARE_STREAM_CUSTOMER_ORIGIN", "https://customer-ab12.cloudflarestream.com");
   vi.stubEnv("APP_BASE_URL", "https://vance-dotson.vancedotson.workers.dev");
 }
 
@@ -81,5 +82,11 @@ describe("Cloudflare Stream live-input adapter", () => {
     } }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(prepareCloudflareLiveInput({ sessionId, title: "Private rehearsal" })).rejects.toThrow("unexpected endpoint");
+  });
+
+  it("fails closed until the exact Stream customer origin is configured", () => {
+    configure();
+    vi.stubEnv("CLOUDFLARE_STREAM_CUSTOMER_ORIGIN", "");
+    expect(cloudflareStreamConfigured()).toBe(false);
   });
 });
