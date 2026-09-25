@@ -3,20 +3,19 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { draftOf, updateSessionDraft, type SessionDraft } from "@/lib/live-webinar-editor";
 import { liveDateToIso } from "@/lib/live-webinar-display";
-import { isLivePlayerUrl, isTimezone, type LiveWebinarSession } from "@/lib/live-webinar-types";
+import { isTimezone, type LiveWebinarSession } from "@/lib/live-webinar-types";
 import { validateLiveSessionInput } from "@/lib/live-webinar-validation";
 
 const field = "mt-2 min-h-11 w-full min-w-0 rounded-lg border border-mist bg-card px-3 py-2.5 text-base text-body outline-none transition-colors focus:border-trust focus:ring-2 focus:ring-trust/15 disabled:opacity-60 sm:text-sm";
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-trust";
 const label = "block text-sm font-medium text-heading";
-type IconName = "calendar" | "clock" | "stream" | "replay" | "mail" | "shield" | "chevron";
+type IconName = "calendar" | "clock" | "stream" | "mail" | "shield" | "chevron";
 
 function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: string }) {
   const paths: Record<IconName, ReactNode> = {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4m10-4v4M3 10h18" /></>,
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
     stream: <><path d="M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14M8 8a6 6 0 0 0 0 8m8-8a6 6 0 0 1 0 8m-4-1v6" /><circle cx="12" cy="11" r="2" /></>,
-    replay: <><circle cx="12" cy="12" r="9" /><path d="m10 8 6 4-6 4Z" /></>,
     mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 6 9 7 9-7" /></>,
     shield: <><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z" /><path d="m8 12 3 3 5-6" /></>,
     chevron: <path d="m6 9 6 6 6-6" />,
@@ -66,9 +65,8 @@ function SessionSummary({ draft, siteEnabled }: { draft: SessionDraft; siteEnabl
     <div className="mt-6 space-y-4 border-t border-mist pt-6 text-xs leading-relaxed text-slate">
       <p className="flex items-start gap-3"><Icon name="shield" />{draft.status === "draft" ? "Draft · Registration closed" : draft.status === "cancelled" ? "Cancelled · Registration closed" : siteEnabled ? "Scheduled" : "Scheduled · Site paused"}</p>
       <p className="flex items-start gap-3"><Icon name="mail" /><span>Session emails {draft.automationEnabled ? "enabled" : "off"}{draft.automationEnabled && !siteEnabled ? <span className="mt-1 block">Site delivery is paused</span> : null}</span></p>
-      <p className="flex items-start gap-3"><Icon name="replay" />Replay {draft.replayPublished ? "marked for publication" : "unpublished"}</p>
     </div>
-    <p className="mt-7 text-xs leading-relaxed text-slate">{draft.id ? "Changes apply to this session and its registrants." : "You can add your stream and replay later."}</p>
+    <p className="mt-7 text-xs leading-relaxed text-slate">{draft.id ? "Changes apply to this session and its registrants." : "Save a draft, then prepare its private Cloudflare broadcast from the CRM."}</p>
   </aside>;
 }
 
@@ -76,7 +74,6 @@ export function LiveWebinarSessionEditor({ session, date, timezone, siteEnabled,
   const [draft, setDraft] = useState(() => draftOf(session, date, timezone));
   const [manualSlug, setManualSlug] = useState(false);
   const [streamOpen, setStreamOpen] = useState(false);
-  const [replayOpen, setReplayOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<string>();
@@ -106,7 +103,6 @@ export function LiveWebinarSessionEditor({ session, date, timezone, siteEnabled,
     if (control instanceof HTMLElement) {
       const section = control.closest("[data-editor-section]")?.id;
       if (section === "webinar-stream-settings") setStreamOpen(true);
-      if (section === "webinar-replay-settings") setReplayOpen(true);
       requestAnimationFrame(() => { control.focus(); control.scrollIntoView({ block: "nearest" }); });
     } else requestAnimationFrame(() => errorMessage.current?.focus());
   }
@@ -121,14 +117,14 @@ export function LiveWebinarSessionEditor({ session, date, timezone, siteEnabled,
     if (invalidControl) { showError(invalidControl.validationMessage, invalidControl.name); return; }
     if (!isTimezone(draft.timezone)) { showError("Enter a valid timezone, such as America/New_York or Europe/Lisbon.", "timezone"); return; }
     const dates: Record<string, string | null> = {};
-    for (const key of ["startsAt", "endsAt", "replayAvailableUntil"] as const) {
-      try { dates[key] = key === "replayAvailableUntil" && !draft[key] ? null : liveDateToIso(draft[key], draft.timezone); }
+    for (const key of ["startsAt", "endsAt"] as const) {
+      try { dates[key] = liveDateToIso(draft[key], draft.timezone); }
       catch (cause) { showError(cause instanceof Error ? cause.message : "Enter a valid date and time.", key); return; }
     }
     const validation = validateLiveSessionInput({ ...draft, ...dates });
     if (!validation.session) {
       const message = validation.error ?? "Check the session details.";
-      const name = message.includes("title") ? "title" : message.includes("slug") ? "slug" : message.includes("expiry") ? "replayAvailableUntil" : message.includes("recording") ? "replayUrl" : message.includes("player") ? ((!draft.embedUrl && draft.status === "scheduled") || (draft.embedUrl && !isLivePlayerUrl(draft.embedUrl)) ? "embedUrl" : "replayUrl") : "endsAt";
+      const name = message.includes("title") ? "title" : message.includes("slug") ? "slug" : message.includes("Cloudflare") ? "status" : "endsAt";
       showError(message, name); return;
     }
     saving.current = true; setPending(true);
@@ -174,20 +170,16 @@ export function LiveWebinarSessionEditor({ session, date, timezone, siteEnabled,
                 <div className="min-w-0"><label htmlFor="webinar-start" className={label}>Starts at</label><input id="webinar-start" name="startsAt" type="datetime-local" required value={draft.startsAt} onChange={(event) => update("startsAt", event.target.value)} aria-describedby="webinar-timezone-hint" className={field} {...invalid("startsAt")} /></div>
                 <div className="min-w-0"><label htmlFor="webinar-end" className={label}>Ends at</label><input id="webinar-end" name="endsAt" type="datetime-local" required value={draft.endsAt} onChange={(event) => update("endsAt", event.target.value)} aria-describedby="webinar-timezone-hint" className={field} {...invalid("endsAt")} /></div>
               </div>
-              <div className="mt-4"><label htmlFor="webinar-timezone" className={label}>Timezone</label><input id="webinar-timezone" name="timezone" required list="live-webinar-timezones" value={draft.timezone} onChange={(event) => update("timezone", event.target.value)} aria-describedby="webinar-timezone-hint" className={field} {...invalid("timezone")} /><datalist id="live-webinar-timezones">{["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/Lisbon", "Europe/London", "UTC"].map((zone) => <option key={zone} value={zone} />)}</datalist><p id="webinar-timezone-hint" className="mt-2 text-xs text-slate">All times, including replay expiry, use this timezone.</p></div>
+              <div className="mt-4"><label htmlFor="webinar-timezone" className={label}>Timezone</label><input id="webinar-timezone" name="timezone" required list="live-webinar-timezones" value={draft.timezone} onChange={(event) => update("timezone", event.target.value)} aria-describedby="webinar-timezone-hint" className={field} {...invalid("timezone")} /><datalist id="live-webinar-timezones">{["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "Europe/Lisbon", "Europe/London", "UTC"].map((zone) => <option key={zone} value={zone} />)}</datalist><p id="webinar-timezone-hint" className="mt-2 text-xs text-slate">All session times use this timezone.</p></div>
             </section>
 
             <div className="space-y-3">
-              <Disclosure id="webinar-stream-settings" name="Stream & delivery" description="Live player, status and session emails" badge={draft.automationEnabled ? "Emails on" : draft.status === "draft" && !draft.embedUrl ? "Optional" : "Configured"} icon="stream" open={streamOpen} disabled={pending} onToggle={() => setStreamOpen((value) => !value)}>
-                <div><label htmlFor="webinar-status" className={label}>Status</label><select id="webinar-status" name="status" value={draft.status} onChange={(event) => update("status", event.target.value as SessionDraft["status"])} aria-describedby="webinar-status-hint" className={field}><option value="draft">Draft</option><option value="scheduled">Scheduled</option><option value="cancelled">Cancelled</option></select><p id="webinar-status-hint" className="mt-2 text-xs leading-relaxed text-slate">{draft.status === "draft" ? "Drafts are private. Choose Scheduled when your stream is ready." : draft.status === "scheduled" ? (siteEnabled ? "Registration stays open until this session ends." : "Ready for registration when live webinars are enabled for the site.") : "Cancelling closes registration and stops pending reminders. History is preserved."}</p></div>
-                <div><label htmlFor="webinar-stream" className={label}>Live player URL</label><input id="webinar-stream" name="embedUrl" type="url" value={draft.embedUrl} onChange={(event) => update("embedUrl", event.target.value)} placeholder="https://www.youtube.com/embed/…" aria-describedby="webinar-player-hint" className={field} {...invalid("embedUrl")} /><p id="webinar-player-hint" className="mt-2 text-xs leading-relaxed text-slate">YouTube, YouTube privacy-enhanced, or Vimeo embed URL. Required to schedule.</p></div>
+              <Disclosure id="webinar-stream-settings" name="Stream & delivery" description="Private Cloudflare broadcast and session emails" badge={draft.automationEnabled ? "Emails on" : draft.status === "draft" ? "Draft" : "Configured"} icon="stream" open={streamOpen} disabled={pending} onToggle={() => setStreamOpen((value) => !value)}>
+                <div><label htmlFor="webinar-status" className={label}>Status</label><select id="webinar-status" name="status" value={draft.status} onChange={(event) => update("status", event.target.value as SessionDraft["status"])} aria-describedby="webinar-status-hint" className={field}><option value="draft">Draft</option><option value="scheduled">Scheduled</option><option value="cancelled">Cancelled</option></select><p id="webinar-status-hint" className="mt-2 text-xs leading-relaxed text-slate">{draft.status === "draft" ? "Drafts are private. Prepare the Cloudflare broadcast before scheduling." : draft.status === "scheduled" ? (siteEnabled ? "Registration stays open until this session ends." : "Ready for registration when live webinars are enabled for the site.") : "Cancelling closes registration and stops pending reminders. History is preserved."}</p></div>
+                <p className="rounded-lg border border-mist bg-card p-3 text-xs leading-relaxed text-slate">{draft.streamProvider === "cloudflare" && draft.cloudflareLiveInputId ? "A private Cloudflare live input is prepared. Recording and replay are disabled." : "No Cloudflare live input is prepared. Save this session as a draft, then use Broadcast studio to prepare one."}</p>
                 <label className="flex items-start gap-3 rounded-lg border border-mist bg-cloud p-3"><input name="automationEnabled" type="checkbox" checked={draft.automationEnabled} onChange={(event) => update("automationEnabled", event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-trust" /><span className="text-sm font-medium text-heading">Enable session emails<span className="mt-1 block text-xs font-normal leading-relaxed text-slate">Joining details, reminders and eligible follow-up use this schedule.{!siteEnabled ? " Delivery is paused for the site." : " Existing consent and delivery rules apply."}</span></span></label>
               </Disclosure>
-              <Disclosure id="webinar-replay-settings" name="Replay settings" description="Add a recording after your session" badge={draft.replayPublished ? "Publish selected" : draft.replayUrl ? "Recording added" : "Optional"} icon="replay" open={replayOpen} disabled={pending} onToggle={() => setReplayOpen((value) => !value)}>
-                <div><label htmlFor="webinar-replay" className={label}>Replay player URL</label><input id="webinar-replay" name="replayUrl" type="url" value={draft.replayUrl} onChange={(event) => update("replayUrl", event.target.value)} placeholder="https://www.youtube.com/embed/…" aria-describedby="webinar-replay-hint" className={field} {...invalid("replayUrl")} /><p id="webinar-replay-hint" className="mt-2 text-xs leading-relaxed text-slate">Use a supported YouTube or Vimeo embed URL.</p></div>
-                <div><label htmlFor="webinar-expiry" className={label}>Available until (optional)</label><input id="webinar-expiry" name="replayAvailableUntil" type="datetime-local" value={draft.replayAvailableUntil} onChange={(event) => update("replayAvailableUntil", event.target.value)} aria-describedby="webinar-expiry-hint" className={field} {...invalid("replayAvailableUntil")} /><p id="webinar-expiry-hint" className="mt-2 text-xs text-slate">Leave blank for no expiry. Uses {draft.timezone || "the session timezone"}.</p></div>
-                <label className="flex items-start gap-3 text-sm text-heading"><input name="replayPublished" aria-label="Publish replay" aria-describedby="webinar-publication-hint" type="checkbox" checked={draft.replayPublished} onChange={(event) => update("replayPublished", event.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-trust" /><span>Publish replay<span id="webinar-publication-hint" className="mt-1 block text-xs leading-relaxed text-slate">Available after a scheduled session ends, while the site is enabled and the replay has not expired.</span></span></label>
-              </Disclosure>
+              <p className="rounded-lg border border-mist bg-cloud p-3 text-xs leading-relaxed text-slate">Live sessions are not recorded. No replay is available or promised.</p>
             </div>
             {session?.status === "scheduled" ? <p className="rounded-lg border border-mist bg-cloud p-3 text-xs leading-relaxed text-slate">Changing these dates postpones this same session for its registrants. Use a new session for a separate webinar.</p> : null}
           </fieldset>

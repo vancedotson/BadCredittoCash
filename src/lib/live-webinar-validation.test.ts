@@ -4,20 +4,22 @@ import { hasLiveContext } from "./live-webinar-types";
 import { deriveSegment } from "./segments";
 import { stageFromEvents } from "./stages";
 
-const valid = { title: "Collector rights live", slug: "collector-rights", startsAt: "2026-10-10T17:00:00Z", endsAt: "2026-10-10T17:45:00Z", timezone: "America/Chicago", status: "scheduled", embedUrl: "https://www.youtube-nocookie.com/embed/test", replayUrl: null, replayPublished: false, replayAvailableUntil: null, automationEnabled: false };
+const inputId = "0123456789abcdef0123456789abcdef";
+const valid = { title: "Collector rights live", slug: "collector-rights", startsAt: "2026-10-10T17:00:00Z", endsAt: "2026-10-10T17:45:00Z", timezone: "America/Chicago", status: "scheduled", streamProvider: "cloudflare", cloudflareLiveInputId: inputId, embedUrl: `https://customer-ab12.cloudflarestream.com/${inputId}/webRTC/play`, replayUrl: null, replayPublished: false, replayAvailableUntil: null, automationEnabled: false };
 
 describe("live session validation", () => {
-  it("accepts a scheduled session with a supported player", () => expect(validateLiveSessionInput(valid).session).toMatchObject({ ...valid, startsAt: "2026-10-10T17:00:00.000Z", endsAt: "2026-10-10T17:45:00.000Z" }));
-  it("accepts a Cloudflare Stream player and rejects lookalike hosts", () => {
-    expect(validateLiveSessionInput({ ...valid, embedUrl: "https://customer-ab12.cloudflarestream.com/0123456789abcdef0123456789abcdef/iframe" }).session).toBeTruthy();
-    expect(validateLiveSessionInput({ ...valid, embedUrl: "https://customer-ab12.cloudflarestream.com.evil.example/input/iframe" }).error).toBeTruthy();
-  });
+  it("accepts only a prepared Cloudflare WHEP input for scheduled sessions", () => expect(validateLiveSessionInput(valid).session).toMatchObject({ ...valid, startsAt: "2026-10-10T17:00:00.000Z", endsAt: "2026-10-10T17:45:00.000Z" }));
+  it.each([
+    { streamProvider: "external", cloudflareLiveInputId: null },
+    { embedUrl: "https://customer-ab12.cloudflarestream.com/0123456789abcdef0123456789abcdef/iframe" },
+    { embedUrl: "https://customer-ab12.cloudflarestream.com.evil.example/0123456789abcdef0123456789abcdef/webRTC/play" },
+  ])("rejects unsupported player setup %j", (patch) => expect(validateLiveSessionInput({ ...valid, ...patch }).error).toBeTruthy());
   it.each([
     { embedUrl: "javascript:alert(1)" }, { embedUrl: "https://evil.example/player" }, { embedUrl: "https://user:secret@www.youtube.com/embed/test" },
     { embedUrl: null }, { timezone: "Invalid/Zone" }, { endsAt: "2026-10-10T16:00:00Z" }, { replayPublished: true },
     { replayAvailableUntil: "2026-10-10T12:00:00Z" }, { slug: "a/b" }, { id: "not-an-id" },
   ])("rejects inconsistent or unsafe session details %j", (patch) => expect(validateLiveSessionInput({ ...valid, ...patch }).error).toBeTruthy());
-  it("permits incomplete player setup only for a draft", () => expect(validateLiveSessionInput({ ...valid, status: "draft", embedUrl: null }).session).toBeTruthy());
+  it("permits incomplete player setup only for a draft", () => expect(validateLiveSessionInput({ ...valid, status: "draft", streamProvider: "external", cloudflareLiveInputId: null, embedUrl: null }).session).toBeTruthy());
   it("detects preview context in explicit requests and referring pages", () => {
     expect(isLivePreviewRequest(new Request("https://example.com/api/book"), { preview: true })).toBe(true);
     expect(isLivePreviewRequest(new Request("https://example.com/api/book", { headers: { referer: "https://example.com/live/call?preview=1" } }))).toBe(true);

@@ -98,6 +98,7 @@ export async function POST(request: Request) {
     if (preview) return NextResponse.json({ error: "Registration is disabled in preview." }, { status: 409 });
     if (!liveWebinarsEnabled()) return NextResponse.json({ error: "Live registration is not open yet." }, { status: 503 });
     if (!isUuid(body.sessionId)) return NextResponse.json({ error: "Choose a scheduled live session." }, { status: 400 });
+    if (process.env.LIVE_WEBINAR_EMAILS_APPROVED !== "true") return NextResponse.json({ error: "Live registration is not open yet." }, { status: 503 });
   } else if (!evergreenTrainingEnabled()) {
     return emailModeUnavailableResponse();
   }

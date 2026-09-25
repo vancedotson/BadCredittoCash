@@ -5,14 +5,14 @@ import { useSearchParams } from "next/navigation";
 import { liveWebinar } from "@/config/live-webinar";
 import { RegistrationFormV3 } from "@/components/marketing-v3/shared/RegistrationFormV3";
 import { ArrowRightIcon } from "@/components/marketing-v2/Icons";
-import { useEventPhase, useLiveClock } from "../EventTime";
-import { sessionReplayAvailable, useLiveSession } from "../LiveSessionProvider";
+import { useEventPhase } from "../EventTime";
+import { useLiveSession } from "../LiveSessionProvider";
 import "./live-register.css";
 
 /**
  * Building blocks for the /live registration page. Anything that touches the
- * CRM session — the form's session ID, timezone, preview-disabled state, the
- * replay seam — lives here once, kept apart from the page layout.
+ * CRM session — the form's session ID, timezone, and preview-disabled state —
+ * lives here once, kept apart from the page layout.
  */
 
 const registrationFormProps = {
@@ -65,15 +65,9 @@ export function useSessionDurationMinutes(): number {
   return Math.round((Date.parse(session.endsAt) - Date.parse(session.startsAt)) / 60_000);
 }
 
-/** FAQ with the replay answer kept truthful to whether a replay exists. */
+/** Session FAQ; live sessions are never recorded. */
 export function useFaqItems() {
-  const { session } = useLiveSession();
-  const now = useLiveClock();
-  return liveWebinar.faq.map((item) =>
-    item.q === "Will there be a replay?" && sessionReplayAvailable(session, now)
-      ? { ...item, a: "A recording is currently available for this session. Check your email for the replay link and access window." }
-      : item,
-  );
+  return liveWebinar.faq;
 }
 
 /** Button that scrolls to a form anchor on the same page. */

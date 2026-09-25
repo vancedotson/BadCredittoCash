@@ -28,7 +28,6 @@ describe("central outbound email policy", () => {
     ["live_reminder_soon:1", "live", false],
     ["live_attended:1", "live", false],
     ["live_no_show:1", "live", false],
-    ["live_replay:1", "live", false],
     ["live_rescheduled:1", "live", false],
     ["live_cancelled:1", "live", false],
     ["onboarding:999", "unknown", false],
@@ -79,8 +78,11 @@ describe("central outbound email policy", () => {
     expect(outboundEmailDecision("live_confirmation:1")).toMatchObject({ allowed: false, reason: "live_disabled" });
 
     vi.stubEnv("LIVE_WEBINAR_ENABLED", "true");
+    vi.stubEnv("LIVE_WEBINAR_EMAILS_APPROVED", "false");
+    expect(outboundEmailDecision("live_confirmation:1")).toMatchObject({ allowed: false, reason: "live_email_unapproved" });
+    vi.stubEnv("LIVE_WEBINAR_EMAILS_APPROVED", "true");
     vi.stubEnv("MARKETING_EMAILS_ENABLED", "false");
     expect(outboundEmailDecision("live_confirmation:1")).toMatchObject({ allowed: true, reason: "allowed" });
-    expect(outboundEmailDecision("live_replay:1")).toMatchObject({ allowed: false, reason: "marketing_disabled" });
+    expect(outboundEmailDecision("live_replay:1")).toMatchObject({ allowed: false, category: "unknown", reason: "unknown_template" });
   });
 });

@@ -27,17 +27,16 @@ function SessionReport({ report }: { report: LiveWebinarSessionReport }) {
   const { session, registrations, stats } = report;
   const [observedAt] = useState(() => Date.now());
   return <div className="space-y-4">
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">{[["Registrations", stats.registrations], ["Session presence", stats.attended], ["No attendance recorded", stats.noAttendance], ["Replay opened", stats.replayOpened], ["Attributed bookings", stats.booked]].map(([label, value]) => <Card key={label}><p className="text-2xl font-semibold tabular-nums text-heading">{value}</p><p className="mt-1 text-xs text-slate">{label}</p></Card>)}</div>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{[["Registrations", stats.registrations], ["Session presence", stats.attended], ["No attendance recorded", stats.noAttendance], ["Attributed bookings", stats.booked]].map(([label, value]) => <Card key={label}><p className="text-2xl font-semibold tabular-nums text-heading">{value}</p><p className="mt-1 text-xs text-slate">{label}</p></Card>)}</div>
     <Card>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold text-heading">Registrations for this session</h3><Link href={`/crm/contacts?funnel=live&sessionId=${encodeURIComponent(session.id)}`} className="text-sm text-trust hover:underline">View in contacts →</Link></div>
-      <p className="mb-4 text-xs text-slate">Presence records someone being in the live room during the session. Opening the room or replay alone does not establish how much they watched.</p>
+      <p className="mb-4 text-xs text-slate">Presence records someone being in the live room during the session. It does not establish how much they watched. Sessions are not recorded.</p>
       {!registrations.length ? <p className="py-4 text-sm text-slate">No registrations for this session yet.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-sm">
-        <thead><tr className="border-b border-mist text-xs text-slate"><th scope="col" className="pb-3 pr-4 font-medium">Contact</th><th scope="col" className="pb-3 pr-4 font-medium">Registered</th><th scope="col" className="pb-3 pr-4 font-medium">Participation</th><th scope="col" className="pb-3 pr-4 font-medium">Replay</th><th scope="col" className="pb-3 font-medium">Session emails</th></tr></thead>
+        <thead><tr className="border-b border-mist text-xs text-slate"><th scope="col" className="pb-3 pr-4 font-medium">Contact</th><th scope="col" className="pb-3 pr-4 font-medium">Registered</th><th scope="col" className="pb-3 pr-4 font-medium">Participation</th><th scope="col" className="pb-3 font-medium">Session emails</th></tr></thead>
         <tbody>{registrations.map((registration) => <tr key={registration.id} className="border-b border-mist/70 align-top last:border-0">
           <td className="py-3 pr-4"><Link href={`/crm/contacts/${registration.contactId}`} className="font-medium text-trust hover:underline">{registration.contactName || registration.email}</Link><p className="mt-1 text-xs text-slate">{registration.email}</p>{liveBookingLabel(registration, observedAt) ? <p className="mt-1 text-xs text-slate">{liveBookingLabel(registration, observedAt)}</p> : null}</td>
           <td className="py-3 pr-4 text-xs text-slate">{formatLiveDate(registration.registeredAt, session.timezone)}</td>
           <td className="py-3 pr-4"><Badge tone={registration.attendedAt ? "active" : "neutral"}>{liveParticipationLabel(registration)}</Badge>{registration.firstRoomOpenedAt ? <p className="mt-1 text-xs text-slate">Room: {formatLiveDate(registration.firstRoomOpenedAt, session.timezone)}</p> : null}{registration.attendedAt ? <p className="mt-1 text-xs text-slate">Present: {formatLiveDate(registration.attendedAt, session.timezone)}</p> : null}</td>
-          <td className="py-3 pr-4 text-xs text-slate">{registration.replayOpenedAt ? formatLiveDate(registration.replayOpenedAt, session.timezone) : "Not opened"}</td>
           <td className="min-w-44 py-3"><LiveWebinarMessages messages={registration.messages} timezone={session.timezone} /></td>
         </tr>)}</tbody>
       </table></div>}
@@ -45,7 +44,7 @@ function SessionReport({ report }: { report: LiveWebinarSessionReport }) {
   </div>;
 }
 
-export function LiveWebinarManager({ initialSessions, initialSessionId, initialNow, calendarTimezone = "America/Chicago", canWrite, siteEnabled, streamConfigured = false }: { initialSessions: LiveWebinarSession[]; initialSessionId?: string; initialNow: string; calendarTimezone?: string; canWrite: boolean; siteEnabled: boolean; streamConfigured?: boolean }) {
+export function LiveWebinarManager({ initialSessions, initialSessionId, initialNow, calendarTimezone = "America/Chicago", canWrite, canManageBroadcasts, siteEnabled, streamConfigured = false }: { initialSessions: LiveWebinarSession[]; initialSessionId?: string; initialNow: string; calendarTimezone?: string; canWrite: boolean; canManageBroadcasts: boolean; siteEnabled: boolean; streamConfigured?: boolean }) {
   const router = useRouter();
   // Do not accept clicks on server-rendered controls before handlers are attached.
   const interactive = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
@@ -118,11 +117,11 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, initialN
           <div><p className="mb-2 text-xs font-medium uppercase tracking-wider text-slate">Selected session</p><h2 id="selected-webinar-title" className="break-words text-xl font-semibold leading-snug tracking-tight text-heading">{selected.title}</h2><div className="mt-3"><Badge tone={selected.status === "scheduled" ? "info" : selected.status === "cancelled" ? "warn" : "neutral"}>{selected.status}</Badge></div></div>
           {sessions.length > 1 ? <label className="block text-xs text-slate">Switch session<select aria-label="Session" value={selectedId} disabled={controlsDisabled} onChange={(event) => { select(event.target.value); const item = sessions.find((session) => session.id === event.target.value); if (item) setMonth(calendarDate(item.startsAt, calendarTimezone).slice(0, 7)); }} className={field}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}</select></label> : null}
           <div className="space-y-2 text-sm text-slate"><p>{formatLiveDate(selected.startsAt, selected.timezone)}</p><p className="text-xs">Ends {formatLiveDate(selected.endsAt, selected.timezone)}</p><p className="text-xs">{selected.timezone}</p></div>
-          <div className="flex flex-wrap gap-2"><Badge tone={selected.automationEnabled ? "success" : "neutral"}>Session emails {selected.automationEnabled ? "enabled" : "disabled"}</Badge><Badge tone={selected.replayPublished ? "info" : "neutral"}>Replay {selected.replayPublished ? "published" : "unpublished"}</Badge></div>
-          {canWrite ? <CloudflareBroadcastStudio sessionId={selected.id} configured={streamConfigured} disabled={controlsDisabled} onPrepared={() => { setNotice("Cloudflare broadcast prepared."); setRefresh((value) => value + 1); }} /> : null}
+          <div className="flex flex-wrap gap-2"><Badge tone={selected.automationEnabled ? "success" : "neutral"}>Session emails {selected.automationEnabled ? "enabled" : "disabled"}</Badge><Badge tone="neutral">Recording disabled</Badge></div>
+          {canManageBroadcasts ? <CloudflareBroadcastStudio sessionId={selected.id} configured={streamConfigured} disabled={controlsDisabled} onPrepared={() => { setNotice("Cloudflare broadcast prepared."); setRefresh((value) => value + 1); }} /> : null}
           <div className="space-y-3 border-t border-mist pt-5">
             {canWrite ? <button type="button" disabled={controlsDisabled} onClick={() => setEditing(selected)} className={`${primaryButton} w-full`}>Edit session</button> : null}
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link href={`/live?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Registration page ↗</Link>{selected.replayPublished ? <Link href={`/live/replay?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Replay page ↗</Link> : null}</div>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link href={`/live?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Registration page ↗</Link></div>
           </div>
         </section> : <section className="rounded-xl border border-mist bg-card p-5 sm:p-6" aria-labelledby="plan-webinar-title">
           <span className="mb-5 grid h-14 w-14 place-items-center rounded-xl bg-gold/10 text-gold-deep"><CalendarPlus /></span>

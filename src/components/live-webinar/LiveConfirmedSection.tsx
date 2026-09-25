@@ -10,8 +10,7 @@ import { CheckIcon } from "@/components/marketing-v2/Icons";
 import { Countdown, SourceTime, useEventPhase } from "./EventTime";
 import { AddToCalendar } from "./AddToCalendar";
 import { UnscheduledNotice, PreviewBanner } from "./UnscheduledNotice";
-import { useLiveSession, sessionReplayAvailable } from "./LiveSessionProvider";
-import { useLiveClock } from "./EventTime";
+import { useLiveSession } from "./LiveSessionProvider";
 
 /**
  * /live/confirmed — step 2 of the live funnel, reached from the registration
@@ -56,7 +55,6 @@ function ConfirmedBody() {
   const ref = useReveal<HTMLDivElement>();
   const { session, participant, preview, href } = useLiveSession();
   const { phase } = useEventPhase();
-  const now = useLiveClock();
   const sessionId = session?.id;
   const registrationId = participant?.registrationId;
 
@@ -175,7 +173,7 @@ function ConfirmedBody() {
             <Reveal>
               <Panel label={C.boundary.label} className="mt-6">
                 <ul className="flex flex-col gap-3">
-                  {C.boundary.lines.filter((line) => !sessionReplayAvailable(session, now) || line !== "No recording or replay is promised.").map((line) => (
+                  {C.boundary.lines.map((line) => (
                     <li
                       key={line}
                       className="flex items-start gap-3"

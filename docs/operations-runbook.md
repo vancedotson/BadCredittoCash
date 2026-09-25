@@ -6,6 +6,22 @@ Production application: `https://vance-dotson.vancedotson.workers.dev`
 
 Public health check: `https://vance-dotson.vancedotson.workers.dev/api/health`
 
+## Live webinar activation (future operator checklist; not an activation instruction)
+
+Live webinars are independent of the evergreen training funnel. The application is deliberately fail-closed: the checked-in `LIVE_WEBINAR_ENABLED` and `CLOUDFLARE_STREAM_ENABLED` values remain `false`, and live registration also requires `LIVE_WEBINAR_EMAILS_APPROVED=true`. Missing email approval is treated as false. Marketing follow-up has its own separate gate. Do not change these settings as part of routine deployment or troubleshooting.
+
+Before a separately approved activation:
+
+1. Confirm the target Worker version and environment, and verify the existing `supabase/migrations/20260916140000_cloudflare_stream_live.sql` migration has been reviewed and applied there. Do not infer migration status from source control.
+2. Confirm the client-owned Cloudflare account is eligible for Stream Live and that the owner has approved anticipated provider usage. Preparing inputs or rehearsals can consume paid service resources; do not create one without that approval.
+3. Have an authorized operator configure the Stream API token, signing-key ID, and private RSA JWK as Worker secrets. Never place secret values in Wrangler variables, source control, shell transcripts, logs, tickets, or this runbook.
+4. Confirm `APP_BASE_URL` is the final HTTPS attendee origin. The input is restricted to that hostname; a custom domain, redirect, or canonical-origin change requires a separate review and verification.
+5. Approve live confirmation/reminder copy and legal/content claims. Only then may an authorized operator set the live email approval gate. Marketing follow-up remains separately gated.
+6. Keep global registration and Stream preparation disabled until the owner explicitly authorizes a rehearsal/activation. When authorized, an admin prepares an input through CRM Broadcast Studio; independently verify recording mode is off and that attendees need their personal registration link for playback.
+7. Conduct any host broadcast/rehearsal only under separate explicit authorization. Verify attendee playback, mobile/browser behavior, connection/offline states, and that no replay or recording is created. Do not send test emails to real recipients.
+
+If the feature is paused after activation, an authorized operator should first close registration/email gates and follow the approved Cloudflare resource-retention decision. Do not delete inputs, recordings, or related database rows as an improvised rollback. Worker rollback does not reverse database changes. This repository task does not enable flags, create a Stream input, change secrets, run a rehearsal, or send email.
+
 ## Before any planned deployment or database migration
 
 1. Sign in to the CRM and open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.

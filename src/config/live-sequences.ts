@@ -4,7 +4,7 @@ import type { SequenceEmail } from "./sequences";
 export const LIVE_EMAIL_TEMPLATES: Record<string, SequenceEmail> = {
   "live_confirmation:1": {
     delay: "immediately", subject: "Your live session joining link",
-    body: "You're registered for {{session_title}} with Vance Dotson on {{appointment_time}} ({{timezone}}). Join here: {{join_link}}. Add it to your calendar: {{calendar_link}}. This is general information about collector conduct, not legal advice or an individual case review. No recording is promised unless we tell you one is available.",
+    body: "You're registered for {{session_title}} with Vance Dotson on {{appointment_time}} ({{timezone}}). Join here: {{join_link}}. Add it to your calendar: {{calendar_link}}. This is general information about collector conduct, not legal advice or an individual case review. The live session will not be recorded.",
   },
   "live_reminder_day:1": {
     delay: "immediately", subject: "Your live session is tomorrow",
@@ -20,11 +20,7 @@ export const LIVE_EMAIL_TEMPLATES: Record<string, SequenceEmail> = {
   },
   "live_no_show:1": {
     delay: "immediately", subject: "In case you missed the live session",
-    body: "In case you missed any of {{session_title}}, you can still discuss your situation on a free call with Vance: {{call_link}}. A recording isn't promised; we'll let you know separately if one becomes available. No pressure and no obligation.",
-  },
-  "live_replay:1": {
-    delay: "immediately", subject: "The session replay is available",
-    body: "The recording of {{session_title}} is now posted. Open it here: {{replay_link}}. {{replay_expiry}} The session provides general information, not legal advice. If you'd like to discuss your situation, book a free call: {{call_link}}.",
+    body: "{{session_title}} was not recorded, but you can still discuss your situation on a free call with Vance: {{call_link}}. No pressure and no obligation.",
   },
   "live_rescheduled:1": {
     delay: "immediately", subject: "Your live session details have changed",
@@ -38,5 +34,5 @@ export const LIVE_EMAIL_TEMPLATES: Record<string, SequenceEmail> = {
 
 export function isLiveEmailTemplate(key: string): boolean { return Object.hasOwn(LIVE_EMAIL_TEMPLATES, key); }
 export function isLiveMarketingTemplate(key: string): boolean {
-  return key === "live_attended:1" || key === "live_no_show:1" || key === "live_replay:1";
+  return key === "live_attended:1" || key === "live_no_show:1";
 }

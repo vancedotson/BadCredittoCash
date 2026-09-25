@@ -70,6 +70,8 @@ describe("CRM webinar authorization and lifecycle requests", () => {
     const response = await POST(request());
     expect(response.status).toBe(200);
     expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ status: "draft", automation_enabled: false }));
+    expect(mocks.insert.mock.calls[0][0]).not.toHaveProperty("replay_url");
+    expect(mocks.insert.mock.calls[0][0]).not.toHaveProperty("replay_published");
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ actorId: "operator", action: "live_webinar.created", entityId: sessionId }));
   });
 
@@ -78,6 +80,8 @@ describe("CRM webinar authorization and lifecycle requests", () => {
     expect(response.status).toBe(200);
     expect(mocks.eq).toHaveBeenCalledWith("id", sessionId);
     expect(mocks.update.mock.calls[0][0]).not.toHaveProperty("schedule_version");
+    expect(mocks.update.mock.calls[0][0]).not.toHaveProperty("replay_url");
+    expect(mocks.update.mock.calls[0][0]).not.toHaveProperty("replay_published");
     expect(mocks.update.mock.calls[0][0]).not.toHaveProperty("unexpectedAdminField");
     expect(mocks.insert).not.toHaveBeenCalled();
   });

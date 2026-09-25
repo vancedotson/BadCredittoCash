@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 const privateHeaders = { "cache-control": "private, no-store", vary: "Cookie" };
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const auth = await requireCrmApiUser(request, "write");
+  const auth = await requireCrmApiUser(request, "admin-write");
   if (auth.response) return auth.response;
   if (isCrmDemoMode()) return Response.json({ error: "Live broadcasting is unavailable in demonstration mode." }, { status: 409 });
   const { id } = await context.params;

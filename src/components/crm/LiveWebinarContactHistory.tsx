@@ -11,12 +11,12 @@ export function LiveWebinarContactHistory({ registrations }: { registrations: Li
       {registrations.map((registration) => <li key={registration.id} className="space-y-2 rounded-xl border border-mist p-3">
         <Link href={`/crm/webinars?sessionId=${encodeURIComponent(registration.sessionId)}`} className="font-medium text-trust hover:underline">{registration.session.title}</Link>
         <p className="text-xs text-slate">{formatLiveDate(registration.session.startsAt, registration.session.timezone)}</p>
-        <div className="flex flex-wrap gap-1.5"><Badge tone={registration.attendedAt ? "active" : "neutral"}>{liveParticipationLabel(registration)}</Badge>{registration.replayOpenedAt ? <Badge tone="info">Replay opened</Badge> : null}{registration.session.status === "cancelled" ? <Badge tone="warn">Session cancelled</Badge> : null}</div>
+        <div className="flex flex-wrap gap-1.5"><Badge tone={registration.attendedAt ? "active" : "neutral"}>{liveParticipationLabel(registration)}</Badge>{registration.replayOpenedAt ? <Badge tone="info">Legacy replay event</Badge> : null}{registration.session.status === "cancelled" ? <Badge tone="warn">Session cancelled</Badge> : null}</div>
         <dl className="space-y-1 text-xs text-slate">
           <div>Registered: <span className="text-body">{formatLiveDate(registration.registeredAt, registration.session.timezone)}</span></div>
           {registration.firstRoomOpenedAt ? <div>First room entry: <span className="text-body">{formatLiveDate(registration.firstRoomOpenedAt, registration.session.timezone)}</span></div> : null}
           {registration.attendedAt ? <div>Session presence: <span className="text-body">{formatLiveDate(registration.attendedAt, registration.session.timezone)}</span></div> : null}
-          {registration.replayOpenedAt ? <div>Replay opened: <span className="text-body">{formatLiveDate(registration.replayOpenedAt, registration.session.timezone)}</span></div> : null}
+          {registration.replayOpenedAt ? <div>Legacy replay event recorded: <span className="text-body">{formatLiveDate(registration.replayOpenedAt, registration.session.timezone)}</span></div> : null}
           {registration.bookingStatus ? <div>Call: <span className="text-body">{registration.bookingStatus}</span></div> : null}
         </dl>
         <LiveWebinarMessages messages={registration.messages} timezone={registration.session.timezone} />

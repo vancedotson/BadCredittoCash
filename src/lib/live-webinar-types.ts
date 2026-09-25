@@ -61,7 +61,7 @@ export type LiveWebinarSessionReport = {
 
 export const LIVE_ACTIVITY_EVENTS = [
   "webinar_confirmed_view", "webinar_room_opened", "live_presence",
-  "live_replay_opened", "live_question_asked", "call_page_view", "call_booking_started",
+  "live_question_asked", "call_page_view", "call_booking_started",
 ] as const;
 export type LiveActivityEvent = (typeof LIVE_ACTIVITY_EVENTS)[number];
 
@@ -79,6 +79,17 @@ export function isLivePlayerUrl(value: string): boolean {
     const cloudflarePlayer = /^customer-[a-z0-9]+\.cloudflarestream\.com$/i.test(url.hostname);
     return url.protocol === "https:" && !url.username && !url.password
       && ((LIVE_PLAYER_ORIGINS as readonly string[]).includes(url.origin) || cloudflarePlayer);
+  } catch { return false; }
+}
+
+export function isCloudflareWhepUrl(value: string, liveInputId?: string | null): boolean {
+  try {
+    const url = new URL(value);
+    const inputId = liveInputId ?? url.pathname.split("/")[1];
+    return url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash
+      && /^customer-[a-z0-9]+\.cloudflarestream\.com$/i.test(url.hostname)
+      && /^[a-f\d]{32}$/i.test(inputId)
+      && url.pathname === `/${inputId}/webRTC/play`;
   } catch { return false; }
 }
 

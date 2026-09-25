@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { Kicker } from "@/components/marketing-v3/shared/primitives";
 import { UnscheduledNotice, PreviewBanner } from "./UnscheduledNotice";
-import { sessionReplayAvailable, useLiveSession } from "./LiveSessionProvider";
-import { useLiveClock, useEventPhase } from "./EventTime";
+import { useLiveSession } from "./LiveSessionProvider";
+import { useEventPhase } from "./EventTime";
 import { LiveRegisterV1 } from "./registration/LiveRegisterV1";
 
 /**
@@ -36,7 +36,6 @@ function RegistrationPage({ preview }: { preview: boolean }) {
 function GatedRegistrationPage() {
   const { session, preview, loading, error, href } = useLiveSession();
   const { phase } = useEventPhase();
-  const now = useLiveClock();
   if (loading || !session || (!preview && (error || session.status !== "scheduled"))) return <UnscheduledNotice />;
   if (!preview && phase === "ended") {
     return <main className="v3-wrap" style={{ paddingTop: 72, paddingBottom: 120, maxWidth: 720 }}>
@@ -44,7 +43,6 @@ function GatedRegistrationPage() {
       <h1 className="v3-display mt-5" style={{ fontSize: 40 }}>This session has ended.</h1>
       <p className="mt-6" style={{ color: "var(--v3-mut)" }}>Registration for {session.title} is closed.</p>
       <div className="mt-8 flex flex-wrap gap-4">
-        {sessionReplayAvailable(session, now) ? <Link className="v3-btn v3-btn-primary" href={href("/live/replay")}>Watch the replay</Link> : null}
         <Link className="v3-btn v3-btn-ghost" href={href("/live/call")}>Book a free call</Link>
       </div>
     </main>;

@@ -106,7 +106,7 @@ export function useLiveSession() {
 }
 
 export function sessionReplayAvailable(session: PublicLiveWebinarSession | null, now: number) {
-  return Boolean(session?.replayPublished && session.replayUrl && session.status === "scheduled"
-    && now >= new Date(session.endsAt).getTime()
-    && (!session.replayAvailableUntil || new Date(session.replayAvailableUntil).getTime() > now));
+  void session;
+  void now;
+  return false;
 }

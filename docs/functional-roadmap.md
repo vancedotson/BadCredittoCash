@@ -1,6 +1,6 @@
 # Vance Dotson Website — Functional Implementation Roadmap
 
-Last updated: 2026-08-21
+Last updated: 2026-09-25
 
 This document is the working backlog for turning the approved website shell into a production system. Check an item only after its acceptance criteria pass in the Cloudflare deployment.
 
@@ -149,7 +149,7 @@ Acceptance criteria:
 - Delivery state is visible on the contact timeline.
 - Bounces and complaints are suppressed automatically.
 
-### 4. Real webinar experience — P1
+### 4. Evergreen training recording — P1 (separate funnel)
 
 Status: `[~] In progress â€” Google Calendar availability and two-way booking lifecycle synchronization are live and manually verified`
 
@@ -170,6 +170,27 @@ Acceptance criteria:
 - The approved recording plays across current desktop/mobile browsers.
 - Watch milestones and CTA timing match actual playback.
 - Refreshing resumes appropriately and does not duplicate milestones.
+
+The evergreen recording/player backlog above remains open and is independent of the live-webinar path below. Live sessions must not enable evergreen enrollment, share its playback state, or imply that an on-demand recording exists.
+
+### 4a. Live webinar — code path implemented; activation blocked
+
+The live webinar is a separate, feature-gated product path. The application code prepares Cloudflare Stream live inputs for admin users, uses native WebRTC/WHEP playback for registered attendees, signs playback URLs for a short access window, and configures new inputs with recording disabled. Public session responses omit the raw input ID, conceal playback from nonparticipants, and strip legacy replay fields. CRM edits do not overwrite legacy replay columns. The public replay route is a permanent no-recording notice.
+
+- [x] Keep live registrations and confirmations separate from evergreen training readiness and enrollment.
+- [x] Require exact live feature and live-email approval gates; keep marketing follow-up behind its separate approval.
+- [x] Restrict live-input preparation to CRM admins and validate Cloudflare WHEP endpoints.
+- [x] Make recording/replay unavailable for new sessions without purging legacy database fields.
+- [x] Test registration isolation, endpoint validation, signing, participant playback access, admin authorization, and replay suppression locally.
+- [ ] Verify the existing `20260916140000_cloudflare_stream_live.sql` migration has been reviewed and applied in each target environment. This code task does not apply migrations.
+- [ ] Confirm the client-owned Cloudflare Stream subscription is eligible and approve any provider usage before preparing a live input.
+- [ ] Configure and independently verify Stream API and signing-key secrets; never store their values in source control or this roadmap.
+- [ ] Confirm the final `APP_BASE_URL`/allowed origin after domain and redirect decisions; custom-domain/DNS work remains a separate launch item.
+- [ ] Obtain final approval for live email copy and legal/content claims; configure `LIVE_WEBINAR_EMAILS_APPROVED` only after that approval.
+- [ ] Complete a separately authorized non-production rehearsal, including host broadcast, attendee access, browser compatibility, and the no-recording behavior.
+- [ ] Keep `LIVE_WEBINAR_ENABLED`, `CLOUDFLARE_STREAM_ENABLED`, and `LIVE_WEBINAR_EMAILS_APPROVED` false until all prerequisites and explicit launch approval are complete.
+
+No production resource, secret, database, feature flag, broadcast, or email is changed by the code implementation alone. Live webinar activation is not a substitute for the still-open evergreen recording/player backlog.
 
 ### 5. Real appointment scheduling — P1
 

@@ -14,23 +14,27 @@ export type SessionDraft = {
   replayPublished: boolean;
   replayAvailableUntil: string;
   automationEnabled: boolean;
+  streamProvider: "external" | "cloudflare";
+  cloudflareLiveInputId: string | null;
 };
 
 export function draftOf(session: LiveWebinarSession | null, date?: string, timezone = "America/Chicago"): SessionDraft {
   if (!session) return {
     slug: "", title: "", startsAt: date ? `${date}T12:00` : "", endsAt: date ? `${date}T13:00` : "",
     timezone, status: "draft", embedUrl: "", replayUrl: "", replayPublished: false,
-    replayAvailableUntil: "", automationEnabled: false,
+    replayAvailableUntil: "", automationEnabled: false, streamProvider: "external", cloudflareLiveInputId: null,
   };
   return {
     id: session.id, slug: session.slug, title: session.title,
     startsAt: liveDateInput(session.startsAt, session.timezone),
     endsAt: liveDateInput(session.endsAt, session.timezone),
     timezone: session.timezone, status: session.status,
-    embedUrl: session.embedUrl ?? "", replayUrl: session.replayUrl ?? "",
-    replayPublished: session.replayPublished,
-    replayAvailableUntil: liveDateInput(session.replayAvailableUntil, session.timezone),
+    embedUrl: session.embedUrl ?? "", replayUrl: "",
+    replayPublished: false,
+    replayAvailableUntil: "",
     automationEnabled: session.automationEnabled,
+    streamProvider: session.streamProvider ?? "external",
+    cloudflareLiveInputId: session.cloudflareLiveInputId ?? null,
   };
 }
 

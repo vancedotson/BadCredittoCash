@@ -200,7 +200,7 @@ export function CloudflareBroadcastStudio({ sessionId, configured, disabled, onP
     }
   }
 
-  if (!configured) return <p className="rounded-lg border border-gold/30 bg-gold/5 p-3 text-xs leading-relaxed text-slate">Browser broadcasting is built in. Cloudflare Stream billing and its API token still need to be connected.</p>;
+  if (!configured) return <p className="rounded-lg border border-gold/30 bg-gold/5 p-3 text-xs leading-relaxed text-slate">Broadcast setup is unavailable. Cloudflare Stream must be enabled and its API token and playback signing key configured before an administrator can prepare a live input.</p>;
 
   return <div className="space-y-3 rounded-lg border border-mist bg-cloud/40 p-3">
     <div className="flex items-center justify-between gap-3"><p className="text-sm font-semibold text-heading">Broadcast studio</p><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${state === "live" ? "bg-red text-white" : "bg-mist text-slate"}`}>{state === "live" ? "● YOU ARE LIVE" : state === "preparing" ? "Starting…" : "Offline"}</span></div>

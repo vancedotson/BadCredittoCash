@@ -56,6 +56,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
   vi.stubEnv("LIVE_WEBINAR_ENABLED", "true");
+  vi.stubEnv("LIVE_WEBINAR_EMAILS_APPROVED", "true");
   vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "false");
   vi.stubEnv("MARKETING_EMAILS_ENABLED", "false");
   vi.stubEnv("EMAIL_MODE", "production");
@@ -214,52 +215,12 @@ describe("live email delivery integration", () => {
       props: expect.objectContaining({ funnel: "live", sessionId: SESSION_A, registrationId: REGISTRATION_A }) }));
   });
 
-  it("keeps replay routing and session sales links valid and supplies marketing unsubscribe headers", async () => {
-    vi.stubEnv("MARKETING_EMAILS_ENABLED", "true");
+  it("cancels previously queued replay mail without rendering or provider dispatch", async () => {
     queue("live_replay:1", payload(), "cccccccc-cccc-4ccc-8ccc-cccccccccccc");
-    await processDueEmails();
-    const message = sentContent();
-    const links = htmlLinks(message.html);
-    const replay = links.find((url) => url.pathname === "/api/live/join")!;
-    expect(replay.searchParams.get("replay")).toBe("1");
-    expect(verifyLiveParticipantToken(replay.searchParams.get("token")!, NOW.getTime())).not.toBeNull();
-    expect(links.find((url) => url.pathname === "/live/call")?.searchParams.get("session")).toBe(SESSION_A);
-    expect(message.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
-    expect(message.text).toContain("Available until");
-    expect(message.text).not.toContain("{{");
-  });
-
-  it("gives a replay published 120 days later a usable token and identical retry content from its durable send deadline", async () => {
-    vi.stubEnv("MARKETING_EMAILS_ENABLED", "true");
-    const day = 86_400_000;
-    const publishedAt = Date.parse(payload().endsAt!) + 120 * day;
-    const sendDeadline = publishedAt + 7 * day;
-    const messageId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
-    const savedPayload = payload({ replayAvailableUntil: null, sendDeadline: new Date(sendDeadline).toISOString() });
-    vi.setSystemTime(publishedAt);
-    mocked.send.mockResolvedValueOnce({ data: null, error: { message: "Temporary provider error", statusCode: 503 } });
-    queue("live_replay:1", savedPayload, messageId);
-    expect(await processDueEmails()).toMatchObject({ retrying: 1, sent: 0 });
-
-    const firstMessage = sentContent();
-    const replay = htmlLinks(firstMessage.html).find((url) => url.pathname === "/api/live/join")!;
-    const firstToken = replay.searchParams.get("token")!;
-    expect(replay.searchParams.get("replay")).toBe("1");
-    expect(verifyLiveParticipantToken(firstToken, publishedAt)).toMatchObject({
-      registrationId: REGISTRATION_A, sessionId: SESSION_A, expiresAt: sendDeadline + day,
-    });
-    expect(firstMessage.text).toContain("No expiry date is currently set.");
-
-    await vi.advanceTimersByTimeAsync(30 * 60_000);
-    queue("live_replay:1", savedPayload, messageId);
-    expect(await processDueEmails()).toMatchObject({ sent: 1, retrying: 0 });
-    const retryMessage = sentContent(1);
-    const retryToken = htmlLinks(retryMessage.html).find((url) => url.pathname === "/api/live/join")!.searchParams.get("token");
-    expect(retryToken).toBe(firstToken);
-    expect(verifyLiveParticipantToken(retryToken!, Date.now())).not.toBeNull();
-    expect(retryMessage).toEqual(firstMessage);
-    expect(mocked.send.mock.calls[1][1]).toEqual({ idempotencyKey: `vance-${messageId}` });
-    expect(mocked.send.mock.calls[1][1]).toEqual(mocked.send.mock.calls[0][1]);
+    expect(await processDueEmails()).toMatchObject({ cancelled: 1, failed: 0, sent: 0 });
+    expect(messageStates.get("cccccccc-cccc-4ccc-8ccc-cccccccccccc")).toMatchObject({ status: "cancelled" });
+    expect(mocked.send).not.toHaveBeenCalled();
+    expect(mocked.resendConstructed).not.toHaveBeenCalled();
   });
 
   it("blocks legacy immediate registration before claim while evergreen training is disabled", async () => {
@@ -370,7 +331,7 @@ describe("live email delivery integration", () => {
 
   it.each([
     ["live_confirmation:1", false], ["live_reminder_day:1", false], ["live_reminder_soon:1", false],
-    ["live_attended:1", true], ["live_no_show:1", true], ["live_replay:1", true],
+    ["live_attended:1", true], ["live_no_show:1", true],
     ["live_rescheduled:1", false], ["live_cancelled:1", false],
   ])("renders %s with complete fields and the correct promotional classification", async (template, promotional) => {
     if (promotional) vi.stubEnv("MARKETING_EMAILS_ENABLED", "true");

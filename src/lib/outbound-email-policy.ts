@@ -11,7 +11,7 @@ export type OutboundEmailDecision = {
   allowed: boolean;
   category: OutboundEmailCategory;
   marketing: boolean;
-  reason: "allowed" | "training_disabled" | "marketing_disabled" | "live_disabled" | "unknown_template";
+  reason: "allowed" | "training_disabled" | "marketing_disabled" | "live_disabled" | "live_email_unapproved" | "unknown_template";
 };
 
 const BOOKING_UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
@@ -60,6 +60,9 @@ export function outboundEmailDecision(templateKey: string): OutboundEmailDecisio
   if (category === "live") {
     if (process.env.LIVE_WEBINAR_ENABLED !== "true") {
       return { allowed: false, category, marketing, reason: "live_disabled" };
+    }
+    if (process.env.LIVE_WEBINAR_EMAILS_APPROVED !== "true") {
+      return { allowed: false, category, marketing, reason: "live_email_unapproved" };
     }
     if (marketing && !marketingEmailsEnabled()) {
       return { allowed: false, category, marketing, reason: "marketing_disabled" };

@@ -137,8 +137,7 @@ export const liveWebinar = {
     "A review of your individual case.",
     "That contact from a collector will stop.",
     "That a debt is reduced, cancelled, or goes away.",
-    /** ⚠️ Delete this line ONLY if a replay is actually produced and delivered. */
-    "A recording or replay.",
+    "A recording; live sessions are not recorded.",
   ],
 
   faq: [
@@ -160,7 +159,7 @@ export const liveWebinar = {
     },
     {
       q: "Will there be a replay?",
-      a: "No replay is promised. If that changes, registrants are told by email — but plan to attend live.",
+      a: "No. Live sessions are not recorded, and no replay is available.",
     },
     {
       q: "What does it cost?",
@@ -364,23 +363,11 @@ export const liveWebinar = {
     },
   },
 
-  /**
-   * /live/replay — optional. A recording for no-shows and late registrants.
-   *
-   * IMPORTANT: `isPublished` is the switch for the whole funnel's replay
-   * promise, not just this page. While it is false, /live and /live/confirmed
-   * keep saying no replay is promised and this page says the session isn't
-   * posted — which is the honest state when no recording exists. Setting it to
-   * true removes those disclaimers everywhere automatically (see
-   * `notPromisedLines()` and `boundaryLines()` below), so the site never
-   * promises a replay it doesn't have, or denies one it does.
-   *
-   * Never set this true before the recording is actually up at `embedUrl`.
-   */
+  /** Legacy schema retained for compatibility. The live product never records or publishes replays. */
   replay: {
     isPublished: false,
 
-    /** ⚠️ PLACEHOLDER — the recording's player URL. Its origin is added to CSP frame-src. */
+    /** Legacy compatibility field; live webinar playback uses private WHEP URLs. */
     embedUrl: null as string | null,
 
     /**
@@ -390,25 +377,24 @@ export const liveWebinar = {
      */
     availableUntil: null as string | null,
 
-    kicker: "REPLAY // LIMITED TIME",
-    heading: "Watch the replay.",
-    sub: "The full session — where the line is, how to document it, and what you're entitled to ask for.",
-    expiryLabel: "AVAILABLE UNTIL",
-    expiredKicker: "REPLAY CLOSED",
-    expiredHeading: "The replay window has closed.",
-    expiredSub:
-      "This recording is no longer available. You can book a free strategy call to discuss possible next steps.",
+    kicker: "LIVE SESSION",
+    heading: "This session was not recorded.",
+    sub: "Live webinars are not recorded, and no replay is available.",
+    expiryLabel: "NOT AVAILABLE",
+    expiredKicker: "LIVE SESSION",
+    expiredHeading: "This session was not recorded.",
+    expiredSub: "Live webinars are not recorded. You can book a free strategy call to discuss possible next steps.",
 
-    /** Shown while `isPublished` is false. Says plainly that none exists. */
+    /** Legacy copy retained for compatibility; the public replay route is always unavailable. */
     unavailable: {
-      kicker: "NO REPLAY POSTED",
-      heading: "There's no recording of this one.",
-      sub: "A replay is not currently available for this session. You can check back for updates or book a free strategy call.",
+      kicker: "LIVE SESSION",
+      heading: "This session was not recorded.",
+      sub: "Live webinars are not recorded. You can book a free strategy call to discuss possible next steps.",
     },
 
     cta: {
       heading: "Want your own situation looked at?",
-      sub: "The replay is general information. A free call is where the specifics get discussed.",
+      sub: "A free call is where the specifics get discussed.",
       buttonLabel: "Book my free call",
       href: "/live/call",
     },
@@ -507,15 +493,13 @@ export const liveWebinar = {
      * `null` renders an honest "stream not connected" panel instead of a broken
      * black box.
      *
-     * IMPORTANT: the origin of whatever you put here is added to the page's
-     * Content-Security-Policy `frame-src` automatically (see middleware.ts).
-     * Without that the browser blocks the iframe silently — no console error
-     * that most people would notice, just an empty rectangle.
+     * Legacy field; current WebRTC playback is governed by `connect-src` (see middleware.ts).
+     * The live player negotiates WebRTC directly and does not use this field.
      */
     embedUrl: null as string | null,
 
     /** How early the room lets people in before the session starts. */
-    doorsOpenMinutes: 15,
+    doorsOpenMinutes: 5,
 
     heading: "The live session.",
     stagePlaceholder: {
@@ -532,10 +516,7 @@ export const liveWebinar = {
     ended: {
       kicker: "SESSION ENDED",
       heading: "That's a wrap.",
-      sub: "The live session is over. No replay was promised and none is posted. You can book a free call to discuss possible next steps.",
-      /** Used instead of `sub` when `replay.isPublished` is true. */
-      subWithReplay:
-        "The live session is over. The recording is up for a limited time — watch it below, or book a free call if you want your own situation looked at.",
+      sub: "The live session is over. It was not recorded. You can book a free call to discuss possible next steps.",
     },
 
     /**
@@ -574,49 +555,25 @@ export const liveWebinar = {
 /** Total of the agenda segments — used to assert the schedule matches the stated duration. */
 export const agendaTotalMinutes = liveWebinar.agenda.reduce((sum, s) => sum + s.minutes, 0);
 
-/* -------------------------------------------------------------- replay seam */
-
-/**
- * The replay disclaimers are derived, never hand-maintained in three places.
- * `replay.isPublished` is the single switch: while it's false the site says no
- * replay is promised; when it's true those lines disappear on their own. This
- * exists so nobody has to remember to edit /live, /live/confirmed and
- * /live/room when a recording goes up or comes down.
- */
-const REPLAY_NOT_PROMISED = "A recording or replay.";
-const REPLAY_NOT_PROMISED_BOUNDARY = "No recording or replay is promised.";
+/* -------------------------------------------------------------- live copy helpers */
 
 /** The /live "Not promised" column. */
 export function notPromisedLines(): readonly string[] {
-  const lines = liveWebinar.notPromised as readonly string[];
-  return liveWebinar.replay.isPublished ? lines.filter((l) => l !== REPLAY_NOT_PROMISED) : lines;
+  return liveWebinar.notPromised;
 }
 
 /** The /live/confirmed "So there's no confusion" list. */
 export function boundaryLines(): readonly string[] {
-  const lines = liveWebinar.confirmed.boundary.lines as readonly string[];
-  return liveWebinar.replay.isPublished
-    ? lines.filter((l) => l !== REPLAY_NOT_PROMISED_BOUNDARY)
-    : lines;
+  return liveWebinar.confirmed.boundary.lines;
 }
 
 /** The /live FAQ, with the replay answer swapped to match reality. */
 export function faqItems(): ReadonlyArray<{ q: string; a: string }> {
-  return liveWebinar.faq.map((item) =>
-    liveWebinar.replay.isPublished && item.q === "Will there be a replay?"
-      ? {
-          q: item.q,
-          a: "Yes — a recording is posted after the session and registrants are emailed the link. Attending live is still worth it: the Q&A is answered in the room.",
-        }
-      : item,
-  );
+  return liveWebinar.faq;
 }
 
 /** True when a replay exists AND its stated window hasn't passed. */
 export function replayIsWatchable(now: number = Date.now()): boolean {
-  if (!liveWebinar.replay.isPublished) return false;
-  const until = liveWebinar.replay.availableUntil;
-  if (!until) return true;
-  const deadline = new Date(until).getTime();
-  return Number.isNaN(deadline) ? true : now < deadline;
+  void now;
+  return false;
 }

@@ -7,12 +7,9 @@ import { LIVE_PLAYER_ORIGINS } from "@/lib/live-webinar-types";
 const isDev = process.env.NODE_ENV === "development";
 
 /**
- * The live room (/live/room) and the replay (/live/replay) embed video in an
- * iframe. CSP `frame-src` defaults to Turnstile only, so without the player's
- * origin here the browser blocks the embed silently — an empty rectangle and no
- * visible error. Deriving it from the configured embed URLs means setting
- * `room.embedUrl` / `replay.embedUrl` is enough; no one has to remember to edit
- * the CSP too.
+ * The live room uses Cloudflare Stream WHEP over a cross-origin SDP fetch.
+ * Allow only Stream customer subdomains for that connection; participant
+ * checks and signed URLs remain the authorization boundary.
  */
 function originOf(url: string | null): string | null {
   if (!url) return null;
@@ -39,7 +36,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://gulidnxltrgomjyctjlp.supabase.co wss://gulidnxltrgomjyctjlp.supabase.co https://challenges.cloudflare.com",
+  "connect-src 'self' https://gulidnxltrgomjyctjlp.supabase.co wss://gulidnxltrgomjyctjlp.supabase.co https://challenges.cloudflare.com https://*.cloudflarestream.com",
   `frame-src ${frameSrc}`,
   "media-src 'self' blob: https:",
   "object-src 'none'",

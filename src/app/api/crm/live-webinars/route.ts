@@ -36,8 +36,8 @@ export async function POST(request: Request) {
   try {
     const db = await createClient();
     const values = { slug: session.slug, title: session.title, starts_at: session.startsAt, ends_at: session.endsAt,
-      timezone: session.timezone, status: session.status, embed_url: session.embedUrl, replay_url: session.replayUrl,
-      replay_published: session.replayPublished, replay_available_until: session.replayAvailableUntil, automation_enabled: session.automationEnabled };
+      timezone: session.timezone, status: session.status, embed_url: session.embedUrl, automation_enabled: session.automationEnabled,
+      stream_provider: session.streamProvider ?? "external", cloudflare_live_input_id: session.cloudflareLiveInputId ?? null };
     const { data, error } = session.id
       ? await db.from("live_webinar_sessions").update(values).eq("id", session.id).select("*").single()
       : await db.from("live_webinar_sessions").insert(values).select("*").single();

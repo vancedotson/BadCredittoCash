@@ -20,6 +20,7 @@ function request(body: unknown = liveLead, headers: Record<string, string> = {})
 beforeEach(() => {
   vi.stubEnv("EMAIL_MODE", "production");
   vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "true");
+  vi.stubEnv("LIVE_WEBINAR_EMAILS_APPROVED", "true");
   vi.resetAllMocks();
   mocks.enabled.mockReturnValue(true);
   mocks.session.mockImplementation(async (id) => ({ id, status: "scheduled", timezone: "UTC", endsAt: "2030-10-12T13:00:00Z" }));
@@ -69,6 +70,19 @@ describe("evergreen training readiness gate", () => {
 });
 
 describe("live registration isolation", () => {
+  it("keeps live registration independent of evergreen readiness and blocks its email until separately approved", async () => {
+    vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "false");
+    vi.stubEnv("LIVE_WEBINAR_EMAILS_APPROVED", "false");
+    const response = await POST(request());
+    expect(response.status).toBe(503);
+    expect(mocks.enabled).toHaveBeenCalledOnce();
+    expect(mocks.rate).not.toHaveBeenCalled();
+    expect(mocks.admin).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.deliverLive).not.toHaveBeenCalled();
+    expect(mocks.deliverLegacy).not.toHaveBeenCalled();
+  });
+
   it.each([
     { ...liveLead },
     { name: liveLead.name, email: liveLead.email, sessionId },

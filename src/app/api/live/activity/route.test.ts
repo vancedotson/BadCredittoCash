@@ -93,6 +93,12 @@ describe("live activity authorization and durable acknowledgement", () => {
     expect((await POST(request())).status).toBe(409);
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
+
+  it("rejects legacy replay-open events now that replay is permanently disabled", async () => {
+    const response = await POST(request({ ...activity, event: "live_replay_opened" }));
+    expect(response.status).toBe(400);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
 });
 
 describe("joining links and public session metadata", () => {
@@ -109,10 +115,10 @@ describe("joining links and public session metadata", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("removes tokens on redirect and only uses a scoped HTTP-only cookie", async () => {
+  it("always redirects valid joining links to the live room and uses a scoped HTTP-only cookie", async () => {
     const response = await join(new Request(`${origin}/api/live/join?token=valid&replay=1&redirect=https://unrelated.test`));
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(`${origin}/live/replay?session=${sessionId}`);
+    expect(response.headers.get("location")).toBe(`${origin}/live/room?session=${sessionId}`);
     expect(response.headers.get("set-cookie")).toContain(`vance-live-${sessionId}=valid`);
     expect(response.headers.get("set-cookie")).toMatch(/HttpOnly/i);
     expect(response.headers.get("set-cookie")).toMatch(/Secure/i);

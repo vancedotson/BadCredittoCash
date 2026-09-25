@@ -5,9 +5,10 @@ import Link from "next/link";
 import { liveWebinar } from "@/config/live-webinar";
 import { trackLiveEvent } from "@/lib/live-tracking";
 import { Kicker, SectionScan } from "@/components/marketing-v3/shared/primitives";
-import { Countdown, SourceTime, useEventPhase, useLiveClock } from "./EventTime";
+import { Countdown, SourceTime, useEventPhase } from "./EventTime";
 import { UnscheduledNotice, PreviewBanner } from "./UnscheduledNotice";
-import { sessionReplayAvailable, useLiveSession } from "./LiveSessionProvider";
+import { useLiveSession } from "./LiveSessionProvider";
+import { CloudflareLivePlayer } from "./CloudflareLivePlayer";
 
 /**
  * /live/room — step 3. The session itself.
@@ -25,9 +26,9 @@ const R = liveWebinar.room;
 
 /* --------------------------------------------------------------- the stage */
 
-function Stage() {
-  const { session } = useLiveSession();
-  if (!session?.embedUrl) {
+function Stage({ onStreamState }: { onStreamState: (state: "connecting" | "live" | "offline") => void }) {
+  const { session, participant, preview } = useLiveSession();
+  if (!participant || preview) {
     return (
       <div
         className="grid place-items-center p-8 text-center"
@@ -44,35 +45,25 @@ function Stage() {
             className="v3-mono"
             style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-accent)" }}
           >
-            {R.stagePlaceholder.label}
+            REGISTRATION REQUIRED
           </span>
           <p className="mt-4" style={{ fontSize: 14.5, color: "var(--v3-mut)", lineHeight: 1.6 }}>
-            The stream is not connected yet. Please keep this page open and check your email for updates.
+            Open your personal joining link from the registration email to enter this room.
           </p>
         </div>
       </div>
     );
   }
 
+  if (session?.streamProvider !== "cloudflare" || !session.embedUrl) {
+    return <div className="grid aspect-video place-items-center rounded border border-dashed p-8 text-center" style={{ background: "var(--v3-bg2)", borderColor: "var(--v3-line)" }}>
+      <div><span className="v3-mono" style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-accent)" }}>LIVE STREAM UNAVAILABLE</span>
+        <p className="mt-4" role="status" style={{ maxWidth: 420, fontSize: 14.5, color: "var(--v3-mut)", lineHeight: 1.6 }}>The secure live player is not configured for this session. Please refresh or contact the host.</p></div>
+    </div>;
+  }
+
   return (
-    <div
-      style={{
-        aspectRatio: "16 / 9",
-        width: "100%",
-        background: "#000",
-        border: "1px solid var(--v3-line)",
-        borderRadius: 4,
-        overflow: "hidden",
-      }}
-    >
-      <iframe
-        src={session.embedUrl}
-        title={session.title}
-        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-        allowFullScreen
-        style={{ width: "100%", height: "100%", border: 0, display: "block" }}
-      />
-    </div>
+    <CloudflareLivePlayer endpoint={session.embedUrl} onState={onStreamState} />
   );
 }
 
@@ -231,11 +222,7 @@ function EarlyState() {
 }
 
 function EndedState() {
-  // When a replay actually exists, that's the most useful next step and the
-  // "no replay was promised" line would be wrong. Both follow the one flag.
-  const { session, href } = useLiveSession();
-  const now = useLiveClock();
-  const hasReplay = sessionReplayAvailable(session, now);
+  const { href } = useLiveSession();
   return (
     <div className="v3-wrap" style={{ maxWidth: 680, paddingTop: 64, paddingBottom: 120 }}>
       <Kicker>{R.ended.kicker}</Kicker>
@@ -243,16 +230,11 @@ function EndedState() {
         {R.ended.heading}
       </h1>
       <p className="mt-5" style={{ fontSize: 17, color: "var(--v3-mut)", lineHeight: 1.6 }}>
-        {hasReplay ? R.ended.subWithReplay : R.ended.sub}
+        This live session has ended. It was not recorded, so there is no replay.
       </p>
       <div className="mt-9 flex flex-wrap gap-3">
-        {hasReplay ? (
-          <Link className="v3-btn v3-btn-primary" href={href("/live/replay")}>
-            Watch the replay
-          </Link>
-        ) : null}
         <Link
-          className={hasReplay ? "v3-btn v3-btn-ghost" : "v3-btn v3-btn-primary"}
+          className="v3-btn v3-btn-primary"
           href={href(R.cta.href)}
         >
           {R.cta.buttonLabel}
@@ -270,6 +252,7 @@ function LiveState() {
   const startsAt = session?.startsAt;
   const endsAt = session?.endsAt;
   const embedUrl = session?.embedUrl;
+  const [streamState, setStreamState] = useState<"connecting" | "live" | "offline">("connecting");
 
   useEffect(() => {
     if (preview || !sessionId || !registrationId) return;
@@ -277,7 +260,7 @@ function LiveState() {
   }, [preview, sessionId, registrationId]);
 
   useEffect(() => {
-    if (preview || !sessionId || !registrationId || !embedUrl || !startsAt || !endsAt || phase !== "live") return;
+    if (preview || streamState !== "live" || !sessionId || !registrationId || !embedUrl || !startsAt || !endsAt || phase !== "live") return;
     const presence = () => {
       const now = Date.now();
       if (document.visibilityState === "visible" && now >= Date.parse(startsAt) && now < Date.parse(endsAt)) {
@@ -288,7 +271,7 @@ function LiveState() {
     const timer = setInterval(presence, 60_000);
     document.addEventListener("visibilitychange", presence);
     return () => { clearInterval(timer); document.removeEventListener("visibilitychange", presence); };
-  }, [preview, sessionId, registrationId, startsAt, endsAt, embedUrl, phase]);
+  }, [preview, sessionId, registrationId, startsAt, endsAt, embedUrl, phase, streamState]);
 
   return (
     <div className="v3-wrap" style={{ paddingTop: 32, paddingBottom: 96 }}>
@@ -308,7 +291,7 @@ function LiveState() {
             className="v3-mono"
             style={{ fontSize: 11, letterSpacing: "0.2em", color: "var(--v3-danger)" }}
           >
-            {phase === "live" ? "LIVE NOW" : "DOORS OPEN — STARTING SOON"}
+            {phase !== "live" ? "DOORS OPEN — STARTING SOON" : streamState === "live" ? "LIVE NOW" : streamState === "connecting" ? "CONNECTING TO LIVE SESSION" : "WAITING FOR THE HOST"}
           </span>
         </div>
       </div>
@@ -318,7 +301,7 @@ function LiveState() {
       </h1>
 
       <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
-        <Stage />
+        <Stage onStreamState={setStreamState} />
         <QuestionBox key={`${sessionId}:${registrationId}`} />
       </div>
     </div>
@@ -342,8 +325,14 @@ function RoomBody() {
 }
 
 function GatedRoom() {
-  const { session, preview, loading, error } = useLiveSession();
+  const { session, participant, preview, loading, error, href } = useLiveSession();
   if (loading || !session || (!preview && (error || session.status !== "scheduled"))) return <UnscheduledNotice />;
+  if (!preview && !participant) return <main className="v3-wrap" style={{ maxWidth: 680, paddingTop: 72, paddingBottom: 120 }}>
+    <Kicker>REGISTRATION REQUIRED</Kicker>
+    <h1 className="v3-display mt-5" style={{ fontSize: "clamp(32px,5vw,56px)", lineHeight: 1.05 }}>Open your personal joining link.</h1>
+    <p className="mt-5" style={{ fontSize: 17, color: "var(--v3-mut)", lineHeight: 1.6 }}>The live room is available to registered attendees. Use the latest joining link from your confirmation email, or register for this session.</p>
+    <Link className="v3-btn v3-btn-primary mt-7" href={href("/live")}>Register for this session</Link>
+  </main>;
   return (
     <main>
       {preview ? <PreviewBanner /> : null}

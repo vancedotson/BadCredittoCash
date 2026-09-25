@@ -12,8 +12,7 @@ export async function GET(request: Request) {
     const session = await getPublicLiveWebinarSession(claims.sessionId);
     const participant = session ? await resolveLiveParticipant(claims.sessionId, token) : null;
     if (!session || !participant) return NextResponse.json({ error: "This registration is no longer available." }, { status: 401, headers });
-    const destination = url.searchParams.get("replay") === "1" ? "/live/replay" : "/live/room";
-    const target = new URL(destination, url.origin);
+    const target = new URL("/live/room", url.origin);
     target.searchParams.set("session", session.id);
     const response = NextResponse.redirect(target, { status: 303, headers });
     response.cookies.set(liveParticipantCookie(session.id), token, { httpOnly: true, secure: url.protocol === "https:", sameSite: "lax", path: "/", expires: new Date(claims.expiresAt) });
