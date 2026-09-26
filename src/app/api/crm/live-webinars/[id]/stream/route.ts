@@ -39,7 +39,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       entityId: id,
       afterState: { provider: "cloudflare", liveInputId: stream.liveInputId },
     });
-    return Response.json(stream, { headers: privateHeaders });
+    const preparationOnly = request.headers.get("x-stream-preparation-only") === "1";
+    return Response.json(preparationOnly ? { liveInputId: stream.liveInputId } : stream, { headers: privateHeaders });
   } catch (cause) {
     const message = cause instanceof Error && cause.message === "Cloudflare Stream is not configured yet."
       ? cause.message

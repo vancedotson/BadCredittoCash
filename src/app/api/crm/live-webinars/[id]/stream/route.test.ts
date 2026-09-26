@@ -60,6 +60,43 @@ describe("Cloudflare broadcast preparation authorization", () => {
     expect(mocks.audit).toHaveBeenCalledWith(expect.objectContaining({ actorId: "admin", action: "live_webinar.stream_prepared", entityId: sessionId }));
   });
 
+  it("reuses the session's already-linked input on a repeated prepare request", async () => {
+    mocks.auth.mockResolvedValue({ user: { sub: "admin", crmRole: "admin" }, response: null });
+    query.maybeSingle.mockResolvedValue({ data: { id: sessionId, title: "Private workshop", cloudflare_live_input_id: inputId }, error: null });
+
+    const response = await POST(request(), { params: Promise.resolve({ id: sessionId }) });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(mocks.prepare).toHaveBeenCalledTimes(1);
+    expect(mocks.prepare).toHaveBeenCalledWith({ sessionId, title: "Private workshop", liveInputId: inputId });
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({ cloudflare_live_input_id: inputId }));
+    expect(mocks.audit).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits publish and playback endpoints from a prepare-only response", async () => {
+    mocks.auth.mockResolvedValue({ user: { sub: "admin", crmRole: "admin" }, response: null });
+
+    const response = await POST(new Request("https://example.test/api/crm/live-webinars/session/stream", {
+      method: "POST",
+      headers: { "x-stream-preparation-only": "1" },
+    }), { params: Promise.resolve({ id: sessionId }) });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ liveInputId: inputId });
+  });
+
+  it("keeps demo mode disabled before reading the session or calling Stream", async () => {
+    mocks.auth.mockResolvedValue({ user: { sub: "admin", crmRole: "admin" }, response: null });
+    mocks.demo.mockReturnValue(true);
+
+    const response = await POST(request(), { params: Promise.resolve({ id: sessionId }) });
+
+    expect(response.status).toBe(409);
+    expect(mocks.client).not.toHaveBeenCalled();
+    expect(mocks.prepare).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed session identifiers before database or provider access", async () => {
     mocks.auth.mockResolvedValue({ user: { sub: "admin", crmRole: "admin" }, response: null });
     expect((await POST(request(), { params: Promise.resolve({ id: "invalid" }) })).status).toBe(400);

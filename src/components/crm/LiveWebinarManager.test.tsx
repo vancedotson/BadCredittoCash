@@ -34,4 +34,13 @@ describe("live webinar CRM role and activation display", () => {
     expect(html).toContain("Test camera &amp; mic");
     expect(html).toContain("Start live");
   });
+
+  it("passes linked input state to the private studio without rendering the input identifier", () => {
+    const linkedSession = { ...session, streamProvider: "cloudflare" as const, cloudflareLiveInputId: "0123456789abcdef0123456789abcdef" };
+    const html = renderToStaticMarkup(<LiveWebinarManager initialSessions={[linkedSession]} initialNow="2026-09-12T17:00:00Z" canWrite canManageBroadcasts siteEnabled={false} streamConfigured />);
+
+    expect(html).toContain("Stream input prepared. Broadcast is offline; recording is off.");
+    expect(html).toContain("Preparing again reuses that input.");
+    expect(html).not.toContain(linkedSession.cloudflareLiveInputId);
+  });
 });

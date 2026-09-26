@@ -118,7 +118,12 @@ export function LiveWebinarManager({ initialSessions, initialSessionId, initialN
           {sessions.length > 1 ? <label className="block text-xs text-slate">Switch session<select aria-label="Session" value={selectedId} disabled={controlsDisabled} onChange={(event) => { select(event.target.value); const item = sessions.find((session) => session.id === event.target.value); if (item) setMonth(calendarDate(item.startsAt, calendarTimezone).slice(0, 7)); }} className={field}>{sessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}</select></label> : null}
           <div className="space-y-2 text-sm text-slate"><p>{formatLiveDate(selected.startsAt, selected.timezone)}</p><p className="text-xs">Ends {formatLiveDate(selected.endsAt, selected.timezone)}</p><p className="text-xs">{selected.timezone}</p></div>
           <div className="flex flex-wrap gap-2"><Badge tone={selected.automationEnabled ? "success" : "neutral"}>Session emails {selected.automationEnabled ? "enabled" : "disabled"}</Badge><Badge tone="neutral">Recording disabled</Badge></div>
-          {canManageBroadcasts ? <CloudflareBroadcastStudio sessionId={selected.id} configured={streamConfigured} disabled={controlsDisabled} onPrepared={() => { setNotice("Cloudflare broadcast prepared."); setRefresh((value) => value + 1); }} /> : null}
+          {canManageBroadcasts ? <CloudflareBroadcastStudio key={selected.id} sessionId={selected.id} liveInputId={selected.streamProvider === "cloudflare" ? selected.cloudflareLiveInputId : null} configured={streamConfigured} disabled={controlsDisabled} onPrepared={(liveInputId, broadcastStarted) => {
+            setSessions((current) => current.map((session) => session.id === selected.id
+              ? { ...session, streamProvider: "cloudflare", cloudflareLiveInputId: liveInputId }
+              : session));
+            setNotice(broadcastStarted ? "Cloudflare Stream broadcast started." : "Cloudflare Stream input prepared. Broadcast remains offline.");
+          }} /> : null}
           <div className="space-y-3 border-t border-mist pt-5">
             {canWrite ? <button type="button" disabled={controlsDisabled} onClick={() => setEditing(selected)} className={`${primaryButton} w-full`}>Edit session</button> : null}
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm"><Link href={`/live?session=${encodeURIComponent(selected.id)}`} target="_blank" className="text-trust hover:underline">Registration page ↗</Link></div>
