@@ -179,6 +179,8 @@ The live webinar is a separate, feature-gated product path. An authenticated, cu
 
 The exact non-secret `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` must be configured as `https://customer-<account-code>.cloudflarestream.com` before Stream setup can be considered configured. It is used as the sole Cloudflare Stream `connect-src`; absent/invalid values omit Cloudflare from the policy and Stream setup fails closed. WHEP uses the configured origin for its SDP fetch and session cleanup; the media arrives over WebRTC, so generic HTTPS `media-src` access is not needed.
 
+The separate non-secret `CLOUDFLARE_STREAM_ALLOWED_ORIGINS` variable controls attendee application origins allowed by each live input. It accepts a comma-separated list of at most two exact HTTPS origins and emits their deduplicated hostnames to Stream; any malformed entry or absent/empty setting fails closed. The eventual rehearsal transition may include both `https://vance-dotson.vancedotson.workers.dev` and `https://badcredittocash.com`. After cutover, remove the workers.dev origin if it is no longer needed. No wildcard, broad HTTPS allowance, IP address, or non-root path is permitted. This setting is distinct from `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` (the Cloudflare endpoint/CSP origin) and `APP_BASE_URL` (the canonical application/email base). This code task does not configure production.
+
 - [x] Keep live registrations and confirmations separate from evergreen training readiness and enrollment.
 - [x] Require exact live feature and live-email approval gates; keep marketing follow-up behind its separate approval.
 - [x] Restrict live-input preparation to CRM admins and validate Cloudflare WHEP endpoints.
@@ -189,7 +191,8 @@ The exact non-secret `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` must be configured as `
 - [ ] Confirm the client-owned Cloudflare Stream subscription is eligible and approve any provider usage before preparing a live input.
 - [ ] Configure and independently verify Stream API and signing-key secrets; never store their values in source control or this roadmap.
 - [ ] Configure and verify `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` as the exact `https://customer-<account-code>.cloudflarestream.com` origin. It is non-secret Worker configuration, not a wildcard; without it CSP blocks WHEP and Stream setup remains unavailable.
-- [ ] Confirm the final `APP_BASE_URL`/allowed origin after domain and redirect decisions; custom-domain/DNS work remains a separate launch item.
+- [ ] Configure and verify `CLOUDFLARE_STREAM_ALLOWED_ORIGINS` in the authorized runtime with exact attendee HTTPS origins; the rehearsal transition may include both the workers.dev origin and final custom domain, then remove workers.dev after cutover if unneeded. Do not use wildcard/broad origins. This code task does not set the production variable.
+- [ ] Keep `APP_BASE_URL` as the canonical application/email base; do not treat it as Stream's attendee-origin allowlist. Custom-domain/DNS work remains a separate launch item.
 - [ ] Obtain final approval for live email copy and legal/content claims; configure `LIVE_WEBINAR_EMAILS_APPROVED` only after that approval.
 - [ ] Complete a separately authorized non-production rehearsal, including host broadcast, attendee access, browser compatibility, and the no-recording behavior.
 - [ ] Keep `LIVE_WEBINAR_ENABLED`, `CLOUDFLARE_STREAM_ENABLED`, and `LIVE_WEBINAR_EMAILS_APPROVED` false until all prerequisites and explicit launch approval are complete.

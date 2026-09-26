@@ -1,6 +1,7 @@
 import "server-only";
 import { cloudflareStreamPlaybackSigningConfigured } from "./cloudflare-stream-token";
 import { cloudflareStreamCustomerOrigin } from "./cloudflare-stream-origin";
+import { cloudflareStreamAllowedOriginHosts } from "./cloudflare-stream-allowed-origins";
 
 type CloudflareLiveInput = {
   uid: string;
@@ -18,17 +19,19 @@ export function cloudflareStreamConfigured(): boolean {
     && Boolean(process.env.CLOUDFLARE_ACCOUNT_ID)
     && Boolean(process.env.CLOUDFLARE_STREAM_API_TOKEN)
     && Boolean(cloudflareStreamCustomerOrigin())
+    && Boolean(cloudflareStreamAllowedOriginHosts())
     && cloudflareStreamPlaybackSigningConfigured();
 }
 
 function streamInputSettings(input: { sessionId: string; title: string }) {
-  const origin = new URL(process.env.APP_BASE_URL || "https://vance-dotson.vancedotson.workers.dev").origin;
+  const allowedOrigins = cloudflareStreamAllowedOriginHosts();
+  if (!allowedOrigins) throw new Error("Cloudflare Stream attendee origins are not configured yet.");
   return {
     defaultCreator: "vance-dotson",
     enabled: true,
     meta: { creator: "vance-dotson", webinarSessionId: input.sessionId, title: input.title.slice(0, 200) },
     recording: {
-      allowedOrigins: [new URL(origin).hostname],
+      allowedOrigins,
       hideLiveViewerCount: false,
       mode: "off",
       requireSignedURLs: true,
