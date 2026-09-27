@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parse } from "comment-json";
-import { describe, expect, it } from "vitest";
-import { PUBLIC_SITE_ORIGIN } from "@/config/public-site";
+import { describe, expect, it, vi } from "vitest";
+import { PUBLIC_SITE_ORIGIN, resolvePublicSiteOrigin } from "@/config/public-site";
 import { isBookingEmailConfigurationReady } from "@/lib/email-configuration";
 
 type WranglerConfig = {
@@ -29,6 +29,37 @@ const jsoncFixture = `
 `;
 
 describe("public site origin configuration", () => {
+  it("uses the current canonical origin by default and accepts a configured HTTPS origin", () => {
+    expect(resolvePublicSiteOrigin(undefined)).toBe("https://badcredittocash.com");
+    expect(resolvePublicSiteOrigin("https://launch.example.test/")).toBe("https://launch.example.test");
+  });
+
+  it("uses APP_BASE_URL for canonical links and the calendar hostname", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://launch.example.test/");
+    vi.resetModules();
+    try {
+      const configured = await import("@/config/public-site");
+      expect(configured.PUBLIC_SITE_ORIGIN).toBe("https://launch.example.test");
+      expect(configured.PUBLIC_SITE_HOSTNAME).toBe("launch.example.test");
+      expect(configured.publicUrl("/credit-check")).toBe("https://launch.example.test/credit-check");
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  it.each([
+    "",
+    "http://launch.example.test",
+    "https://launch.example.test/credit-check",
+    "https://launch.example.test?campaign=1",
+    "https://launch.example.test/#section",
+    "https://user:pass@launch.example.test",
+    "launch.example.test",
+  ])("rejects an invalid APP_BASE_URL: %s", (value) => {
+    expect(() => resolvePublicSiteOrigin(value)).toThrow("APP_BASE_URL must be an HTTPS origin.");
+  });
+
   it("parses JSONC comments and trailing commas", () => {
     const parsedFixture = parse<WranglerConfig>(jsoncFixture);
 

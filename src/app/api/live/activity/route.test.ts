@@ -138,7 +138,22 @@ describe("joining links and public session metadata", () => {
     const response = await calendar(new Request(`${origin}/api/live/calendar?session=${sessionId}`));
     const text = await response.text();
     expect(text).toContain("SEQUENCE:2");
+    expect(text).toContain(`UID:${sessionId}@badcredittocash.com`);
+    expect(text).not.toContain(`UID:${sessionId}@example.test`);
     expect(text).toContain("STATUS:CANCELLED");
     expect(text.match(/\r\nBEGIN:VEVENT/g)).toHaveLength(1);
+  });
+
+  it("uses the configured canonical hostname in calendar UIDs", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://launch.example.test");
+    vi.resetModules();
+    try {
+      const { GET: configuredCalendar } = await import("../calendar/route");
+      const response = await configuredCalendar(new Request(`${origin}/api/live/calendar?session=${sessionId}`));
+      expect(await response.text()).toContain(`UID:${sessionId}@launch.example.test`);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
   });
 });

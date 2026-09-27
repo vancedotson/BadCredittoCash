@@ -113,12 +113,16 @@ export async function saveCreditReport(session: CreditReportSession, bureau: Cre
         throw new Error("The report receipt could not be saved.");
       }
     }
-    const { error } = await supabase.from("credit_report_uploads").upsert(row, { onConflict: "session_id,bureau" });
+    const { data: committed, error } = await supabase.from("credit_report_uploads")
+      .upsert(row, { onConflict: "session_id,bureau" })
+      .select("id,submission_id,bureau,file_name,uploaded_at,byte_size")
+      .single();
     // An ambiguous metadata failure may have committed. Keep the private object
     // for reconciliation; never delete a file that a committed receipt may name.
     if (error) throw new Error("The report receipt could not be saved.");
     receiptCommitted = true;
-    return receipt(row);
+    if (!committed) throw new Error("The report receipt could not be confirmed.");
+    return receipt(committed as ReportRow);
   } finally {
     clearInterval(heartbeat);
     if (receiptCommitted) {

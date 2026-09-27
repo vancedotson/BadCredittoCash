@@ -47,7 +47,7 @@ If the feature is paused after activation, an authorized operator should first c
 
 1. Sign in to the CRM and open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.
 2. In **Backups**, click **Download CRM database backup (JSON)**.
-3. Store the downloaded file somewhere private. It contains CRM data and must not be committed to Git or shared publicly. This relational snapshot excludes credit-report PDF files and their report metadata; those files currently have no independent recovery guarantee.
+3. Store the downloaded file somewhere private. It contains CRM data and must not be committed to Git or shared publicly. After the follow-up migration, backup v3 includes active-contact follow-up queue metadata, but excludes credit-report PDF files and upload receipt/session/attempt metadata; those files currently have no independent recovery guarantee. Take the current backup before migration and verify a new v3 export immediately afterward.
 4. Confirm `https://vance-dotson.vancedotson.workers.dev/api/health` returns `{"ok":true}`.
 5. Run the project tests, TypeScript check, lint, and production build.
 6. Apply reviewed database migrations before deploying code that depends on them.
@@ -71,7 +71,7 @@ Important: a Worker rollback changes application code only. It does not reverse 
 
 ## Restore a CRM database backup
 
-Only restore when the included CRM database records must be replaced by a known-good relational JSON snapshot. This restore does not restore credit-report PDFs or their report metadata, and must not be treated as a complete application or report-file recovery.
+Only restore when the included CRM database records must be replaced by a known-good relational JSON snapshot. A v3 backup restores active-contact follow-up queue metadata; v1/v2 backups restore an empty queue, so transfer open obligations before using an older file. The admin-only contact privacy export also includes active-contact queue metadata. Neither export restores credit-report PDFs or upload receipt/session/attempt metadata, and the full backup must not be treated as complete report-file recovery.
 
 1. First download a fresh backup of the current state, even if it may be damaged.
 2. Open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.
@@ -98,7 +98,7 @@ Contact purge blocks new sessions first, then reconciles eligible stale attempts
 
 ## Credit-report recovery limitation
 
-The downloadable CRM JSON is a relational database export, not a full-system backup. It excludes uploaded credit-report PDFs and the related receipt/session/attempt metadata. The project currently has no independent recovery guarantee for those files. Do not promise report-file restore or claim that the CRM export covers it. The database migration does not add an external backup provider or change this limitation; a storage backup/recovery decision remains pending with the client.
+The downloadable CRM JSON is a relational database export, not a full-system backup. Version 3 includes active-contact follow-up queue metadata but excludes uploaded credit-report PDFs and upload receipt/session/attempt metadata. The project currently has no independent recovery guarantee for those files. Do not promise report-file restore or claim that the CRM export covers it. The follow-up migration does not add an external backup provider or change this limitation; a storage backup/recovery decision remains pending with the client.
 
 ## Database migration failure
 

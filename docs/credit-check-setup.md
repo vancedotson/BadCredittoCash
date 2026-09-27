@@ -134,10 +134,13 @@ operator verifies that the remote write has finished, reconciles any private
 object, and marks the attempt complete. Do not expire or clear pending attempts
 on a timer: doing so could permit a late write after a purported deletion.
 
-The CRM relational JSON backup and privacy JSON exports exclude PDF bytes and
-credit-report receipt metadata. The project currently has no independent recovery
-guarantee for uploaded reports. Do not represent the CRM JSON as a full-system
-backup; a separate report-file recovery plan requires a later client decision.
+The CRM relational JSON backup v3 and admin-only contact privacy JSON export
+include active-contact follow-up queue metadata, but exclude PDF bytes and upload
+receipt/session/attempt metadata. Staff UUIDs are redacted from queue data in
+both exports. The privacy owner must still approve retention and handling.
+The project currently has no independent recovery guarantee for uploaded reports.
+Do not represent the CRM JSON as a full-system backup; a separate report-file
+recovery plan requires a later client decision.
 
 Interrupted report uploads are reconciled only after 24 hours without activity and
 an expired upload lease. Recent or uncertain attempts continue to block permanent

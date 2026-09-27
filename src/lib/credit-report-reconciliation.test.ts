@@ -42,6 +42,7 @@ describe("credit-report artifact reconciliation", () => {
     mocks.remove.mockResolvedValue({ data: [], error: null });
     mocks.rpc.mockImplementation(async (name: string) => {
       if (name === "credit_report_reconciliation_counts_v1") return { data: { attempts: 1, obsoleteObjects: 0, hasMore: false }, error: null };
+      if (name === "reconcile_credit_report_followup_receipts_v1") return { data: { scanned: 0, reconciled: 0, hasMore: false }, error: null };
       if (name === "claim_credit_report_attempts_v1") return { data: [attempt], error: null };
       if (name === "claim_credit_report_obsolete_objects_v1") return { data: [], error: null };
       if (name === "finish_credit_report_attempt_reconciliation_v1") return { data: "abandoned", error: null };
@@ -92,7 +93,8 @@ describe("credit-report artifact reconciliation", () => {
       ? { data: { attempts: 1, obsoleteObjects: 0, hasMore: false }, error: null }
       : name === "claim_credit_report_attempts_v1" ? { data: [attempt], error: null }
         : name === "finish_credit_report_attempt_reconciliation_v1" ? { data: "completed", error: null }
-          : { data: [], error: null });
+          : name === "reconcile_credit_report_followup_receipts_v1" ? { data: { scanned: 0, reconciled: 0, hasMore: false }, error: null }
+            : { data: [], error: null });
     const result = await reconcileCreditReportArtifacts({ limit: 1 });
     expect(mocks.remove).not.toHaveBeenCalled();
     expect(result.attemptsCompleted).toBe(1);
@@ -126,7 +128,8 @@ describe("credit-report artifact reconciliation", () => {
       : name === "claim_credit_report_attempts_v1" ? { data: [], error: null }
         : name === "claim_credit_report_obsolete_objects_v1" ? { data: [obsolete], error: null }
           : name === "finish_credit_report_obsolete_object_v1" ? { data: "removed", error: null }
-            : { data: true, error: null });
+            : name === "reconcile_credit_report_followup_receipts_v1" ? { data: { scanned: 0, reconciled: 0, hasMore: false }, error: null }
+              : { data: true, error: null });
     mocks.exists.mockResolvedValue({ data: true, error: null });
     const result = await reconcileCreditReportArtifacts({ limit: 1 });
     expect(mocks.remove).toHaveBeenCalledExactlyOnceWith([obsolete.object_path]);
@@ -139,7 +142,8 @@ describe("credit-report artifact reconciliation", () => {
       : name === "claim_credit_report_attempts_v1" ? { data: [], error: null }
         : name === "claim_credit_report_obsolete_objects_v1" ? { data: [obsolete], error: null }
           : name === "finish_credit_report_obsolete_object_v1" ? { data: "protected_current", error: null }
-            : { data: true, error: null });
+            : name === "reconcile_credit_report_followup_receipts_v1" ? { data: { scanned: 0, reconciled: 0, hasMore: false }, error: null }
+              : { data: true, error: null });
     mocks.exists.mockResolvedValue({ data: true, error: null });
     queryResult({ id: "current-report" });
     const result = await reconcileCreditReportArtifacts({ limit: 1 });
@@ -155,7 +159,8 @@ describe("credit-report artifact reconciliation", () => {
       : name === "claim_credit_report_attempts_v1" ? { data: [], error: null }
         : name === "claim_credit_report_obsolete_objects_v1" ? { data: [obsolete], error: null }
           : name === "finish_credit_report_obsolete_object_v1" ? { data: "deferred", error: null }
-            : { data: true, error: null });
+            : name === "reconcile_credit_report_followup_receipts_v1" ? { data: { scanned: 0, reconciled: 0, hasMore: false }, error: null }
+              : { data: true, error: null });
     mocks.exists.mockResolvedValue({ data: true, error: null });
     mocks.remove.mockResolvedValue({ data: null, error: { message: "private provider detail" } });
     const result = await reconcileCreditReportArtifacts({ limit: 1 });
@@ -170,7 +175,8 @@ describe("credit-report artifact reconciliation", () => {
   it("does not repeat actions on a later pass after the database has no eligible claims", async () => {
     mocks.rpc.mockImplementation(async (name: string) => name === "credit_report_reconciliation_counts_v1"
       ? { data: { attempts: 0, obsoleteObjects: 0, hasMore: false }, error: null }
-      : { data: [], error: null });
+      : name === "reconcile_credit_report_followup_receipts_v1" ? { data: { scanned: 0, reconciled: 0, hasMore: false }, error: null }
+        : { data: [], error: null });
     const first = await reconcileCreditReportArtifacts({ limit: 5 });
     const second = await reconcileCreditReportArtifacts({ limit: 5 });
     expect(first).toMatchObject({ attempts: 0, obsoleteObjects: 0 });

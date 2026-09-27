@@ -23,6 +23,8 @@ function validBackup(): CrmBackup {
       contacts: [], events: [], notes: [], tasks: [], tags: [], contact_tags: [],
       bookings: [], sequence_enrollments: [], scheduled_messages: [], settings: [],
       live_webinar_sessions: [], live_webinar_registrations: [],
+      credit_report_followup_obligations: [], credit_report_followup_receipts: [],
+      credit_report_followup_contact_attempts: [], credit_report_followup_audit: [],
     },
   };
 }
@@ -37,7 +39,7 @@ describe("CRM backup repository integration", () => {
 
     await expect(createCrmBackup()).resolves.toEqual(backup);
     expect(mocks.rpc).toHaveBeenCalledOnce();
-    expect(mocks.rpc).toHaveBeenCalledWith("export_crm_backup_v2");
+    expect(mocks.rpc).toHaveBeenCalledWith("export_crm_backup_v3");
   });
 
   it("surfaces database export failures without returning partial data", async () => {
@@ -60,13 +62,20 @@ describe("CRM backup validation", () => {
     expect(result.error).toBeUndefined();
     expect(result.backup?.version).toBe(1);
     expect(result.backup?.tables.live_webinar_sessions).toEqual([]);
+    expect(result.backup?.tables.credit_report_followup_obligations).toEqual([]);
     expect(result.counts?.live_webinar_registrations).toBe(0);
   });
 
   it("requires webinar tables in version 2 backups", () => {
     const tables = { ...validBackup().tables } as Record<string, unknown>;
     delete tables.live_webinar_registrations;
-    expect(validateCrmBackup({ ...validBackup(), tables }).error).toBe("The live_webinar_registrations table is missing or invalid.");
+    expect(validateCrmBackup({ ...validBackup(), version: 2, tables }).error).toBe("The live_webinar_registrations table is missing or invalid.");
+  });
+
+  it("requires follow-up metadata in version 3 backups", () => {
+    const tables = { ...validBackup().tables } as Record<string, unknown>;
+    delete tables.credit_report_followup_receipts;
+    expect(validateCrmBackup({ ...validBackup(), tables }).error).toBe("The credit_report_followup_receipts table is missing or invalid.");
   });
 
   it("reports table counts for a complete backup", () => {

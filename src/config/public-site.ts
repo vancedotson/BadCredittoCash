@@ -1,6 +1,26 @@
 import { site } from "@/config/site";
 
-export const PUBLIC_SITE_ORIGIN = "https://badcredittocash.com";
+const DEFAULT_PUBLIC_SITE_ORIGIN = "https://badcredittocash.com";
+
+export function resolvePublicSiteOrigin(value: string | undefined): string {
+  if (value === undefined) return DEFAULT_PUBLIC_SITE_ORIGIN;
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("APP_BASE_URL must be an HTTPS origin.");
+  }
+
+  if (url.protocol !== "https:" || !url.hostname || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+    throw new Error("APP_BASE_URL must be an HTTPS origin.");
+  }
+
+  return url.origin;
+}
+
+export const PUBLIC_SITE_ORIGIN = resolvePublicSiteOrigin(process.env.APP_BASE_URL);
+export const PUBLIC_SITE_HOSTNAME = new URL(PUBLIC_SITE_ORIGIN).hostname;
 export const PUBLIC_SITE_NAME = site.name;
 export const PUBLIC_SOCIAL_IMAGE_PATH = "/opengraph-image";
 export const PUBLIC_SOCIAL_IMAGE_SIZE = { width: 1200, height: 630 } as const;

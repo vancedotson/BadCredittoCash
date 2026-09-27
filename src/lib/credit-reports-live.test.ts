@@ -9,8 +9,9 @@ const session: CreditReportSession = { id: "891e5660-352e-4487-aeae-aeb9b9b1c100
 const previousObjectPath = `${session.contactId}/${session.id}/891e5660-352e-4487-aeae-aeb9b9b1c103.pdf`;
 const pdf = new TextEncoder().encode("%PDF-1.4\n1 0 obj <<>> endobj\n%%EOF\n");
 function query(data: unknown, error: unknown = null) {
-  const result = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data, error }), upsert: vi.fn().mockResolvedValue({ data: null, error }) };
+  const result = { select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data, error }), single: vi.fn().mockResolvedValue({ data, error }), upsert: vi.fn() };
   result.select.mockReturnValue(result); result.eq.mockReturnValue(result);
+  result.upsert.mockReturnValue(result);
   return result;
 }
 describe("private live report persistence", () => {
@@ -21,6 +22,7 @@ describe("private live report persistence", () => {
   afterEach(() => { vi.unstubAllEnvs(); });
   it("stores the private PDF, queues only the replaced object, then commits new metadata", async () => {
     const previous = query({ object_path: previousObjectPath }); const commit = query(null);
+    commit.single.mockResolvedValue({ data: { id: "891e5660-352e-4487-aeae-aeb9b9b1c104", submission_id: session.submissionId, bureau: "equifax", file_name: "report.pdf", uploaded_at: "2026-09-27T13:00:00.000Z", byte_size: pdf.byteLength }, error: null });
     mocks.from.mockReturnValueOnce(previous).mockReturnValueOnce(commit);
     const saved = await saveCreditReport(session, "equifax", "report.pdf", pdf);
     expect(saved.bureau).toBe("equifax");
@@ -30,7 +32,8 @@ describe("private live report persistence", () => {
     expect(mocks.rpc.mock.invocationCallOrder[1]).toBeLessThan(commit.upsert.mock.invocationCallOrder[0]);
     expect(mocks.remove).not.toHaveBeenCalled();
     expect(mocks.rpc).toHaveBeenNthCalledWith(1, "begin_credit_report_upload_v1", expect.objectContaining({ p_session_id: session.id }));
-    expect(mocks.rpc).toHaveBeenNthCalledWith(3, "finish_credit_report_upload_v1", expect.objectContaining({ p_attempt_id: saved.id }));
+    expect(saved.uploadedAt).toBe("2026-09-27T13:00:00.000Z");
+    expect(mocks.rpc).toHaveBeenNthCalledWith(3, "finish_credit_report_upload_v1", expect.objectContaining({ p_attempt_id: expect.any(String) }));
     expect(mocks.rpc.mock.invocationCallOrder[0]).toBeLessThan(mocks.upload.mock.invocationCallOrder[0]);
   });
   it("does not publish metadata or remove the previous report if the file write fails", async () => {

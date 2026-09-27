@@ -19,6 +19,7 @@ type Summary = {
   deferred: number;
   failed: number;
   hasMore: boolean;
+  followupReceipts: { scanned: number; reconciled: number; hasMore: boolean };
 };
 type FailureCode = "storage_check_failed" | "storage_remove_failed" | "database_check_failed" | "unexpected_error";
 
@@ -229,6 +230,7 @@ export async function reconcileCreditReportArtifacts(options: ReconciliationOpti
     deferred: 0,
     failed: 0,
     hasMore: counts.hasMore === true,
+    followupReceipts: { scanned: 0, reconciled: 0, hasMore: false },
   };
   if (summary.dryRun) return summary;
 
@@ -254,5 +256,12 @@ export async function reconcileCreditReportArtifacts(options: ReconciliationOpti
   } else {
     summary.obsoleteObjects = 0;
   }
+  const { data: followupData, error: followupError } = await client.rpc("reconcile_credit_report_followup_receipts_v1", { p_limit: 100 });
+  if (followupError || !isObject(followupData)) throw new Error("Credit-report follow-up reconciliation is unavailable.");
+  summary.followupReceipts = {
+    scanned: Number.isInteger(followupData.scanned) ? Number(followupData.scanned) : 0,
+    reconciled: Number.isInteger(followupData.reconciled) ? Number(followupData.reconciled) : 0,
+    hasMore: followupData.hasMore === true,
+  };
   return summary;
 }

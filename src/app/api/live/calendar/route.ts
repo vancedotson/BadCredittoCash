@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPublicLiveWebinarSession } from "@/lib/live-webinars";
+import { PUBLIC_SITE_HOSTNAME } from "@/config/public-site";
 
 const escapeIcs = (value: string) => value.replaceAll("\\", "\\\\").replaceAll("\n", "\\n").replaceAll(",", "\\,").replaceAll(";", "\\;").replaceAll("\r", "");
 const stamp = (value: string) => new Date(value).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
     const session = await getPublicLiveWebinarSession(new URL(request.url).searchParams.get("session"));
     if (!session) return NextResponse.json({ error: "Session not found." }, { status: 404 });
     const content = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Bad Credit to Cash//Live Webinar//EN", "METHOD:PUBLISH", "BEGIN:VEVENT",
-      `UID:${session.id}@badcredittocash.com`, `SEQUENCE:${session.scheduleVersion}`, `DTSTAMP:${stamp(new Date().toISOString())}`,
+      `UID:${session.id}@${PUBLIC_SITE_HOSTNAME}`, `SEQUENCE:${session.scheduleVersion}`, `DTSTAMP:${stamp(new Date().toISOString())}`,
       `DTSTART:${stamp(session.startsAt)}`, `DTEND:${stamp(session.endsAt)}`, `SUMMARY:${escapeIcs(session.title)}`,
       `DESCRIPTION:${escapeIcs("Use the personal joining link in your registration email. General information, not legal advice.")}`,
       `STATUS:${session.status === "cancelled" ? "CANCELLED" : "CONFIRMED"}`, "END:VEVENT", "END:VCALENDAR", ""].join("\r\n");

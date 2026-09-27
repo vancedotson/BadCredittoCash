@@ -111,6 +111,7 @@ export function CrmChrome({ nav, children }: { nav: NavData; children: React.Rea
     { href: "/crm/calendar", label: "Calendar", Icon: ImageIcon },
     { href: "/crm/webinars", label: "Live webinars", Icon: PlayIcon },
     { href: "/crm/lead-magnet", label: "Lead magnet", Icon: DocumentIcon },
+    { href: "/crm/credit-report-followups", label: "Report follow-ups", Icon: DocumentIcon },
     { href: "/crm/sequences", label: "Sequences", Icon: DocumentIcon },
     { href: "/crm/health", label: "System health", Icon: ShieldIcon },
     { href: "/crm/settings", label: "Settings", Icon: ShieldIcon },
