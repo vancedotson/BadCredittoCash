@@ -6,14 +6,14 @@ describe("public sitemap", () => {
     const urls = sitemap().map(({ url }) => url);
 
     expect(urls).toEqual([
-      "https://badcredittocash.com/",
-      "https://badcredittocash.com/credit-check",
-      "https://badcredittocash.com/book",
-      "https://badcredittocash.com/live",
-      "https://badcredittocash.com/privacy",
-      "https://badcredittocash.com/terms",
+      "https://creditrepairparty.com/",
+      "https://creditrepairparty.com/credit-check",
+      "https://creditrepairparty.com/book",
+      "https://creditrepairparty.com/live",
+      "https://creditrepairparty.com/privacy",
+      "https://creditrepairparty.com/terms",
     ]);
-    expect(urls.every((url) => new URL(url).origin === "https://badcredittocash.com")).toBe(true);
+    expect(urls.every((url) => new URL(url).origin === "https://creditrepairparty.com")).toBe(true);
     expect(urls.join("\n")).not.toMatch(/workers\.dev|vancedotson\.com|localhost|\/crm|\/api\/|\/login|\/confirmed|\/booked|thank-you|\/v[14](?:\n|$)/i);
   });
 });

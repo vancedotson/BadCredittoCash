@@ -20,7 +20,7 @@ function configure() {
   vi.stubEnv("CLOUDFLARE_STREAM_SIGNING_KEY_ID", "test-key");
   vi.stubEnv("CLOUDFLARE_STREAM_SIGNING_KEY_JWK", "test-key-material");
   vi.stubEnv("CLOUDFLARE_STREAM_CUSTOMER_ORIGIN", "https://customer-ab12.cloudflarestream.com");
-  vi.stubEnv("CLOUDFLARE_STREAM_ALLOWED_ORIGINS", "https://vance-dotson.vancedotson.workers.dev,https://badcredittocash.com");
+  vi.stubEnv("CLOUDFLARE_STREAM_ALLOWED_ORIGINS", "https://vance-dotson.vancedotson.workers.dev,https://creditrepairparty.com");
   vi.stubEnv("APP_BASE_URL", "https://canonical.example.test");
 }
 
@@ -47,7 +47,7 @@ describe("Cloudflare Stream live-input adapter", () => {
     expect(new Headers(init.headers).get("authorization")).toBe("Bearer test-only-token");
     expect(new Headers(init.headers).get("idempotency-key")).toBe(`webinar-${sessionId}`);
     const body = JSON.parse(String(init.body));
-    expect(body.recording).toMatchObject({ mode: "off", requireSignedURLs: true, allowedOrigins: ["badcredittocash.com", "vance-dotson.vancedotson.workers.dev"] });
+    expect(body.recording).toMatchObject({ mode: "off", requireSignedURLs: true, allowedOrigins: ["creditrepairparty.com", "vance-dotson.vancedotson.workers.dev"] });
     expect(body.recording).not.toHaveProperty("deleteRecordingAfterDays");
     expect(body.meta).toMatchObject({ webinarSessionId: sessionId, title: "Private rehearsal" });
   });
@@ -61,7 +61,7 @@ describe("Cloudflare Stream live-input adapter", () => {
     expect(url).toContain(`/stream/live_inputs/${inputId}`);
     expect(init.method).toBe("PUT");
     expect(JSON.parse(String(init.body))).toMatchObject({
-      recording: { mode: "off", requireSignedURLs: true, allowedOrigins: ["badcredittocash.com", "vance-dotson.vancedotson.workers.dev"] },
+      recording: { mode: "off", requireSignedURLs: true, allowedOrigins: ["creditrepairparty.com", "vance-dotson.vancedotson.workers.dev"] },
       meta: { webinarSessionId: sessionId, title: "Updated session" },
     });
   });

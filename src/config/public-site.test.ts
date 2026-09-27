@@ -23,14 +23,14 @@ const jsoncFixture = `
   // JSONC permits line comments.
   "vars": {
     /* It also permits block comments and trailing commas. */
-    "APP_BASE_URL": "https://badcredittocash.com",
+    "APP_BASE_URL": "https://creditrepairparty.com",
   },
 }
 `;
 
 describe("public site origin configuration", () => {
   it("uses the current canonical origin by default and accepts a configured HTTPS origin", () => {
-    expect(resolvePublicSiteOrigin(undefined)).toBe("https://badcredittocash.com");
+    expect(resolvePublicSiteOrigin(undefined)).toBe("https://creditrepairparty.com");
     expect(resolvePublicSiteOrigin("https://launch.example.test/")).toBe("https://launch.example.test");
   });
 

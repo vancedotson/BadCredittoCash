@@ -9,8 +9,8 @@ afterEach(() => vi.unstubAllEnvs());
 describe("Cloudflare Stream attendee allowed origins", () => {
   it("parses the rehearsal Worker origin and final custom domain", () => {
     expect(cloudflareStreamAllowedOriginHosts(
-      "https://vance-dotson.vancedotson.workers.dev,https://badcredittocash.com",
-    )).toEqual(["badcredittocash.com", "vance-dotson.vancedotson.workers.dev"]);
+      "https://vance-dotson.vancedotson.workers.dev,https://creditrepairparty.com",
+    )).toEqual(["creditrepairparty.com", "vance-dotson.vancedotson.workers.dev"]);
   });
 
   it("trims whitespace, removes root slashes, lowercases and deduplicates hostnames", () => {

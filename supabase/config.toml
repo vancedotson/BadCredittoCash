@@ -5,7 +5,8 @@ site_url = "https://vance-dotson.vancedotson.workers.dev"
 additional_redirect_urls = [
   "http://localhost:3000/auth/update-password",
   "https://vance-dotson.vancedotson.workers.dev/auth/update-password",
-  "https://badcredittocash.com/auth/update-password"
+  "https://badcredittocash.com/auth/update-password",
+  "https://creditrepairparty.com/auth/update-password"
 ]
 enable_signup = false
 

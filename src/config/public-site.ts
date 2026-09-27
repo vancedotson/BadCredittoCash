@@ -1,6 +1,6 @@
 import { site } from "@/config/site";
 
-const DEFAULT_PUBLIC_SITE_ORIGIN = "https://badcredittocash.com";
+const DEFAULT_PUBLIC_SITE_ORIGIN = "https://creditrepairparty.com";
 
 export function resolvePublicSiteOrigin(value: string | undefined): string {
   if (value === undefined) return DEFAULT_PUBLIC_SITE_ORIGIN;

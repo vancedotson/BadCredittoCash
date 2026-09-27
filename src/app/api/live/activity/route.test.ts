@@ -138,7 +138,7 @@ describe("joining links and public session metadata", () => {
     const response = await calendar(new Request(`${origin}/api/live/calendar?session=${sessionId}`));
     const text = await response.text();
     expect(text).toContain("SEQUENCE:2");
-    expect(text).toContain(`UID:${sessionId}@badcredittocash.com`);
+    expect(text).toContain(`UID:${sessionId}@creditrepairparty.com`);
     expect(text).not.toContain(`UID:${sessionId}@example.test`);
     expect(text).toContain("STATUS:CANCELLED");
     expect(text.match(/\r\nBEGIN:VEVENT/g)).toHaveLength(1);

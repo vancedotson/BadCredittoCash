@@ -11,7 +11,7 @@ const privateRoutes = [
 ] as const;
 
 const publicRoutes = ["/", "/credit-check", "/book", "/live", "/privacy", "/terms"] as const;
-const publicOrigin = "https://badcredittocash.com";
+const publicOrigin = "https://creditrepairparty.com";
 const publicMetadataRoutes = [
   {
     path: "/",
