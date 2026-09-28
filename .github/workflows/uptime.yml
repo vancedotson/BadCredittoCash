@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - name: Check public application health
         run: |
@@ -25,3 +25,33 @@ jobs:
             --retry-all-errors \
             --max-time 20 \
             https://vance-dotson.vancedotson.workers.dev/api/health
+
+      - name: Check public domain health
+        if: always()
+        run: |
+          curl --fail --silent --show-error \
+            --retry 2 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 20 \
+            https://creditrepairparty.com/api/health
+
+      - name: Check public credit-check page
+        if: always()
+        shell: bash
+        run: |
+          # No -L: a redirect (e.g. parking or domain takeover) must fail.
+          # --fail ignores 3xx, so compare the status code explicitly.
+          status="$(curl --fail --silent --show-error \
+            --retry 2 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 20 \
+            -o /dev/null \
+            -w "%{http_code}" \
+            https://creditrepairparty.com/credit-check)"
+          if [ "$status" != "200" ]; then
+            echo "::error::https://creditrepairparty.com/credit-check returned HTTP $status, expected 200"
+            exit 1
+          fi
+          echo "credit-check returned HTTP $status"
