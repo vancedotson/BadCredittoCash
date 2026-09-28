@@ -105,6 +105,10 @@ export function CreditReportFollowupsClient() {
         <div>
           <h3 className="text-lg font-semibold text-ink"><Link className="hover:underline" href={`/crm/contacts/${item.contactId}`}>{item.contactName}</Link></h3>
           <p className="text-sm text-slate">{item.contactEmail}</p>
+          <Link href={`/crm/contacts/${item.contactId}#credit-reports`} aria-label={`View reports for ${item.contactName}`}
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-lg border border-mist bg-card px-3 py-2 text-xs font-semibold text-body transition-colors hover:bg-cloud focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-trust">
+            View reports <span aria-hidden="true" className="ml-1.5">→</span>
+          </Link>
         </div>
         <div className="flex flex-wrap gap-2">{statuses.map((status) => <span key={status.label} className={`rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>)}</div>
       </div>
