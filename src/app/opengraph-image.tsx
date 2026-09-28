@@ -28,8 +28,8 @@ export default function OpenGraphImage() {
             <div style={{ fontSize: 22, letterSpacing: "0.2em", color: "#d8c99f" }}>{site.name.toUpperCase()}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", fontSize: 72, fontWeight: 700, lineHeight: 1.05, letterSpacing: "-0.04em" }}>
-            <div>Bad Credit</div>
-            <div style={{ color: "#d2b16e" }}>to Cash</div>
+            <div>Credit Repair</div>
+            <div style={{ color: "#d2b16e" }}>Party</div>
           </div>
           <div style={{ display: "flex", width: 260, height: 5, marginTop: 38, backgroundColor: "#426d6b" }} />
         </div>
