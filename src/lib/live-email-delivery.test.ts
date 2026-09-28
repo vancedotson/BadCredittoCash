@@ -60,7 +60,7 @@ beforeEach(() => {
   vi.stubEnv("EVERGREEN_TRAINING_ENABLED", "false");
   vi.stubEnv("MARKETING_EMAILS_ENABLED", "false");
   vi.stubEnv("EMAIL_MODE", "production");
-  vi.stubEnv("EMAIL_FROM", "Bad Credit to Cash <updates@updates.badcredittocash.com>");
+  vi.stubEnv("EMAIL_FROM", "Vance Dotson <updates@updates.creditrepairparty.com>");
   vi.stubEnv("EMAIL_REPLY_TO", "vance@vancethecreditdoctor.com");
   vi.stubEnv("APP_BASE_URL", "https://example.test/");
   vi.stubEnv("RESEND_API_KEY", "mocked-resend-key");

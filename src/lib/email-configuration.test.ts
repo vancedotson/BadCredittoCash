@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getBookingEmailConfiguration, isBookingEmailConfigurationReady } from "./email-configuration";
 
 const valid = {
-  EMAIL_FROM: "Bad Credit to Cash <updates@updates.badcredittocash.com>",
+  EMAIL_FROM: "Vance Dotson <updates@updates.creditrepairparty.com>",
   EMAIL_REPLY_TO: "vance@vancethecreditdoctor.com",
 };
 

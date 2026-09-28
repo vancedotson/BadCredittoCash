@@ -54,7 +54,7 @@ export async function sendDailyOverdueDigest(): Promise<{ sent: boolean; skipped
       const text = [`${tasks.length} overdue task${tasks.length === 1 ? "" : "s"} need attention:`, "", ...lines, "", `Open Tasks: ${appUrl}/crm/tasks`].join("\n");
       const list = lines.map((line) => `<li style="margin-bottom:8px">${escapeHtml(line.slice(2))}</li>`).join("");
       const { data: sent, error: sendError } = await new Resend(apiKey).emails.send({
-        from: process.env.EMAIL_FROM ?? "Bad Credit to Cash <updates@updates.badcredittocash.com>",
+        from: process.env.EMAIL_FROM ?? "Vance Dotson <updates@updates.creditrepairparty.com>",
         to: recipient,
         subject: `Vance CRM: ${tasks.length} overdue task${tasks.length === 1 ? "" : "s"}`,
         text,

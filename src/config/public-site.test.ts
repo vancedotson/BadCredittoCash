@@ -76,7 +76,7 @@ describe("public site origin configuration", () => {
     expect(wranglerConfig.vars?.MARKETING_EMAILS_ENABLED).toBe("false");
     expect(wranglerConfig.vars?.EMAIL_MODE).toBe("test");
     expect(wranglerConfig.vars?.EMAIL_REPLY_TO).toBe("vance@vancethecreditdoctor.com");
-    expect(wranglerConfig.vars?.EMAIL_FROM).toMatch(/^Bad Credit to Cash <[^<>\s]+@[^<>\s]+>$/);
+    expect(wranglerConfig.vars?.EMAIL_FROM).toMatch(/^Vance Dotson <[^<>\s@]+@updates\.creditrepairparty\.com>$/);
     expect(wranglerConfig.vars?.EVERGREEN_TRAINING_ENABLED).toBe("false");
     expect(wranglerConfig.vars?.LIVE_WEBINAR_ENABLED).toBe("false");
     expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_ENABLED).toBe("false");

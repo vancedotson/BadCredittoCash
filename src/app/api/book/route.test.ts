@@ -19,7 +19,7 @@ function request(body: unknown, headers: Record<string, string> = {}) { return n
 
 beforeEach(() => {
   vi.stubEnv("EMAIL_MODE", "production");
-  vi.stubEnv("EMAIL_FROM", "Bad Credit to Cash <updates@updates.badcredittocash.com>");
+  vi.stubEnv("EMAIL_FROM", "Vance Dotson <updates@updates.creditrepairparty.com>");
   vi.stubEnv("EMAIL_REPLY_TO", "vance@vancethecreditdoctor.com");
   vi.resetAllMocks();
   mocks.session.mockResolvedValue({ id: sessionId, status: "scheduled" });
@@ -57,9 +57,9 @@ describe("email mode readiness gate", () => {
     ["missing sender", undefined, "vance@vancethecreditdoctor.com"],
     ["blank sender", "", "vance@vancethecreditdoctor.com"],
     ["malformed sender", "Sender <invalid>", "vance@vancethecreditdoctor.com"],
-    ["missing reply-to", "Bad Credit to Cash <updates@updates.badcredittocash.com>", undefined],
-    ["malformed reply-to", "Bad Credit to Cash <updates@updates.badcredittocash.com>", "not-an-address"],
-    ["reply-to without a public domain", "Bad Credit to Cash <updates@updates.badcredittocash.com>", "reply@localhost"],
+    ["missing reply-to", "Vance Dotson <updates@updates.creditrepairparty.com>", undefined],
+    ["malformed reply-to", "Vance Dotson <updates@updates.creditrepairparty.com>", "not-an-address"],
+    ["reply-to without a public domain", "Vance Dotson <updates@updates.creditrepairparty.com>", "reply@localhost"],
   ])("rejects booking before every side effect when the %s configuration is unavailable", async (_name, from, replyTo) => {
     vi.stubEnv("EMAIL_FROM", from);
     vi.stubEnv("EMAIL_REPLY_TO", replyTo);
