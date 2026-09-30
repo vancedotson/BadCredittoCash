@@ -11,11 +11,20 @@ export const PAYMENT_RESPONSE_HEADERS = {
   "X-Robots-Tag": "noindex, nofollow",
 } as const;
 
-/** Same semantics as hasReportSameOrigin: reject cross-site traffic; POSTs must carry Origin. */
+/**
+ * Same semantics as hasReportSameOrigin: reject cross-site traffic; POSTs must carry Origin.
+ *
+ * Payment pages send Referrer-Policy: no-referrer, so per the Fetch spec a
+ * same-origin form POST from /pay/<token> carries `Origin: null`. That opaque
+ * origin is accepted only when the browser-controlled Sec-Fetch-Site header
+ * (a forbidden header pages cannot set) says exactly "same-origin".
+ */
 export function hasPaymentSameOrigin(request: Request, required = true): boolean {
-  if (request.headers.get("sec-fetch-site") === "cross-site") return false;
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite === "cross-site") return false;
   const origin = request.headers.get("origin");
   if (!origin) return !required;
+  if (origin === "null") return fetchSite === "same-origin";
   const url = new URL(request.url);
   const host = request.headers.get("host");
   if (host && /[\s/\\?#@]/.test(host)) return false;
