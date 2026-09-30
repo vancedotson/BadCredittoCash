@@ -1,9 +1,12 @@
+import { formatUsdCents } from "./payments-display";
+
 type DetailEvent = {
   event: string;
   props?: Record<string, unknown>;
 };
 
 const stringValue = (value: unknown) => typeof value === "string" ? value.trim() : "";
+const PAYMENT_EVENTS = new Set(["payment_request_created", "payment_received", "payment_failed", "payment_request_cancelled"]);
 
 /** Plain text only: callers render this as React text, never as HTML. */
 export function eventDetail(event: DetailEvent): string {
@@ -14,6 +17,10 @@ export function eventDetail(event: DetailEvent): string {
   if (event.event === "call_booked" && stringValue(props.preferredTime)) return `Preferred: ${stringValue(props.preferredTime)}`;
   if (event.event === "email_queued" && stringValue(props.sequence)) return `Sequence: ${stringValue(props.sequence)}`;
   if (event.event === "webinar_registered" && stringValue(props.source)) return `Source: ${stringValue(props.source)}`;
+  if (PAYMENT_EVENTS.has(event.event)) {
+    const amount = typeof props.amountCents === "number" && Number.isInteger(props.amountCents) ? formatUsdCents(props.amountCents) : "";
+    return [amount, stringValue(props.description)].filter(Boolean).join(" · ");
+  }
   return "";
 }
 

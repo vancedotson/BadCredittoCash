@@ -7,6 +7,7 @@ import { AddNoteForm, AddTaskForm, TaskItem } from "@/components/crm/mutations";
 import { RecentPin } from "@/components/crm/RecentPin";
 import { ContactPrivacyControls } from "@/components/crm/ContactPrivacyControls";
 import { CreditReportsPanel } from "@/components/crm/CreditReportsPanel";
+import { PaymentRequestsPanel } from "@/components/crm/PaymentRequestsPanel";
 import { requireCrmUser } from "@/lib/auth";
 import { isCrmDemoMode } from "@/lib/demo";
 import { getContactPrivacyState } from "@/lib/contact-privacy";
@@ -82,6 +83,15 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           <Card><LiveWebinarContactHistory registrations={liveRegistrations} /></Card>
           <Card>
             <CreditReportsPanel contactId={contact.id} demo={isCrmDemoMode()} />
+          </Card>
+          <Card>
+            <PaymentRequestsPanel
+              contactId={contact.id}
+              contactEmail={contact.email}
+              contactName={contact.name}
+              demo={isCrmDemoMode()}
+              canWrite={user.crmRole !== "readonly"}
+            />
           </Card>
           <Card>
             <h2 className="mb-3 text-lg font-semibold text-heading">Snapshot</h2>

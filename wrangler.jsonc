@@ -15,7 +15,11 @@
       "RESEND_WEBHOOK_SECRET",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
-      "GOOGLE_TOKEN_ENCRYPTION_KEY"
+      "GOOGLE_TOKEN_ENCRYPTION_KEY",
+      "AUTHNET_API_LOGIN_ID",
+      "AUTHNET_TRANSACTION_KEY",
+      "AUTHNET_SIGNATURE_KEY",
+      "AUTHNET_PUBLIC_CLIENT_KEY"
     ]
   },
   "vars": {
@@ -28,6 +32,8 @@
     "EVERGREEN_TRAINING_ENABLED": "false",
     "LIVE_WEBINAR_ENABLED": "false",
     "CLOUDFLARE_STREAM_ENABLED": "false",
+    "PAYMENTS_ENABLED": "false",
+    "AUTHNET_ENV": "sandbox",
     "EMAIL_FROM": "Vance Dotson <updates@updates.creditrepairparty.com>",
     "EMAIL_REPLY_TO": "vance@vancethecreditdoctor.com",
     "APP_BASE_URL": "https://creditrepairparty.com",

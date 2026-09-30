@@ -3,18 +3,25 @@ import { isLiveEmailTemplate, isLiveMarketingTemplate } from "@/config/live-sequ
 import { OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON } from "@/config/email-policy";
 import { evergreenTrainingEnabled } from "./evergreen-training";
 import { marketingEmailsEnabled } from "./marketing-emails";
+import { paymentsEnabled } from "./authorize-net-config";
 
 export { OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON };
 
-export type OutboundEmailCategory = "booking" | "evergreen" | "marketing" | "live" | "unknown";
+export type OutboundEmailCategory = "booking" | "evergreen" | "marketing" | "live" | "payment" | "unknown";
 export type OutboundEmailDecision = {
   allowed: boolean;
   category: OutboundEmailCategory;
   marketing: boolean;
-  reason: "allowed" | "training_disabled" | "marketing_disabled" | "live_disabled" | "live_email_unapproved" | "unknown_template";
+  reason: "allowed" | "training_disabled" | "marketing_disabled" | "live_disabled" | "live_email_unapproved" | "payments_disabled" | "unknown_template";
 };
 
 const BOOKING_UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+const PAYMENT_TEMPLATE = /^payment_request:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Transactional payment-link email: payment_request:<request uuid>:<message uuid>. */
+export function isPaymentRequestTemplate(templateKey: string): boolean {
+  return PAYMENT_TEMPLATE.test(templateKey);
+}
 const EVERGREEN_SEQUENCE_IDS = new Set([
   "pre_webinar",
   "registered_no_show",
@@ -32,6 +39,8 @@ function classifyTemplate(templateKey: string): { category: OutboundEmailCategor
   if (new RegExp(`^booking_(?:rescheduled|reminder|cancelled):${BOOKING_UUID}:${BOOKING_UUID}$`, "i").test(templateKey)) {
     return { category: "booking", marketing: false };
   }
+
+  if (isPaymentRequestTemplate(templateKey)) return { category: "payment", marketing: false };
 
   const match = templateKey.match(/^([a-z0-9_]+):([1-9]\d*)(?::([0-9a-f-]{36}))?$/i);
   if (!match) return { category: "unknown", marketing: false };
@@ -56,6 +65,11 @@ export function outboundEmailDecision(templateKey: string): OutboundEmailDecisio
   }
   if (category === "booking") {
     return { allowed: true, category, marketing: false, reason: "allowed" };
+  }
+  if (category === "payment") {
+    return paymentsEnabled()
+      ? { allowed: true, category, marketing: false, reason: "allowed" }
+      : { allowed: false, category, marketing: false, reason: "payments_disabled" };
   }
   if (category === "live") {
     if (process.env.LIVE_WEBINAR_ENABLED !== "true") {

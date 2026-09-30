@@ -54,13 +54,25 @@ async function sha256Hex(value: string): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+export type RateLimitBucket = "registration" | "booking" | "tracking" | "live-question" | "live-activity" | "payment";
+
 export async function consumePublicRateLimit(
   request: Request,
-  bucket: "registration" | "booking" | "tracking" | "live-question" | "live-activity",
+  bucket: RateLimitBucket,
   limit: number,
   windowSeconds: number,
 ): Promise<boolean> {
-  const keyHash = await sha256Hex(`${bucket}:${requestIdentity(request)}`);
+  return consumeRateLimitForKey(requestIdentity(request), bucket, limit, windowSeconds);
+}
+
+/** Rate limit an explicit identity (for example an IP from headers() or a token hash). Only its hash is stored. */
+export async function consumeRateLimitForKey(
+  identity: string,
+  bucket: RateLimitBucket,
+  limit: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  const keyHash = await sha256Hex(`${bucket}:${identity}`);
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("consume_rate_limit", {
     p_bucket: bucket,

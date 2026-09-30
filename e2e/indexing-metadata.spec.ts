@@ -8,6 +8,8 @@ const privateRoutes = [
   { path: "/live/confirmed?preview=1", label: "live webinar confirmation" },
   { path: "/live/booked?preview=1", label: "live booking confirmation" },
   { path: "/credit-check/thank-you", label: "credit-check thank-you" },
+  // Renders the "unavailable" card (before any database read) while PAYMENTS_ENABLED is unset locally.
+  { path: `/pay/${"a".repeat(43)}`, label: "payment link" },
 ] as const;
 
 const publicRoutes = ["/", "/credit-check", "/book", "/live", "/privacy", "/terms"] as const;
@@ -179,6 +181,7 @@ test("robots.txt allows public crawling and disallows only the requested private
     "/webinar/booked",
     "/live/confirmed",
     "/live/booked",
+    "/pay/",
   ]) {
     expect(body).toContain(`Disallow: ${path}`);
   }

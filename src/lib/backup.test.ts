@@ -25,6 +25,7 @@ function validBackup(): CrmBackup {
       live_webinar_sessions: [], live_webinar_registrations: [],
       credit_report_followup_obligations: [], credit_report_followup_receipts: [],
       credit_report_followup_contact_attempts: [], credit_report_followup_audit: [],
+      payment_requests: [], payment_request_events: [],
     },
   };
 }
@@ -39,7 +40,7 @@ describe("CRM backup repository integration", () => {
 
     await expect(createCrmBackup()).resolves.toEqual(backup);
     expect(mocks.rpc).toHaveBeenCalledOnce();
-    expect(mocks.rpc).toHaveBeenCalledWith("export_crm_backup_v3");
+    expect(mocks.rpc).toHaveBeenCalledWith("export_crm_backup_v4");
   });
 
   it("surfaces database export failures without returning partial data", async () => {
@@ -75,7 +76,24 @@ describe("CRM backup validation", () => {
   it("requires follow-up metadata in version 3 backups", () => {
     const tables = { ...validBackup().tables } as Record<string, unknown>;
     delete tables.credit_report_followup_receipts;
-    expect(validateCrmBackup({ ...validBackup(), tables }).error).toBe("The credit_report_followup_receipts table is missing or invalid.");
+    expect(validateCrmBackup({ ...validBackup(), version: 3, tables }).error).toBe("The credit_report_followup_receipts table is missing or invalid.");
+  });
+
+  it("accepts a version 3 backup without payment tables and defaults them to empty", () => {
+    const tables = { ...validBackup().tables } as Record<string, unknown>;
+    delete tables.payment_requests;
+    delete tables.payment_request_events;
+    const result = validateCrmBackup({ ...validBackup(), version: 3, tables });
+    expect(result.error).toBeUndefined();
+    expect(result.backup?.version).toBe(3);
+    expect(result.backup?.tables.payment_requests).toEqual([]);
+    expect(result.backup?.tables.payment_request_events).toEqual([]);
+  });
+
+  it("requires payment tables in version 4 backups", () => {
+    const tables = { ...validBackup().tables } as Record<string, unknown>;
+    delete tables.payment_request_events;
+    expect(validateCrmBackup({ ...validBackup(), tables }).error).toBe("The payment_request_events table is missing or invalid.");
   });
 
   it("reports table counts for a complete backup", () => {

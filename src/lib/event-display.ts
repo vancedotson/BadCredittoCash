@@ -59,6 +59,10 @@ const MAP: Record<string, EventDisplay> = {
   email_clicked: { label: "Clicked an email link", icon: "cursor", tone: "active", category: "email", important: true },
   email_retry_scheduled: { label: "Email retry scheduled", icon: "mail", tone: "warn", category: "email", important: true },
   email_dead_lettered: { label: "Email permanently failed", icon: "mail", tone: "warn", category: "email", important: true },
+  payment_request_created: { label: "Payment request created", icon: "check", tone: "info", category: "other", important: false },
+  payment_received: { label: "Payment received", icon: "check", tone: "success", category: "other", important: true },
+  payment_failed: { label: "Card payment declined", icon: "x", tone: "warn", category: "other", important: true },
+  payment_request_cancelled: { label: "Payment request cancelled", icon: "x", tone: "neutral", category: "other", important: false },
 };
 
 export function displayEvent(eventName: string): EventDisplay {

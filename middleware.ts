@@ -5,6 +5,7 @@ import { liveWebinar } from "@/config/live-webinar";
 import { LIVE_PLAYER_ORIGINS } from "@/lib/live-webinar-types";
 import { cloudflareStreamCustomerOrigin } from "@/lib/cloudflare-stream-origin";
 import { PUBLIC_SITE_HOSTNAME, PUBLIC_SITE_ORIGIN } from "@/config/public-site";
+import { authorizeNetAcceptUiCspOrigins, authorizeNetHostedFormOrigin } from "@/lib/authorize-net-config";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -28,32 +29,42 @@ const frameSrc = [
     ].filter((value): value is string => Boolean(value)),
   ),
 ].join(" ");
-function createContentSecurityPolicy() {
+function createContentSecurityPolicy(formActionOrigin: string | null = null, acceptUi = false) {
   const streamOrigin = cloudflareStreamCustomerOrigin();
+  // The AcceptUI card lightbox is allowed on signed-in /crm pages only, and only
+  // while payments are enabled with a valid AUTHNET_ENV.
+  const acceptUiOrigins = acceptUi ? authorizeNetAcceptUiCspOrigins() : null;
   const connectSources = [
     "'self'", "https://gulidnxltrgomjyctjlp.supabase.co", "wss://gulidnxltrgomjyctjlp.supabase.co",
     "https://challenges.cloudflare.com", ...(streamOrigin ? [streamOrigin] : []),
+    ...(acceptUiOrigins?.connect ?? []),
   ];
+  const frameSources = [...new Set([...frameSrc.split(" "), ...(acceptUiOrigins?.frame ?? [])])].join(" ");
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com`,
+    `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://challenges.cloudflare.com${acceptUiOrigins ? ` ${acceptUiOrigins.script.join(" ")}` : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     `connect-src ${connectSources.join(" ")}`,
-    `frame-src ${frameSrc}`,
+    `frame-src ${frameSources}`,
     "media-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'",
+    // Only the payment checkout response may post to the configured
+    // Authorize.net hosted form; every other path keeps 'self' only.
+    `form-action 'self'${formActionOrigin ? ` ${formActionOrigin}` : ""}`,
     "frame-ancestors 'none'",
     "upgrade-insecure-requests",
   ].join("; ");
 }
 
-function secure(response: NextResponse, privateData = false) {
-  response.headers.set("Content-Security-Policy", createContentSecurityPolicy());
-  if (!response.headers.has("Referrer-Policy")) response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+type SecureOptions = { formActionOrigin?: string | null; noReferrer?: boolean; noStore?: boolean; acceptUi?: boolean };
+
+function secure(response: NextResponse, privateData = false, options: SecureOptions = {}) {
+  response.headers.set("Content-Security-Policy", createContentSecurityPolicy(options.formActionOrigin ?? null, options.acceptUi ?? false));
+  if (options.noReferrer) response.headers.set("Referrer-Policy", "no-referrer");
+  else if (!response.headers.has("Referrer-Policy")) response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
   // The authenticated CRM Broadcast Studio needs same-origin camera and
@@ -61,7 +72,7 @@ function secure(response: NextResponse, privateData = false) {
   const media = privateData ? "camera=(self), microphone=(self)" : "camera=(), microphone=()";
   response.headers.set("Permissions-Policy", `${media}, geolocation=(), payment=(), usb=(), browsing-topics=()`);
   response.headers.set("Strict-Transport-Security", "max-age=31536000");
-  if (privateData) response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  if (privateData || options.noStore) response.headers.set("Cache-Control", "private, no-store, max-age=0");
   return response;
 }
 
@@ -99,6 +110,17 @@ export async function middleware(request: NextRequest) {
     return secure(NextResponse.rewrite(url));
   }
 
+  // Payment links carry a bearer token in the path: never cache or leak it via Referer.
+  const pathname = request.nextUrl.pathname;
+  if (/^\/(?:pay|api\/pay)\//.test(pathname)) {
+    const checkout = /^\/api\/pay\/[^/]+\/checkout$/.test(pathname);
+    return secure(NextResponse.next(), false, {
+      formActionOrigin: checkout ? authorizeNetHostedFormOrigin() : null,
+      noReferrer: true,
+      noStore: true,
+    });
+  }
+
   const protectedPath = request.nextUrl.pathname.startsWith("/crm")
     || request.nextUrl.pathname.startsWith("/api/crm");
   if (!protectedPath) return secure(NextResponse.next());
@@ -117,7 +139,7 @@ export async function middleware(request: NextRequest) {
 
   const hadAuthCookie = request.cookies.getAll().some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
   const { response, claims } = await updateSession(request);
-  if (claims?.sub) return secure(response, true);
+  if (claims?.sub) return secure(response, true, { acceptUi: /^\/crm(?:\/|$)/.test(request.nextUrl.pathname) });
 
   if (request.nextUrl.pathname.startsWith("/api/crm")) {
     return secure(NextResponse.json({ error: "Authentication required." }, { status: 401 }), true);

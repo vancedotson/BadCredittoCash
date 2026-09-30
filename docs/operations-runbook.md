@@ -45,6 +45,43 @@ Expected checks include public versus participant playback, different-session an
 
 If the feature is paused after activation, an authorized operator should first close registration/email gates and follow the approved Cloudflare resource-retention decision. Do not delete inputs, recordings, or related database rows as an improvised rollback. Worker rollback does not reverse database changes. This repository task does not enable flags, create a Stream input, change secrets, run a rehearsal, or send email.
 
+## Authorize.net payments (pay links and manual card charges)
+
+The CRM can email an Accept Hosted pay link and can charge a card manually (**Charge card** in a contact's Payments panel, using the Authorize.net AcceptUI hosted lightbox). Card data is entered only in Authorize.net's form; this app, its database and its logs only ever see a one-time payment token, the processor transaction id, card brand and last four digits. The feature is inert unless `PAYMENTS_ENABLED` is exactly `true` and every setting below is present and valid.
+
+Settings (names are exact):
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `PAYMENTS_ENABLED` | Wrangler var | `"true"` to enable, anything else keeps payments off |
+| `AUTHNET_ENV` | Wrangler var | exactly `sandbox` or `production`; any other value disables payments and adds no CSP origins |
+| `AUTHNET_API_LOGIN_ID` | Worker secret | API Login ID |
+| `AUTHNET_TRANSACTION_KEY` | Worker secret | Transaction Key |
+| `AUTHNET_SIGNATURE_KEY` | Worker secret | Signature Key (verifies webhooks) |
+| `AUTHNET_PUBLIC_CLIENT_KEY` | Worker secret | Public Client Key (AcceptUI). Read server-side only and given just to signed-in CRM users who can write; never a `NEXT_PUBLIC_` variable |
+
+The four `AUTHNET_*` secrets are listed in `secrets.required` in `wrangler.jsonc`, so set them before the first deploy that contains this change (sandbox values are fine).
+
+Sandbox setup:
+
+1. Create or open the Authorize.net **sandbox** account. In the sandbox Merchant Interface open **Account > Settings > Security Settings > General Security Settings > API Credentials & Keys**, and note the API Login ID, create a Transaction Key, a Signature Key and a Public Client Key. Never paste them into chat, tickets, source control or shell history on a shared machine.
+2. Store each secret with `npx wrangler secret put AUTHNET_API_LOGIN_ID` (repeat for `AUTHNET_TRANSACTION_KEY`, `AUTHNET_SIGNATURE_KEY`, `AUTHNET_PUBLIC_CLIENT_KEY`). Wrangler prompts for the value; do not pass it on the command line.
+3. In the sandbox Merchant Interface set **Account > Settings > Transaction Format Settings > Test Mode** to **OFF**. While Test Mode is on, Authorize.net approves everything with transaction id 0 and charges nothing; this app treats that as an error, never as a payment.
+4. Register the webhook: **Account > Settings > Business Settings > Notifications/Webhooks** (Merchant Interface labels vary slightly by account; use the Webhooks page). Add an endpoint with URL `https://creditrepairparty.com/api/payments/authorize-net/webhook` and these events: `net.authorize.payment.authcapture.created`, `net.authorize.payment.fraud.approved`, `net.authorize.payment.fraud.declined`, `net.authorize.payment.fraud.held`, `net.authorize.payment.void.created`, `net.authorize.payment.refund.created`. Leave the endpoint active. The webhook only triggers a lookup: state changes come from `getTransactionDetails` matched to our invoice number, so a missed notification is reconciled with **Check status** in the CRM.
+5. Confirm `AUTHNET_ENV` is `sandbox` in `wrangler.jsonc` vars, set `PAYMENTS_ENABLED` to `"true"`, and deploy. Apply the payment migrations (`20260929120000_payment_requests.sql`, then `20260929130000_payment_request_charge.sql`) before deploying code that depends on them, after taking a CRM backup.
+6. QA on the deployed Worker with Authorize.net sandbox test cards only: an approved charge, a declined charge, and a hosted pay link. Then confirm the browser console shows no Content-Security-Policy violations while the AcceptUI lightbox opens. The CSP adds the AcceptUI script, frame and API origins only to signed-in `/crm` responses and only while payments are enabled with a valid `AUTHNET_ENV`; if the console reports a blocked Authorize.net origin, add that exact origin in `authorizeNetAcceptUiCspOrigins` in `src/lib/authorize-net-config.ts`, never a wildcard.
+
+Manual-charge behaviour to know: the charge row is created before Authorize.net is called. A network or timeout failure is recorded as `charge_unknown` and shown as "unknown"; nothing retries it. Use **Check status** (or wait for the webhook) before charging again. Any open charge that has no recorded definite failure blocks new charges for that contact (409), however old it is (in-progress for the first 2 minutes, then unresolved), until staff use Check status or cancel it after confirming in Authorize.net that the card was not charged. This includes held charges and rows left by a Worker crash. Voids and refunds are done in the Authorize.net dashboard; the webhook records them.
+
+Go live (separate, explicitly authorized step):
+
+1. Create production credentials in the live Merchant Interface (Test Mode is not used in production) and register the same webhook against the live account with the live Signature Key.
+2. Run `npx wrangler secret put` for all four `AUTHNET_*` secrets with the production values, set `AUTHNET_ENV` to `production` in `wrangler.jsonc` vars, and deploy from CI.
+3. Never build or deploy from a machine that has production values in any `.env*` file. OpenNext bundles `.env*` files into the Worker, so a local production value could ship inside the bundle. Keep secrets only in Cloudflare Worker secrets.
+4. Verify the first live charge with a small real amount, then refund it in Authorize.net.
+
+To pause payments, set `PAYMENTS_ENABLED` back to `"false"` and redeploy; the CRM panel, the pay pages, the charge route and the webhook all fail closed.
+
 ## Before any planned deployment or database migration
 
 1. Sign in to the CRM and open `https://vance-dotson.vancedotson.workers.dev/crm/settings`.

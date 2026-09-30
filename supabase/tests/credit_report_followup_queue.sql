@@ -185,7 +185,8 @@ begin
   -- The admin-only contact privacy export includes every active-contact queue
   -- record without report object metadata or staff UUIDs.
   v_contact_export := public.export_crm_contact_v1(c);
-  if v_contact_export->>'version' <> '3'
+  -- Version 4 (payment requests, 20260929120000) wraps the v3 follow-up export.
+  if v_contact_export->>'version' <> '4'
     or jsonb_array_length(v_contact_export->'creditReportFollowupObligations') <> 2
     or jsonb_array_length(v_contact_export->'creditReportFollowupReceipts') <> 3
     or jsonb_array_length(v_contact_export->'creditReportFollowupContactAttempts') <> 2

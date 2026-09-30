@@ -143,3 +143,81 @@ describe("camera and microphone permissions", () => {
     expect(mediaPolicy(page)).toEqual(["camera=(self)", "microphone=(self)"]);
   });
 });
+
+describe("Authorize.net AcceptUI content security policy", () => {
+  function directive(response: Response, name: string): string[] {
+    const part = (response.headers.get("Content-Security-Policy") ?? "").split("; ").find((entry) => entry.startsWith(`${name} `)) ?? "";
+    return part.split(" ").slice(1);
+  }
+  function signedIn() {
+    updateSession.mockImplementation(async (request: NextRequest) => ({
+      response: NextResponse.next({ request }),
+      claims: { sub: "operator-1" },
+    }));
+  }
+  function enable(environment = "sandbox") {
+    vi.stubEnv("PAYMENTS_ENABLED", "true");
+    vi.stubEnv("AUTHNET_ENV", environment);
+  }
+  afterEach(() => { vi.unstubAllEnvs(); updateSession.mockReset(); });
+
+  it("adds only the sandbox origins to signed-in /crm responses", async () => {
+    signedIn();
+    enable("sandbox");
+    const response = await middleware(requestFor(`${canonicalOrigin}/crm/contacts/abc`));
+    expect(directive(response, "script-src")).toContain("https://jstest.authorize.net");
+    expect(directive(response, "frame-src")).toEqual(expect.arrayContaining(["https://jstest.authorize.net", "https://test.authorize.net"]));
+    expect(directive(response, "connect-src")).toContain("https://apitest.authorize.net");
+    const policy = response.headers.get("Content-Security-Policy") ?? "";
+    expect(policy).not.toContain("https://js.authorize.net");
+    expect(policy).not.toContain("https://api2.authorize.net");
+    expect(policy).not.toContain("https://accept.authorize.net");
+    expect(directive(response, "script-src")).not.toContain("*");
+  });
+
+  it("adds production origins only when AUTHNET_ENV is exactly production", async () => {
+    signedIn();
+    enable("production");
+    const response = await middleware(requestFor(`${canonicalOrigin}/crm`));
+    expect(directive(response, "script-src")).toContain("https://js.authorize.net");
+    expect(directive(response, "frame-src")).toEqual(expect.arrayContaining(["https://js.authorize.net", "https://accept.authorize.net"]));
+    expect(directive(response, "connect-src")).toEqual(expect.arrayContaining(["https://api2.authorize.net", "https://api.authorize.net"]));
+    const policy = response.headers.get("Content-Security-Policy") ?? "";
+    expect(policy).not.toContain("jstest.authorize.net");
+    expect(policy).not.toContain("apitest.authorize.net");
+    expect(policy).not.toContain("https://test.authorize.net");
+  });
+
+  it.each(["Production", "prod", "", "sandbox "])("does not widen the CSP for invalid AUTHNET_ENV %j", async (environment) => {
+    signedIn();
+    enable(environment);
+    const response = await middleware(requestFor(`${canonicalOrigin}/crm/contacts/abc`));
+    expect(response.headers.get("Content-Security-Policy")).not.toContain("authorize.net");
+  });
+
+  it.each(["false", "", "TRUE"])("does not widen the CSP when PAYMENTS_ENABLED is %j", async (enabled) => {
+    signedIn();
+    vi.stubEnv("PAYMENTS_ENABLED", enabled);
+    vi.stubEnv("AUTHNET_ENV", "sandbox");
+    const response = await middleware(requestFor(`${canonicalOrigin}/crm/contacts/abc`));
+    expect(response.headers.get("Content-Security-Policy")).not.toContain("authorize.net");
+  });
+
+  it.each(["/", "/live/room", "/api/crm/contact/abc/payment-requests", "/crmx", "/pay/tok", "/login"])(
+    "keeps AcceptUI origins off %s",
+    async (path) => {
+      signedIn();
+      enable("sandbox");
+      const response = await middleware(requestFor(`${canonicalOrigin}${path}`));
+      expect(response.headers.get("Content-Security-Policy")).not.toContain("jstest.authorize.net");
+      expect(response.headers.get("Content-Security-Policy")).not.toContain("apitest.authorize.net");
+    },
+  );
+
+  it("keeps the AcceptUI origins off unauthenticated /crm redirects", async () => {
+    updateSession.mockImplementation(async (request: NextRequest) => ({ response: NextResponse.next({ request }), claims: null }));
+    enable("sandbox");
+    const response = await middleware(requestFor(`${canonicalOrigin}/crm`));
+    expect(response.headers.get("Content-Security-Policy")).not.toContain("authorize.net");
+  });
+});

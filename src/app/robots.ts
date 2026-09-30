@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
         "/webinar/booked",
         "/live/confirmed",
         "/live/booked",
+        "/pay/",
       ],
     },
     sitemap: publicUrl("/sitemap.xml"),

@@ -20,6 +20,7 @@ describe("robots route rules", () => {
           "/webinar/booked",
           "/live/confirmed",
           "/live/booked",
+          "/pay/",
         ],
       },
       sitemap: publicUrl("/sitemap.xml"),

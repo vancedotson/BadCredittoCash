@@ -14,10 +14,13 @@ import { mergeLiveEmailFields, type LiveMessagePayload } from "./live-email-fiel
 import { isProductionEmailMode } from "./email-mode";
 import { getBookingEmailConfiguration } from "./email-configuration";
 import { BOOKING_LIFECYCLE_EMAILS } from "@/config/booking-email-copy";
+import { PAYMENT_REQUEST_EMAIL } from "@/config/payment-email-copy";
 import {
   isOutboundEmailAllowed,
   isOutboundEmailMarketing,
+  isPaymentRequestTemplate,
 } from "./outbound-email-policy";
+import { formatUsdCents, isPaymentLinkToken } from "./payments-display";
 import { OUTBOUND_EMAIL_POLICY_CANCELLATION_REASON } from "@/config/email-policy";
 
 type ClaimedMessage = {
@@ -37,6 +40,12 @@ export type MessagePayload = LiveMessagePayload & {
   bookingId?: string;
   startsAt?: string;
   timezone?: string;
+  paymentRequestId?: string;
+  paymentLinkToken?: string;
+  amountCents?: number;
+  paymentDescription?: string;
+  paymentReference?: string;
+  firstName?: string | null;
 };
 
 type FailureOutcome = {
@@ -45,7 +54,7 @@ type FailureOutcome = {
   retry_at: string | null;
 };
 
-type DeliveryOutcome = "sent" | "retrying" | "failed" | "skipped" | "cancelled";
+export type DeliveryOutcome = "sent" | "retrying" | "failed" | "skipped" | "cancelled";
 
 class PolicyCancellationPersistenceError extends Error {}
 
@@ -55,6 +64,7 @@ function resolveSequence(sequenceId: string) {
 
 function resolveTemplate(templateKey: string): SequenceEmail | null {
   if (isLiveEmailTemplate(templateKey)) return LIVE_EMAIL_TEMPLATES[templateKey];
+  if (templateKey.startsWith("payment_request:")) return isPaymentRequestTemplate(templateKey) ? PAYMENT_REQUEST_EMAIL : null;
   if (templateKey.startsWith("booking_rescheduled:")) return BOOKING_LIFECYCLE_EMAILS.rescheduled;
   if (templateKey.startsWith("booking_reminder:")) return BOOKING_LIFECYCLE_EMAILS.reminder;
   if (templateKey.startsWith("booking_cancelled:")) return BOOKING_LIFECYCLE_EMAILS.cancelled;
@@ -89,9 +99,27 @@ function appointmentTime(payload: MessagePayload): string {
   }
 }
 
+/** Payment-link fields come only from the durable queue payload; malformed rows fail without retry. */
+function mergePaymentEmailFields(value: string, payload: MessagePayload, baseUrl: string): string {
+  const token = payload.paymentLinkToken;
+  const cents = payload.amountCents;
+  const description = typeof payload.paymentDescription === "string" ? payload.paymentDescription.trim() : "";
+  if (!isPaymentLinkToken(token) || typeof cents !== "number" || !Number.isInteger(cents) || cents <= 0 || !description) {
+    throw new Error("Payment email is missing valid request context.");
+  }
+  const firstName = typeof payload.firstName === "string" && payload.firstName.trim() ? payload.firstName.trim() : "there";
+  return value
+    .replaceAll("{{payment_link}}", `${baseUrl}/pay/${token}`)
+    .replaceAll("{{payment_amount}}", formatUsdCents(cents))
+    .replaceAll("{{payment_description}}", description)
+    .replaceAll("{{first_name}}", firstName);
+}
+
 function mergeFields(value: string, payload: MessagePayload = {}, templateKey = ""): string {
   const baseUrl = appBaseUrl();
-  return (isLiveEmailTemplate(templateKey) ? mergeLiveEmailFields(value, payload, baseUrl) : value)
+  const merged = isLiveEmailTemplate(templateKey) ? mergeLiveEmailFields(value, payload, baseUrl)
+    : isPaymentRequestTemplate(templateKey) ? mergePaymentEmailFields(value, payload, baseUrl) : value;
+  return merged
     .replaceAll("{{watch_link}}", `${baseUrl}/webinar/room`)
     .replaceAll("{{call_link}}", `${baseUrl}/book`)
     .replaceAll("{{appointment_time}}", appointmentTime(payload))
@@ -214,7 +242,8 @@ async function deliverClaimedMessage(
     return "failed";
   }
 
-  if (isLiveEmailTemplate(templateKey)) {
+  if (isLiveEmailTemplate(templateKey) || isPaymentRequestTemplate(templateKey)) {
+    // Payment links recheck too: a request paid or cancelled after claiming must not be emailed.
     const db = createAdminClient();
     const { data: eligible, error } = await db.rpc("email_message_is_eligible_v2", { p_message_id: claimed.id });
     if (error) throw new Error("Could not recheck live email eligibility.");
@@ -396,6 +425,34 @@ export async function deliverLiveRegistrationConfirmation(registrationId: string
   if (error) throw new Error("Could not claim the live joining email.");
   const claimed = (data as ClaimedMessage[] | null)?.[0];
   if (claimed) await deliverClaimedMessage(claimed, email, claimed.template_key, claimed.payload, LIVE_EMAIL_TEMPLATES[claimed.template_key]);
+}
+
+/**
+ * Queue one payment-link email on the durable queue, then try to send that
+ * exact message now. The row is queued before any policy check so a disabled
+ * policy cancels it visibly; if the claim finds nothing, cron retries later.
+ */
+export async function deliverPaymentRequestEmail(
+  requestId: string,
+  actorId: string,
+  contactId?: string,
+): Promise<{ messageId: string; outcome: DeliveryOutcome | "queued" }> {
+  const db = createAdminClient();
+  const { data: queuedData, error: queueError } = await db.rpc("queue_payment_request_email_v1", {
+    p_request_id: requestId, p_actor_id: actorId, p_contact_id: contactId ?? null,
+  });
+  const queued = queuedData as { messageId?: unknown; templateKey?: unknown; email?: unknown } | null;
+  if (queueError || typeof queued?.messageId !== "string" || typeof queued.templateKey !== "string" || typeof queued.email !== "string") {
+    const error = new Error(queueError?.message?.trim() || "payment_email_queue_failed") as Error & { code?: string };
+    error.code = queueError?.message?.trim() || "payment_email_queue_failed";
+    throw error;
+  }
+  const { data, error } = await db.rpc("claim_payment_request_email_v1", { p_message_id: queued.messageId });
+  if (error) return { messageId: queued.messageId, outcome: "queued" };
+  const claimed = (data as ClaimedMessage[] | null)?.[0];
+  if (!claimed) return { messageId: queued.messageId, outcome: "queued" };
+  const outcome = await deliverClaimedMessage(claimed, queued.email, claimed.template_key, claimed.payload ?? {}, PAYMENT_REQUEST_EMAIL);
+  return { messageId: queued.messageId, outcome };
 }
 
 /** Drain small atomic batches with pacing and a wall-time budget for synchronized reminders. */
