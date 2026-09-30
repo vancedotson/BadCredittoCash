@@ -108,20 +108,29 @@ export default async function PaymentPage({
   const ip = requestHeaders.get("cf-connecting-ip")
     ?? requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? "unknown";
-  let request: PublicPaymentRequest | null;
+  let request: PublicPaymentRequest | null = null;
+  let rateLimited = false;
+  let unavailable = false;
   try {
-    if (!(await consumeRateLimitForKey(`payment-page:${ip}`, "payment", 60, 600))) {
-      return (
-        <Shell sandbox={sandbox}>
-          <p className="mt-5 text-body">Please try again in a few minutes.</p>
-        </Shell>
-      );
+    if (await consumeRateLimitForKey(`payment-page:${ip}`, "payment", 60, 600)) {
+      request = await findPaymentRequestByToken(token);
+    } else {
+      rateLimited = true;
     }
-    request = await findPaymentRequestByToken(token);
   } catch {
+    unavailable = true;
+  }
+  if (unavailable) {
     return (
       <Shell sandbox={sandbox}>
         <p className="mt-5 text-body">This page is temporarily unavailable. Please try again in a few minutes.</p>
+      </Shell>
+    );
+  }
+  if (rateLimited) {
+    return (
+      <Shell sandbox={sandbox}>
+        <p className="mt-5 text-body">Please try again in a few minutes.</p>
       </Shell>
     );
   }
