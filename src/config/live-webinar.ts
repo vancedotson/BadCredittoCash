@@ -50,7 +50,7 @@ export const liveWebinar = {
   },
 
   hero: {
-    kicker: "FREE LIVE SESSION // KNOW YOUR RIGHTS",
+    kicker: "LIVE SESSION // KNOW YOUR RIGHTS",
     headlinePlain: "They're allowed to call.",
     headlineAccent: "They're not allowed to do this.",
     sub:
@@ -171,7 +171,7 @@ export const liveWebinar = {
     },
     {
       q: "Will you look at my case on the call?",
-      a: "No. It's a general session and the examples are illustrative. Individual situations are handled separately, through a free call.",
+      a: "No. It's a general session and the examples are illustrative. Individual situations are handled separately, through a strategy call.",
     },
   ],
 
@@ -217,7 +217,7 @@ export const liveWebinar = {
     submitLabel: "Save my seat",
     loadingLabel: "Saving your seat...",
     reassurance:
-      "Free. No payment. Your joining link arrives by email — no spam, unsubscribe anytime.",
+      "No payment. Your joining link arrives by email — no spam, unsubscribe anytime.",
   },
 
   finalCta: {
@@ -238,7 +238,7 @@ export const liveWebinar = {
    * quotes here once they exist.
    */
   registrationPage: {
-    announcement: "FREE LIVE SESSION",
+    announcement: "LIVE SESSION",
 
     /** Three things they walk away with — the hero bullets and outcome cards. */
     outcomes: [
@@ -257,7 +257,7 @@ export const liveWebinar = {
     ],
 
     /** Trust facts — lifted from site-v3 `trustBar` / `meetVance.credentials`. */
-    trust: ["Consumer advocate since 2004", "FDCPA & FCRA", "Real office in Oklahoma City", "Free — no payment step"],
+    trust: ["Consumer advocate since 2004", "FDCPA & FCRA", "Real office in Oklahoma City", "No payment step"],
 
     /** "Who it's for" — mirrors vetted site-v3 `painMirror` points. */
     whoFor: {
@@ -287,13 +287,13 @@ export const liveWebinar = {
       kicker: "THE DETAILS",
       where: "Online — join from any browser",
       whereNote: "Your joining link arrives by email",
-      cost: "Free",
+      cost: "No charge",
       costNote: "No payment, now or later",
     },
 
     finalBand: {
       heading: "They're counting on you not knowing the rules.",
-      sub: "It's free, it's live, and it runs once.",
+      sub: "It's live, there's no charge, and it runs once.",
     },
   },
 
@@ -320,7 +320,7 @@ export const liveWebinar = {
       /** Shown on the calendar entry itself. */
       eventTitle: "Live session with Vance Dotson — collector rights",
       eventDescription:
-        "Free live session on what debt collectors are not allowed to do under the FDCPA, how to document it, and what you're entitled to ask for. The joining link is sent by email.",
+        "Live session on what debt collectors are not allowed to do under the FDCPA, how to document it, and what you're entitled to ask for. The joining link is sent by email.",
     },
 
     /** What happens next, stated as fact. Nothing here promises what wasn't done. */
@@ -359,7 +359,7 @@ export const liveWebinar = {
       label: "STARTS IN",
       live: "Happening now — check your email for the joining link.",
       ended: "This session has ended.",
-      endedSub: "This session has ended. You can check back for another scheduled date or book a free call.",
+      endedSub: "This session has ended. You can check back for another scheduled date or book a call.",
     },
   },
 
@@ -383,19 +383,19 @@ export const liveWebinar = {
     expiryLabel: "NOT AVAILABLE",
     expiredKicker: "LIVE SESSION",
     expiredHeading: "This session was not recorded.",
-    expiredSub: "Live webinars are not recorded. You can book a free strategy call to discuss possible next steps.",
+    expiredSub: "Live webinars are not recorded. You can book a strategy call to discuss possible next steps.",
 
     /** Legacy copy retained for compatibility; the public replay route is always unavailable. */
     unavailable: {
       kicker: "LIVE SESSION",
       heading: "This session was not recorded.",
-      sub: "Live webinars are not recorded. You can book a free strategy call to discuss possible next steps.",
+      sub: "Live webinars are not recorded. You can book a strategy call to discuss possible next steps.",
     },
 
     cta: {
       heading: "Want your own situation looked at?",
-      sub: "A free call is where the specifics get discussed.",
-      buttonLabel: "Book my free call",
+      sub: "A call is where the specifics get discussed.",
+      buttonLabel: "Book my call",
       href: "/live/call",
     },
   },
@@ -412,7 +412,7 @@ export const liveWebinar = {
     kicker: "SCHEDULE // STRATEGY CALL",
     heading: "Now let's look at yours.",
     body:
-      "The session was general — this is the part where someone actually looks at what's happening to you. A free 30-minute call with Vance: what the collectors have been doing, what's on your report, and the honest next step. No cost, no obligation.",
+      "The session was general — this is the part where someone actually looks at what's happening to you. A 30-minute call with Vance: what the collectors have been doing, what's on your report, and the honest next step. No cost, no obligation.",
 
     /** What the call covers. Mirrors site-v3 `howItWorks`, in the live voice. */
     covers: [
@@ -421,11 +421,11 @@ export const liveWebinar = {
       "You leave knowing where you stand — either way, and with no pressure.",
     ],
 
-    facts: ["30 minutes", "By phone", "Directly with Vance", "Free, no obligation"],
+    facts: ["30 minutes", "By phone", "Directly with Vance", "No obligation"],
 
     /** The honest floor. Straight from site-v3 `riskReversal`. */
     reassurance: [
-      "The call is free.",
+      "There is no charge for the call.",
       "No judgment. Vance has seen it all.",
       "No obligation.",
       "Worst case: you learn exactly where you stand.",
@@ -465,7 +465,7 @@ export const liveWebinar = {
           text: "Gather any collection letters, texts, or voicemails you still have.",
         },
         {
-          text: "Pull your credit reports from all three bureaus, free, at",
+          text: "Pull your credit reports from all three bureaus at",
           linkLabel: "AnnualCreditReport.com",
           href: "https://www.annualcreditreport.com/",
         },
@@ -474,12 +474,6 @@ export const liveWebinar = {
         },
       ],
       note: "None of this is required — come as you are. It just means less of the call spent reconstructing dates.",
-    },
-
-    /** The honest in-crisis path. Matches site-v3 contact details exactly. */
-    urgent: {
-      label: "IF IT CAN'T WAIT",
-      body: "If a collector is threatening you or something is moving fast, call the office rather than waiting for the appointment.",
     },
   },
 
@@ -516,7 +510,7 @@ export const liveWebinar = {
     ended: {
       kicker: "SESSION ENDED",
       heading: "That's a wrap.",
-      sub: "The live session is over. It was not recorded. You can book a free call to discuss possible next steps.",
+      sub: "The live session is over. It was not recorded. You can book a call to discuss possible next steps.",
     },
 
     /**
@@ -544,7 +538,7 @@ export const liveWebinar = {
      * once the session is over.
      */
     cta: {
-      buttonLabel: "Book my free call",
+      buttonLabel: "Book my call",
       href: "/live/call",
     },
   },

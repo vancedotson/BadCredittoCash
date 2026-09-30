@@ -151,7 +151,7 @@ for (const viewport of viewports) {
     await expectNoOverflow(page);
 
     const heroButton = page.locator("main .v3-btn-primary").first();
-    await expect(heroButton).toContainText("Check my credit report, free");
+    await expect(heroButton).toContainText("Check my credit report");
     await expect(heroButton).toHaveAttribute("href", "/credit-check");
     await focusButtonWithKeyboard(page, heroButton);
     await expect(contrastRatio(heroButton)).resolves.toBeGreaterThanOrEqual(4.5);

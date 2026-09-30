@@ -195,7 +195,7 @@ function ConfirmedBody() {
           <Reveal>
             <div className="mt-10 flex flex-wrap gap-3 py-9" style={{ borderTop: "1px solid var(--v3-line)" }}>
               <Link className="v3-btn v3-btn-ghost" href={href("/live/call")}>
-                Book a free call
+                Book a call
               </Link>
             </div>
           </Reveal>

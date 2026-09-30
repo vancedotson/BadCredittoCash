@@ -5,7 +5,7 @@ import Link from "next/link";
 import { site } from "@/config/site-v3";
 import { Kicker, SectionScan } from "../../marketing-v3/shared/primitives";
 import { useReveal } from "../../marketing-v3/shared/hooks";
-import { CheckIcon, PhoneIcon } from "@/components/marketing-v2/Icons";
+import { CheckIcon } from "@/components/marketing-v2/Icons";
 
 /**
  * /webinar/booked — the onboarding step after the call is booked. Captures
@@ -172,16 +172,6 @@ export function BookedSectionV4() {
                   Apple / Outlook (.ics)
                 </button>
               </div>
-              <p className="mt-4" style={{ fontSize: 13.5, color: "var(--v3-mut)" }}>
-                Need to change the time?{" "}
-                <a
-                  href={site.contact.phoneHref}
-                  style={{ color: "var(--v3-accent)", fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 3 }}
-                >
-                  Call {site.contact.phoneDisplay}
-                </a>
-                .
-              </p>
             </div>
           ) : null}
         </div>
@@ -216,19 +206,6 @@ export function BookedSectionV4() {
             ))}
           </ol>
         </div>
-
-        {/* In-crisis path — don't make someone being harassed wait */}
-        <p className="mt-7 text-center" style={{ fontSize: 14, color: "var(--v3-mut)" }}>
-          Being harassed right now and can&apos;t wait?{" "}
-          <a
-            href={site.contact.phoneHref}
-            className="inline-flex items-center gap-1.5"
-            style={{ color: "var(--v3-accent)", fontWeight: 600 }}
-          >
-            <PhoneIcon className="h-4 w-4" />
-            Call {site.contact.phoneDisplay}
-          </a>
-        </p>
 
         <div className="mt-8 text-center">
           <Link href="/" className="v3-btn v3-btn-ghost" style={{ minHeight: 46 }}>

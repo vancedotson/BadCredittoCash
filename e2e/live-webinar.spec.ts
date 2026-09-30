@@ -113,7 +113,7 @@ test("an unscheduled live page presents no actions", async ({ page }) => {
   await page.route("**/api/live/session**", (route) => route.fulfill({ json: { session: null, participant: null } }));
   await page.goto("/live");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("isn’t on the calendar yet");
-  await expect(page.getByRole("main").getByRole("link", { name: "Book a free strategy call" })).toHaveAttribute("href", "/book");
+  await expect(page.getByRole("main").getByRole("link", { name: "Book a strategy call" })).toHaveAttribute("href", "/book");
   await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
 });
 
@@ -246,7 +246,7 @@ test("legacy replay metadata never exposes a player or replay activity", async (
   await page.goto(`/live/replay?session=${sessionA}`);
   await expect(page.getByRole("heading", { name: "This session was not recorded." })).toBeVisible();
   await expect(page.locator("iframe, video")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Book a free call" })).toHaveAttribute("href", `/live/call?session=${sessionA}`);
+  await expect(page.getByRole("link", { name: "Book a call" })).toHaveAttribute("href", `/live/call?session=${sessionA}`);
   expect(mocks.activities.filter((event) => event.event === "live_replay_opened")).toEqual([]);
 });
 

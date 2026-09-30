@@ -12,7 +12,7 @@ test("idle player shows a clear start state without the booking offer", async ({
   await expect(seek).toHaveAttribute("aria-valuenow", "0");
   await expect(seek).toHaveAttribute("aria-valuetext", "0:00 of 35:00");
   await expect(page.getByText("0:00 / 35:00 · 0%")).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toHaveCount(0);
 
   await stage.focus();
   await expect(stage).toBeFocused();
@@ -33,7 +33,7 @@ test("playing player review state advances and keeps the offer hidden", async ({
   await expect(stage).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("PLAYING", { exact: true })).toBeVisible();
   await expect(seek).not.toHaveAttribute("aria-valuetext", "0:00 of 35:00");
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toHaveCount(0);
 });
 
 test("player quarter review state starts at 25 percent without the offer", async ({ page }) => {
@@ -47,7 +47,7 @@ test("player quarter review state starts at 25 percent without the offer", async
   await expect(seek).toHaveAttribute("aria-valuenow", "25");
   await expect(seek).toHaveAttribute("aria-valuetext", /8:4\d of 35:00/);
   await expect(page.getByText(/8:4\d \/ 35:00 · 25%/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toHaveCount(0);
 });
 
 test("player halfway review state starts at 50 percent without the offer", async ({ page }) => {
@@ -61,7 +61,7 @@ test("player halfway review state starts at 50 percent without the offer", async
   await expect(seek).toHaveAttribute("aria-valuenow", "50");
   await expect(seek).toHaveAttribute("aria-valuetext", /17:3\d of 35:00/);
   await expect(page.getByText(/17:3\d \/ 35:00 · 50%/)).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toHaveCount(0);
 });
 
 test("player at 75 percent reveals the correctly timed offer", async ({ page }) => {
@@ -73,7 +73,7 @@ test("player at 75 percent reveals the correctly timed offer", async ({ page }) 
   await expect(seek).toHaveAttribute("aria-valuetext", /26:1\d of 35:00/);
   await expect(page.getByText(/26:1\d \/ 35:00 · 75%/)).toBeVisible();
   await expect(page.getByText("YOUR NEXT STEP")).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toBeVisible();
 });
 
 test("player at 90 percent keeps the offer visible and controls usable", async ({ page }) => {
@@ -88,7 +88,7 @@ test("player at 90 percent keeps the offer visible and controls usable", async (
   await expect(seek).toHaveAttribute("aria-valuetext", /31:3\d of 35:00/);
   await expect(page.getByText(/31:3\d \/ 35:00 .* 90%/)).toBeVisible();
   await expect(page.getByText("YOUR NEXT STEP")).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toBeVisible();
 
   await stage.click();
   await expect(player).toHaveAttribute("data-player-state", "paused");
@@ -116,7 +116,7 @@ test("completed player shows a clear finish state and can replay", async ({ page
   await expect(page.getByText(/35:00 \/ 35:00 .* 100%/)).toBeVisible();
   await expect(page.getByText("Training complete")).toBeVisible();
   await expect(page.getByText("YOUR NEXT STEP")).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toBeVisible();
 
   await replay.click();
   await expect(player).toHaveAttribute("data-player-state", "playing");
@@ -137,7 +137,7 @@ test("booking offer review state opens at the pitch point and links to booking",
 
   const player = page.getByRole("region", { name: /training player:/i });
   const seek = page.getByRole("slider", { name: "Seek" });
-  const bookingLink = page.getByRole("link", { name: /book my free strategy call/i });
+  const bookingLink = page.getByRole("link", { name: /book my strategy call/i });
 
   await expect(player).toHaveAttribute("data-player-state", "paused");
   await expect(seek).toHaveAttribute("aria-valuenow", "70");
@@ -160,8 +160,8 @@ test("confirmation page reaches the training and reveals its booking CTA", async
 
   await page.getByRole("link", { name: /prefer to skip/i }).click();
   await expect(page).toHaveURL(/\/webinar\/room$/);
-  await expect(page.getByText("FREE TRAINING", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toHaveCount(0);
+  await expect(page.getByText("TRAINING", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toHaveCount(0);
 
   const player = page.getByRole("button", { name: "Play", exact: true }).first();
   await player.click();
@@ -178,7 +178,7 @@ test("confirmation page reaches the training and reveals its booking CTA", async
   await seek.press("ArrowRight");
 
   await expect(page.getByText("YOUR NEXT STEP")).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toBeVisible();
 });
 
 test("quiz shows the choice before continuing", async ({ page }) => {

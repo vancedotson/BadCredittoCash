@@ -12,7 +12,7 @@ import { trackLiveEvent } from "@/lib/live-tracking";
 
 /**
  * Two-step strategy-call booking card, shared by /webinar/call and /book so both
- * use the same booking experience. Step 1 = your details ("Book my free call"
+ * use the same booking experience. Step 1 = your details ("Book my call"
  * advances). Step 2 = pick a time from the week-grid calendar + a short intake,
  * then finalize. Fires call_booking_started on first engagement and call_booked
  * on success; the intake answers ride along to the CRM. Routes to the booked

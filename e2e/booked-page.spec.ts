@@ -1,5 +1,4 @@
 import { expect, test } from "./fixtures/local-safe-page";
-import { site } from "../src/config/site-v3";
 
 test("booking confirmation shows appointment and calendar actions", async ({ page }) => {
   await page.goto("/webinar/booked?state=booking-details");
@@ -7,11 +6,7 @@ test("booking confirmation shows appointment and calendar actions", async ({ pag
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/your call is booked/i);
   await expect(page.getByText("Your 30-minute appointment")).toBeVisible();
   await expect(page.getByText(/send the appointment time by email/i)).toBeVisible();
-  await expect(page.getByText(/need to change the time/i)).toBeVisible();
-  await expect(page.getByRole("link", { name: `Call ${site.contact.phoneDisplay}` }).first()).toHaveAttribute(
-    "href",
-    site.contact.phoneHref,
-  );
+  await expect(page.locator('a[href^="tel:"], a[href^="mailto:"]')).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Add to Google Calendar" })).toHaveAttribute(
     "href",
     /calendar\.google\.com\/calendar\/render/,

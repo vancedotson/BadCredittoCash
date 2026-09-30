@@ -156,7 +156,7 @@ export function CreditCheckQuiz({ localMode }: { localMode: boolean }) {
       {error && <p className="cc-error" role="alert">{error}</p>}
       <button type="submit" className="cc-primary cc-guide-button" disabled={busy}><span>{busy ? "Saving your details…" : twoStep ? "Get my 3-report guide" : "Show me how to get my reports"}</span>{!busy && <ArrowRightIcon className="h-5 w-5" />}</button>
       {twoStep && <button type="button" className="cc-back cc-step-back" disabled={busy} onClick={() => setStep(1)}>← Change my company selections</button>}
-      <p className="cc-small cc-form-reassurance" role="status">{busy ? "Please wait while we save your check." : localMode ? "Local preview · submissions are saved on this computer." : "Free. No payment. No obligation."}</p>
+      <p className="cc-small cc-form-reassurance" role="status">{busy ? "Please wait while we save your check." : localMode ? "Local preview · submissions are saved on this computer." : "No payment. No obligation."}</p>
     </section>
   );
 
@@ -171,12 +171,12 @@ export function CreditCheckQuiz({ localMode }: { localMode: boolean }) {
     </aside>}
     <main id="credit-check-main" className={`cc-container cc-main cc-single-page ${version === "v2" ? "cc-v2-page" : ""}`}>
       <section className="cc-single-intro" aria-labelledby="cc-title">
-        <p className="cc-eyebrow cc-kicker">FREE CREDIT REPORT CHECK</p>
+        <p className="cc-eyebrow cc-kicker">CREDIT REPORT CHECK</p>
         <h1 className="v3-display cc-title" id="cc-title">See one of these names<br /><span>on your credit report?</span></h1>
         <p className="cc-intro-copy">Tell Vance which companies you see. Then get the simple guide for pulling and sending all three reports.</p>
         <div className="cc-benefits">
           <span><CheckIcon className="h-4 w-4" /> Takes about 60 seconds</span>
-          <span><CheckIcon className="h-4 w-4" /> Free—no payment required</span>
+          <span><CheckIcon className="h-4 w-4" /> No payment required</span>
         </div>
       </section>
 

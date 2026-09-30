@@ -43,7 +43,7 @@ function GatedRegistrationPage() {
       <h1 className="v3-display mt-5" style={{ fontSize: 40 }}>This session has ended.</h1>
       <p className="mt-6" style={{ color: "var(--v3-mut)" }}>Registration for {session.title} is closed.</p>
       <div className="mt-8 flex flex-wrap gap-4">
-        <Link className="v3-btn v3-btn-ghost" href={href("/live/call")}>Book a free call</Link>
+        <Link className="v3-btn v3-btn-ghost" href={href("/live/call")}>Book a call</Link>
       </div>
     </main>;
   }

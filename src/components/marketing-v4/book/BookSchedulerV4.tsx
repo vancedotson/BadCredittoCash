@@ -17,15 +17,15 @@ import { BookingWizard } from "./BookingWizard";
  */
 
 const KICKER = "SCHEDULE // STRATEGY CALL";
-const HEADING = "Book your free strategy call.";
+const HEADING = "Book your strategy call.";
 const BODY =
-  "Start with your details, then choose a free 30-minute phone call. Vance will review what’s happening, explain whether there may be a violation, and give you the honest next step. No cost. No obligation.";
+  "Start with your details, then choose a 30-minute phone call. Vance will review what’s happening, explain whether there may be a violation, and give you the honest next step. No cost. No obligation.";
 const COVERS = [
   "We review the calls you're getting and the items on your report.",
   "We find out whether there's a violation to hold them to.",
   "You leave knowing exactly where you stand, either way.",
 ];
-const FACTS = ["30 minutes", "By phone", "Directly with Vance", "Free, no obligation"];
+const FACTS = ["30 minutes", "By phone", "Directly with Vance", "No obligation"];
 
 const labelStyle = {
   fontSize: 10,

@@ -14,11 +14,11 @@ test("homepage presents only the guide and strategy-call paths, without registra
   const visibleCopy = await page.locator("body").innerText();
   expect(visibleCopy).not.toMatch(/\b(training|webinar|watch|live session|private watch link)\b/i);
   expect(await page.locator("#register form").count()).toBe(0);
-  await expect(page.locator("#register").getByRole("link", { name: /check my credit report, free/i })).toHaveAttribute("href", "/credit-check");
-  await expect(page.locator("#register").getByRole("link", { name: /book a free strategy call/i })).toHaveAttribute("href", "/book");
+  await expect(page.locator("#register").getByRole("link", { name: /check my credit report/i })).toHaveAttribute("href", "/credit-check");
+  await expect(page.locator("#register").getByRole("link", { name: /book a strategy call/i })).toHaveAttribute("href", "/book");
 
   const approvedHrefs = new Set(["/credit-check", "/book"]);
-  const activeCtas = page.getByRole("link", { name: /check my credit report, free|book a free strategy call/i });
+  const activeCtas = page.getByRole("link", { name: /check my credit report|book a strategy call/i });
   const count = await activeCtas.count();
   expect(count).toBeGreaterThan(1);
   for (let index = 0; index < count; index += 1) {
@@ -40,13 +40,13 @@ test("retired training routes redirect before rendering, while call booking rema
     await page.goto(path);
     expect(redirects.some(({ status, location }) => status === 307 && location && new URL(location, "http://127.0.0.1").pathname === "/book")).toBe(true);
     await expect(page).toHaveURL(/\/book$/);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(/book your free strategy call/i);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(/book your strategy call/i);
     await expect(page.getByText(/now playing|simulated|training video/i)).toHaveCount(0);
     page.removeAllListeners("response");
   }
 
   await page.goto("/webinar/call?state=booking-calendar");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(/book your free strategy call/i);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/book your strategy call/i);
   await expect(page.getByText("STEP 2 / 2")).toBeVisible();
 
   await page.goto("/webinar/booked?state=booking-generic");

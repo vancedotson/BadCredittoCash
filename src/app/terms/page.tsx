@@ -10,7 +10,7 @@ export default function TermsPage() {
   return (
     <LegalPageShell
       title="Terms of Service"
-      summary="These terms govern your use of this website, its free training, contact forms, credit-check and report-upload features, and appointment-booking features."
+      summary="These terms govern your use of this website, its training, contact forms, credit-check and report-upload features, and appointment-booking features."
     >
       <LegalSection title="Acceptance of these terms">
         <p>
@@ -20,7 +20,7 @@ export default function TermsPage() {
 
       <LegalSection title="Website information is not legal advice">
         <p>
-          Website content and free training provide general educational information about consumer credit reporting and debt collection. They are not legal advice, financial advice, a credit report, or a substitute for advice from a qualified attorney or other licensed professional.
+          Website content and training provide general educational information about consumer credit reporting and debt collection. They are not legal advice, financial advice, a credit report, or a substitute for advice from a qualified attorney or other licensed professional.
         </p>
         <p>
           Using the website, sending information, or booking a call does not create an attorney-client relationship, fiduciary relationship, or paid service relationship.
@@ -29,7 +29,7 @@ export default function TermsPage() {
 
       <LegalSection title="Services and separate agreements">
         <p>
-          The strategy call is free. Pricing for any services varies depending on the issue and will be explained before you decide whether to move forward. No paid service begins, and no fee is due, merely because you use this website or book a call.
+          There is no charge for the strategy call. Pricing for any services varies depending on the issue and will be explained before you decide whether to move forward. No paid service begins, and no fee is due, merely because you use this website or book a call.
         </p>
         <p>
           Any paid engagement must be described in a separate written agreement that identifies the services, timing, price, payment terms, and any cancellation rights or disclosures required by applicable law. If a separate signed agreement conflicts with these website terms about the paid service, the signed agreement controls for that service.
@@ -81,13 +81,13 @@ export default function TermsPage() {
 
       <LegalSection title="Disclaimers">
         <p>
-          To the fullest extent permitted by law, the website and free content are provided “as is” and “as available.” We do not warrant uninterrupted availability, error-free operation, or that website information will fit every situation. Nothing in these terms excludes a warranty or consumer right that cannot lawfully be excluded.
+          To the fullest extent permitted by law, the website and its content are provided “as is” and “as available.” We do not warrant uninterrupted availability, error-free operation, or that website information will fit every situation. Nothing in these terms excludes a warranty or consumer right that cannot lawfully be excluded.
         </p>
       </LegalSection>
 
       <LegalSection title="Limitation of liability">
         <p>
-          To the fullest extent permitted by law, Vance Dotson and authorized service providers will not be liable for indirect, incidental, special, consequential, or punitive damages arising from use of, or inability to use, the website or free content. This limitation does not apply where prohibited by law or to liability that cannot legally be limited.
+          To the fullest extent permitted by law, Vance Dotson and authorized service providers will not be liable for indirect, incidental, special, consequential, or punitive damages arising from use of, or inability to use, the website or its content. This limitation does not apply where prohibited by law or to liability that cannot legally be limited.
         </p>
       </LegalSection>
 
@@ -102,7 +102,7 @@ export default function TermsPage() {
           We may update these terms as the website or applicable requirements change. The effective date at the top identifies the current version. Continued use after an update means the revised terms apply to later use.
         </p>
         <p>
-          Questions may be sent to <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>, <a href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>, or {site.contact.officeAddress}.
+          Questions may be sent to {site.contact.officeAddress}.
         </p>
       </LegalSection>
     </LegalPageShell>

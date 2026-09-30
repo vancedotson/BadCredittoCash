@@ -19,7 +19,7 @@ const publicMetadataRoutes = [
     path: "/",
     title: "FCRA & FDCPA Information | Vance Dotson",
     description:
-      "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
+      "Learn about the FCRA and FDCPA, get a credit-report guide, or book a strategy call in Oklahoma City.",
   },
   {
     path: "/credit-check",
@@ -29,15 +29,15 @@ const publicMetadataRoutes = [
   },
   {
     path: "/book",
-    title: "Book a Free Strategy Call",
+    title: "Book a Strategy Call",
     description:
-      "Schedule a free 30-minute phone call with Vance Dotson to review collector calls, credit report issues, and possible next steps.",
+      "Schedule a 30-minute phone call with Vance Dotson to review collector calls, credit report issues, and possible next steps.",
   },
   {
     path: "/live",
-    title: "Free Live Session on Debt Collector Conduct",
+    title: "Live Session on Debt Collector Conduct",
     description:
-      "Join a free online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
+      "Join an online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
   },
   {
     path: "/privacy",
@@ -145,17 +145,17 @@ test("public routes stay indexable and /book and /live have route-specific metad
   }
 
   await page.goto("/book", { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveTitle(/Book a Free Strategy Call/);
+  await expect(page).toHaveTitle(/Book a Strategy Call/);
   const bookDescription = await page.locator('meta[name="description"]').getAttribute("content");
   expect(bookDescription).toBe(
-    "Schedule a free 30-minute phone call with Vance Dotson to review collector calls, credit report issues, and possible next steps.",
+    "Schedule a 30-minute phone call with Vance Dotson to review collector calls, credit report issues, and possible next steps.",
   );
 
   await page.goto("/live", { waitUntil: "domcontentloaded" });
-  await expect(page).toHaveTitle(/Free Live Session on Debt Collector Conduct/);
+  await expect(page).toHaveTitle(/Live Session on Debt Collector Conduct/);
   const liveDescription = await page.locator('meta[name="description"]').getAttribute("content");
   expect(liveDescription).toBe(
-    "Join a free online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
+    "Join an online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
   );
   expect(liveDescription).not.toBe(bookDescription);
   expectAccurateBlockReasons(blockedRequests, localOrigin);

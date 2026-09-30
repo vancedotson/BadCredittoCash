@@ -12,7 +12,7 @@ import { site } from "@/config/site-v3";
  */
 const CREDS = site.trustBar;
 const TAGS = [
-  "Free strategy call",
+  "Strategy call",
   "Credit-report guide",
   "Oklahoma City, OK",
   "FCRA",

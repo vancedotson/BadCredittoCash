@@ -1,5 +1,4 @@
 import { expect, test } from "./fixtures/local-safe-page";
-import { site } from "../src/config/site-v3";
 
 test("booking page selects a slot without creating a booking", async ({ page }) => {
   await page.route("**/api/book", async (route) => {
@@ -11,9 +10,9 @@ test("booking page selects a slot without creating a booking", async ({ page }) 
   });
 
   await page.goto("/book");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(/book your free strategy call/i);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText(/book your strategy call/i);
   await expect(page.getByText("Your details", { exact: true })).toBeVisible();
-  await expect(page.getByText(/free 30-minute phone call/i)).toBeVisible();
+  await expect(page.getByText(/30-minute phone call/i)).toBeVisible();
   await expect(page.getByText(/no cost\. no obligation\./i)).toBeVisible();
 
   await page.getByRole("textbox", { name: "Email", exact: true }).fill("p.burmesterm+vancee2esafe1@gmail.com");
@@ -170,10 +169,7 @@ test("generic booking confirmation gives useful next steps without inventing app
     "href",
     "https://www.annualcreditreport.com/",
   );
-  await expect(page.getByRole("link", { name: `Call ${site.contact.phoneDisplay}` })).toHaveAttribute(
-    "href",
-    site.contact.phoneHref,
-  );
+  await expect(page.locator('a[href^="tel:"], a[href^="mailto:"]')).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Back to the case file", exact: true })).toHaveAttribute("href", "/");
 });
 

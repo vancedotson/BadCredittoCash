@@ -233,7 +233,7 @@ test("booking offer review state has no serious automated accessibility violatio
   await page.goto("/webinar/room?state=offer-visible");
   await expect(page.getByRole("slider", { name: "Seek" })).toHaveAttribute("aria-valuenow", "70");
   await expect(page.getByText("YOUR NEXT STEP")).toBeVisible();
-  await expect(page.getByRole("link", { name: /book my free strategy call/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /book my strategy call/i })).toBeVisible();
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])

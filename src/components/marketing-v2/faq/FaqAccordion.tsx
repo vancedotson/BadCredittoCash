@@ -39,10 +39,10 @@ export function FaqAccordion() {
             href="#register"
             className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-gold px-7 py-3.5 font-heading text-base font-semibold text-ink outline-none transition-colors hover:bg-gold-deep focus-visible:ring-2 focus-visible:ring-ink/30"
           >
-            Get my questions answered — free
+            Get my questions answered
           </a>
           <p className="mt-3 text-sm text-slate">
-            Still unsure? The free call&apos;s whole job is to tell you if you
+            Still unsure? The call&apos;s whole job is to tell you if you
             even have a case.
           </p>
         </div>

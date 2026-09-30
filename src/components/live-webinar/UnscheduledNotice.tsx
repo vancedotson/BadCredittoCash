@@ -13,7 +13,7 @@ import { LiveSessionLoading, useLiveSession } from "./LiveSessionProvider";
  * Rather than publish a plausible-looking registration form for an event that
  * has not been scheduled — which would collect real emails against a promise
  * nobody can keep — the route says so plainly and sends visitors to the
- * free guide and strategy call remain available while visitors wait.
+ * guide and strategy call remain available while visitors wait.
  *
  * Scheduling and publication are managed through the CRM.
  */
@@ -41,10 +41,10 @@ export function UnscheduledNotice() {
       </h1>
       <p className="mt-6" style={{ fontSize: 17, color: "var(--v3-mut)", lineHeight: 1.6 }}>
         Registration will open when a real session is scheduled. Please check back
-        for the date and joining details, or book a free strategy call in the meantime.
+        for the date and joining details, or book a strategy call in the meantime.
       </p>
       <Link className="v3-btn v3-btn-primary mt-8" href="/book">
-        Book a free strategy call
+        Book a strategy call
       </Link>
 
       <p className="v3-mono mt-10" style={{ fontSize: 11.5, color: "var(--v3-faint)", lineHeight: 1.8 }}>

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import { site } from "@/config/site";
 import { authorizeNetConfigured, authorizeNetEnvironment } from "@/lib/authorize-net-config";
 import { findPaymentRequestByToken, type PublicPaymentRequest } from "@/lib/payment-requests";
 import { formatUsdCents, isPaymentLinkToken } from "@/lib/payments-display";
@@ -49,12 +48,7 @@ function Shell({ children, sandbox }: { children: React.ReactNode; sandbox: bool
           {children}
         </section>
         <footer className="mt-6 text-center text-sm text-slate">
-          <p>
-            Questions? <a className="underline underline-offset-4" href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>
-            {" · "}
-            <a className="underline underline-offset-4" href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
-          </p>
-          <nav aria-label="Legal" className="mt-2 flex justify-center gap-5">
+          <nav aria-label="Legal" className="flex justify-center gap-5">
             <Link className="underline underline-offset-4" href="/privacy">Privacy</Link>
             <Link className="underline underline-offset-4" href="/terms">Terms</Link>
           </nav>

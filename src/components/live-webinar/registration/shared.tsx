@@ -155,7 +155,7 @@ export function StickyRegisterBar({ watchIds, target }: { watchIds: string; targ
   return (
     <div className={`lr-sticky${visible ? " is-visible" : ""}`} aria-hidden={!visible}>
       <span className="lr-sticky-copy">
-        <strong>Free live session</strong>
+        <strong>Live session</strong>
         <small>Joining link by email</small>
       </span>
       <a className="v3-btn v3-btn-primary" href={`#${target}`} tabIndex={visible ? 0 : -1}>

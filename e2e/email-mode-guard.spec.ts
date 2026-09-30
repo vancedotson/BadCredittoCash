@@ -22,8 +22,8 @@ test("public homepage omits the retired registration form and does not submit le
   });
   await page.goto("/#register");
   await expect(page.locator("#register form")).toHaveCount(0);
-  await expect(page.locator("#register").getByRole("link", { name: /check my credit report, free/i })).toHaveAttribute("href", "/credit-check");
-  await expect(page.locator("#register").getByRole("link", { name: /book a free strategy call/i })).toHaveAttribute("href", "/book");
+  await expect(page.locator("#register").getByRole("link", { name: /check my credit report/i })).toHaveAttribute("href", "/credit-check");
+  await expect(page.locator("#register").getByRole("link", { name: /book a strategy call/i })).toHaveAttribute("href", "/book");
   await expect(page.getByRole("textbox", { name: "Email", exact: true })).toHaveCount(0);
   expect(leadPosts).toEqual([]);
 });

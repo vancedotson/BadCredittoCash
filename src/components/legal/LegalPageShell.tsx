@@ -22,7 +22,7 @@ export function LegalPageShell({
             href="/book"
             className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
-            Book a free call
+            Book a call
           </Link>
         </div>
       </header>
@@ -43,10 +43,7 @@ export function LegalPageShell({
         <div className="mx-auto grid max-w-5xl gap-5 px-5 py-8 text-sm text-slate sm:grid-cols-[1fr_auto] sm:px-8">
           <address className="not-italic">
             <strong className="text-heading">Vance Dotson</strong><br />
-            {site.contact.officeAddress}<br />
-            <a className="underline underline-offset-4" href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>
-            {" · "}
-            <a className="underline underline-offset-4" href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
+            {site.contact.officeAddress}
           </address>
           <nav aria-label="Legal" className="flex flex-wrap gap-x-5 gap-y-2 sm:justify-end">
             <Link className="underline underline-offset-4" href="/privacy">Privacy</Link>

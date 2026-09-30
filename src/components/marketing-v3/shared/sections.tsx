@@ -607,11 +607,6 @@ export function Footer() {
               style={{ fontSize: 11, lineHeight: 1.6, color: "var(--v3-mut)" }}
             >
               <span>{site.contact.officeAddress}</span>
-              <span>
-                <a href={site.contact.phoneHref} className="-my-2 inline-block py-2">{site.contact.phoneDisplay}</a>
-                {" · "}
-                <a href={`mailto:${site.contact.email}`} className="-my-2 inline-block py-2">{site.contact.email}</a>
-              </span>
             </address>
           </div>
           <nav className="flex gap-6">

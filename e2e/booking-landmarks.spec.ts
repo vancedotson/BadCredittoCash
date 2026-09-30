@@ -90,7 +90,7 @@ for (const route of bookingRoutes) {
         const stateQuery = state === "calendar and intake" ? "?state=booking-calendar" : "";
         await page.goto(`${route.path}${stateQuery}`);
 
-        await expect(page.getByRole("heading", { level: 1, name: /book your free strategy call/i })).toBeVisible();
+        await expect(page.getByRole("heading", { level: 1, name: /book your strategy call/i })).toBeVisible();
         await expectOneShellMain(page);
 
         if (state === "details") {

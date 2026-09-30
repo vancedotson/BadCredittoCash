@@ -19,9 +19,9 @@ const idx = HEADING.indexOf(PHRASE);
 const registrationFormProps = {
   redirectTo: "/webinar/confirmed",
   showPhone: false,
-  submitLabel: "Send me the free training",
+  submitLabel: "Send me the training",
   loadingLabel: "Sending your link...",
-  reassurance: "Free training. No payment. No obligation. Your link arrives by email.",
+  reassurance: "No payment. No obligation. Your link arrives by email.",
 } as const;
 
 function ReviewableRegistrationForm() {
@@ -64,7 +64,7 @@ export function RegisterSectionV4() {
             )}
           </h2>
           <p className="mt-6" style={{ fontSize: 18, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 520 }}>
-            Watch the free training to understand what may be wrong, what the law says, and what you can do next. No payment. No obligation.
+            Watch the training to understand what may be wrong, what the law says, and what you can do next. No payment. No obligation.
           </p>
           <div
             className="v3-mono mt-8 hidden flex-col gap-2 sm:flex"
@@ -78,7 +78,7 @@ export function RegisterSectionV4() {
         <div className="v3-panel v3-corner p-7 sm:p-9" style={{ borderRadius: 4 }}>
           <div className="mb-6">
             <h3 className="v3-display" style={{ fontSize: 28 }}>
-              Get the free training.
+              Get the training.
             </h3>
             <p className="mt-3" style={{ color: "var(--v3-mut)", fontSize: 14.5, lineHeight: 1.5 }}>
               Tell me where to send your private watch link.

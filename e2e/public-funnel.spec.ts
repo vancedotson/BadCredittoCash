@@ -8,7 +8,7 @@ test("public homepage reaches the registration form", async ({ page }) => {
 
   // The primary CTA leads to the credit-check lead magnet and the secondary CTA
   // to the live webinar; the registration form stays on the page at #register.
-  await expect(page.getByRole("link", { name: /check my credit report, free/i }).first()).toHaveAttribute("href", "/credit-check");
+  await expect(page.getByRole("link", { name: /check my credit report/i }).first()).toHaveAttribute("href", "/credit-check");
   await expect(page.getByRole("link", { name: /join the live session/i }).first()).toHaveAttribute("href", "/live");
 
   await page.goto("/#register");
@@ -18,10 +18,10 @@ test("public homepage reaches the registration form", async ({ page }) => {
   await expect(page.getByRole("textbox", { name: "Name", exact: true })).toBeVisible();
   await expect(page.getByRole("textbox", { name: /phone/i })).toHaveCount(0);
 
-  const submit = page.getByRole("button", { name: /send me the free training/i });
+  const submit = page.getByRole("button", { name: /send me the training/i });
   await expect(submit).toBeVisible();
   await expect(
-    page.getByText("Free training. No payment. No obligation. Your link arrives by email."),
+    page.getByText("No payment. No obligation. Your link arrives by email."),
   ).toBeVisible();
 
   await email.focus();
@@ -62,7 +62,7 @@ test("registration server error review state keeps information and allows retry"
     "alex@example.com",
   );
   await expect(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Alex");
-  await expect(page.getByRole("button", { name: /send me the free training/i })).toBeEnabled();
+  await expect(page.getByRole("button", { name: /send me the training/i })).toBeEnabled();
 });
 
 test("registration submitting review state locks the completed form", async ({ page }) => {

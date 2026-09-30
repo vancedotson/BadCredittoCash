@@ -103,11 +103,11 @@ export function RegistrationForm() {
         disabled={status === "loading"}
         className="relative min-h-[52px] w-full overflow-hidden rounded-full bg-gold px-6 py-4 font-heading text-[17px] font-semibold text-ink transition-colors hover:bg-gold-deep disabled:opacity-60"
       >
-        {status === "loading" ? "Reserving your seat…" : "Save My Seat — Free"}
+        {status === "loading" ? "Reserving your seat…" : "Save My Seat"}
         <ButtonShine />
       </button>
       <p className="text-center text-sm text-slate">
-        Free. No judgment. We&apos;ll email you the link. No spam, ever.
+        No judgment. We&apos;ll email you the link. No spam, ever.
       </p>
     </form>
   );

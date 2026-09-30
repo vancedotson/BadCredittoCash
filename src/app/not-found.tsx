@@ -39,10 +39,6 @@ export default function NotFound() {
           {publicSite.cta.secondary.label}
         </Link>
       </div>
-
-      <p className="mt-10 text-sm text-white/50">
-        Need a hand? <a href={`mailto:${site.contact.email}`} className="text-gold hover:underline">{site.contact.email}</a>
-      </p>
     </main>
   );
 }

@@ -84,7 +84,7 @@ test("/v4 stays in parity with the cleaned home and /v1spare redirects safely", 
   await expect(page).toHaveTitle("FCRA & FDCPA Information | Vance Dotson");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     "content",
-    "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
+    "Learn about the FCRA and FDCPA, get a credit-report guide, or book a strategy call in Oklahoma City.",
   );
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(homeHeading);
   expect(await page.locator("#register").innerText()).toBe(homeChoices);

@@ -13,7 +13,7 @@ const n = (i: number) => String(i + 1).padStart(2, "0");
 // A short calming line per clause — the reassurance behind each term. Kept
 // compliance-safe (no guarantees, no outcome promises).
 const DETAIL = [
-  "The call is free, and you decide what information to share.",
+  "There is no charge for the call, and you decide what information to share.",
   "Discuss only the questions you want to talk through.",
   "Nothing gets signed on the call. You decide what happens next, on your own timeline.",
   "Even if we do nothing else, you walk away knowing exactly what's on your report and what your options are.",

@@ -6,8 +6,6 @@ import { privacyPageMetadata } from "@/lib/route-metadata";
 
 export const metadata: Metadata = privacyPageMetadata;
 
-const privacyRequestHref = `mailto:${site.contact.email}?subject=Privacy%20request`;
-
 export default function PrivacyPage() {
   return (
     <LegalPageShell
@@ -19,7 +17,7 @@ export default function PrivacyPage() {
           This website is operated by Vance Dotson. References to “we,” “us,” and “our” mean Vance Dotson and the people authorized to support this business.
         </p>
         <p>
-          Contact: <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>, <a href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>, or {site.contact.officeAddress}.
+          Contact: {site.contact.officeAddress}.
         </p>
       </LegalSection>
 
@@ -51,7 +49,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="Email choices" id="email-choices">
         <p>
-          Marketing consent is optional. You may unsubscribe at any time using the unsubscribe link in a marketing email. The request is recorded immediately in our system. You may also email <a href={`mailto:${site.contact.email}?subject=Unsubscribe%20request`}>{site.contact.email}</a>.
+          Marketing consent is optional. You may unsubscribe at any time using the unsubscribe link in a marketing email. The request is recorded immediately in our system.
         </p>
         <p>
           After opting out of marketing, we may still send necessary messages about an appointment, request, account, security matter, or an active service relationship.
@@ -90,7 +88,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="Your privacy choices" id="your-choices">
         <p>
-          Depending on applicable law and the nature of our relationship, you may ask to access, correct, export, or delete information associated with you, or ask us to stop marketing communications. Send requests to <a href={privacyRequestHref}>{site.contact.email}</a> with the subject “Privacy request.”
+          Depending on applicable law and the nature of our relationship, you may ask to access, correct, export, or delete information associated with you, or ask us to stop marketing communications. Send requests in writing to {site.contact.officeAddress}, marked “Privacy request.”
         </p>
         <p>
           We may need to verify your identity before completing a request. Some information may be retained where required by law or reasonably necessary for security, fraud prevention, recordkeeping, disputes, or to honor an opt-out.

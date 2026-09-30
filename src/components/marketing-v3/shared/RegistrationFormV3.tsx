@@ -39,7 +39,7 @@ export function RegistrationFormV3({
   showPhone = true,
   submitLabel = "Open my case",
   loadingLabel = "Opening your case...",
-  reassurance = "Free. No judgment. We'll email you the link. No spam, ever.",
+  reassurance = "No judgment. We'll email you the link. No spam, ever.",
   previewState,
   sessionId,
   timezone,

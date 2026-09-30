@@ -21,21 +21,18 @@ export const site = {
   seo: {
     title: "FCRA & FDCPA Information | Vance Dotson",
     description:
-      "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
+      "Learn about the FCRA and FDCPA, get a credit-report guide, or book a strategy call in Oklahoma City.",
   },
 
   contact: {
-    phoneDisplay: "(405) 406-7323",
-    phoneHref: "tel:+14054067323",
-    email: "vance@vancethecreditdoctor.com",
     officeCity: "Oklahoma City, OK",
     officeAddress: "425 W. Wilshire Blvd Ste E, Oklahoma City, OK 73116",
   },
 
   // Dual CTA carried throughout (see structure: webinar primary, call secondary).
   cta: {
-    primary: { label: "Watch How It Works — Free", href: "#register" },
-    secondary: { label: "Book a Free Strategy Call", href: "/book" },
+    primary: { label: "Watch How It Works", href: "#register" },
+    secondary: { label: "Book a Strategy Call", href: "/book" },
   },
 
   // Anchor nav links (targets: ids on the corresponding sections).
@@ -51,7 +48,7 @@ export const site = {
     message:
       "Thinking of disputing it yourself? That's exactly what didn't work last time.",
     messageShort: "About to dispute it yourself?",
-    ctaLabel: "See what actually works — free",
+    ctaLabel: "See what actually works",
     scarcity: "It's just me, so spots are limited.",
     href: "#register",
   },
@@ -219,7 +216,7 @@ export const site = {
   howItWorks: {
     heading: "Getting started is simple:",
     steps: [
-      { title: "Book a free call (or watch first)", body: "No cost, no obligation." },
+      { title: "Book a call (or watch first)", body: "No cost, no obligation." },
       { title: "We review your case and find the violations", body: "You'll know exactly where you stand." },
       { title: "We go to work — you take back control", body: "I handle the bureaus and collectors so you don't have to." },
     ],
@@ -242,7 +239,7 @@ export const site = {
     },
     {
       q: "What will it cost me?",
-      a: "The strategy call is free. Pricing for services varies depending on the issue and will be explained before you decide whether to move forward.",
+      a: "There is no charge for the strategy call. Pricing for services varies depending on the issue and will be explained before you decide whether to move forward.",
     },
     {
       q: "Will I be judged?",
@@ -254,7 +251,7 @@ export const site = {
   riskReversal: {
     heading: "You've got nothing to lose by looking.",
     points: [
-      "The strategy call is free.",
+      "There is no charge for the strategy call.",
       "No judgment — I've seen it all.",
       "No obligation.",
       "Worst case: you learn exactly where you stand.",
@@ -283,9 +280,9 @@ export const site = {
   // Registration / booking section (serves the dual CTA)
   register: {
     heading: "Save your seat — or talk to me now.",
-    body: "Watch the free training to see exactly how this works, or if the calls won't stop and you want help today, reach out directly.",
+    body: "Watch the training to see exactly how this works, or if the calls won't stop and you want help today, reach out directly.",
     // ⚠️ webinar date is a placeholder.
-    webinarNote: "Free online training · watch on any device",
+    webinarNote: "Online training · watch on any device",
   },
 
   // FOOTER (compliance-critical)
@@ -298,7 +295,6 @@ export const site = {
     links: [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
-      { label: "Contact", href: "mailto:vance@vancethecreditdoctor.com" },
     ],
   },
 } as const;

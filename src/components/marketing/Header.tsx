@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { site } from "@/config/site";
-import { PhoneIcon } from "./Icons";
 import { ThemeToggle } from "./ThemeToggle";
 
 /**
@@ -35,15 +34,6 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4 sm:gap-6">
-          <a href={site.contact.phoneHref} className="hidden text-right sm:block">
-            <span className="block text-[11px] font-medium text-white/55">
-              Prefer to talk?
-            </span>
-            <span className="flex items-center gap-1.5 font-heading text-base font-semibold text-white transition-colors hover:text-gold">
-              <PhoneIcon className="h-4 w-4 text-gold" />
-              {site.contact.phoneDisplay}
-            </span>
-          </a>
           <ThemeToggle />
         </div>
       </div>

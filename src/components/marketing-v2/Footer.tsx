@@ -17,18 +17,6 @@ export function Footer() {
           <div>
             <p className="font-heading text-lg font-bold">VANCE DOTSON</p>
             <p className="mt-2 text-sm text-white/70">{site.contact.officeAddress}</p>
-            <a
-              href={site.contact.phoneHref}
-              className="mt-1 block text-sm text-white/70 transition-colors hover:text-gold"
-            >
-              {site.contact.phoneDisplay}
-            </a>
-            <a
-              href={`mailto:${site.contact.email}`}
-              className="text-sm text-white/70 transition-colors hover:text-gold"
-            >
-              {site.contact.email}
-            </a>
           </div>
 
           <nav className="flex flex-wrap gap-x-6 gap-y-2">

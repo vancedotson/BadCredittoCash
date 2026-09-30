@@ -19,21 +19,18 @@ export const site = {
   seo: {
     title: "Vance Dotson: Challenge inaccurate credit information.",
     description:
-      "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
+      "Learn about the FCRA and FDCPA, get a credit-report guide, or book a strategy call in Oklahoma City.",
   },
 
   contact: {
-    phoneDisplay: "(405) 406-7323",
-    phoneHref: "tel:+14054067323",
-    email: "vance@vancethecreditdoctor.com",
     officeCity: "Oklahoma City, OK",
     officeAddress: "425 W. Wilshire Blvd Ste E, Oklahoma City, OK 73116",
   },
 
   // Main page CTAs. Both approved launch paths read from this shared config.
   cta: {
-    primary: { label: "Check my credit report, free", href: "/credit-check" },
-    secondary: { label: "Book a free strategy call", href: "/book" },
+    primary: { label: "Check my credit report", href: "/credit-check" },
+    secondary: { label: "Book a strategy call", href: "/book" },
   },
 
   nav: [
@@ -47,7 +44,7 @@ export const site = {
     message:
       "Thinking of disputing it yourself? That's exactly what didn't work last time.",
     messageShort: "About to dispute it yourself?",
-    ctaLabel: "Get my free credit-report guide",
+    ctaLabel: "Get my credit-report guide",
     scarcity: "It's just me, so spots are limited.",
     href: "/credit-check",
   },
@@ -55,7 +52,7 @@ export const site = {
   trustBar: [
     "FCRA",
     "FDCPA",
-    "Free credit-report guide",
+    "Credit-report guide",
     "Oklahoma City, OK",
   ],
 
@@ -66,7 +63,7 @@ export const site = {
     classification: "FCRA + FDCPA // PUBLIC INFORMATION",
     established: "OKLAHOMA CITY, OK",
     kickers: {
-      hero: "START HERE // FREE OPTIONS",
+      hero: "START HERE // YOUR OPTIONS",
       pain: "COLLECTIONS // COMMON CONCERNS",
       reframe: "FCRA + FDCPA // OVERVIEW",
       meet: "SERVICE FOCUS",
@@ -78,12 +75,12 @@ export const site = {
       faq: "COMMON QUESTIONS // FAQ",
       risk: "TERMS // NO RISK",
       urgency: "CLOCK // TIME-SENSITIVE",
-      register: "NEXT STEP // TWO FREE OPTIONS",
+      register: "NEXT STEP // TWO OPTIONS",
     },
     // Hero "terminal" readout lines (decorative, factual).
     terminal: [
       "> statute: FCRA · FDCPA",
-      "> options: credit-report guide · free call",
+      "> options: credit-report guide · strategy call",
       "> location: Oklahoma City, OK",
       "> next step: yours to choose",
     ],
@@ -93,12 +90,12 @@ export const site = {
   hero: {
     headline: "Understand your options under federal law.",
     subhead:
-      "The FCRA addresses credit-report accuracy, and the FDCPA addresses debt-collection practices. Start with the free credit-report guide or book a free strategy call to discuss possible next steps.",
+      "The FCRA addresses credit-report accuracy, and the FDCPA addresses debt-collection practices. Start with the credit-report guide or book a strategy call to discuss possible next steps.",
     photoCaption: "Vance Dotson, Oklahoma City",
     bullets: [
       "Learn about credit-report accuracy under the FCRA",
       "Learn about debt-collection practices under the FDCPA",
-      "Choose a free guide or strategy call",
+      "Choose a guide or strategy call",
     ],
   },
 
@@ -149,7 +146,7 @@ export const site = {
       },
       {
         title: "You could push back this whole time.",
-        body: "These federal laws address credit-report accuracy and debt-collection practices. A free guide and strategy call are available to discuss possible next steps.",
+        body: "These federal laws address credit-report accuracy and debt-collection practices. A guide and strategy call are available to discuss possible next steps.",
         imageHint: "Vance at his OKC office, reviewing a client's file",
       },
     ],
@@ -160,9 +157,9 @@ export const site = {
     heading: "Credit-report and debt-collection information.",
     body: [
       "The FCRA and FDCPA are federal laws concerning credit-report accuracy and debt-collection practices.",
-      "A free strategy call is available to discuss your situation and possible next steps. Vance Dotson is based in Oklahoma City, Oklahoma.",
+      "A strategy call is available to discuss your situation and possible next steps. Vance Dotson is based in Oklahoma City, Oklahoma.",
     ],
-    signoff: "Free guide · Free strategy call · Oklahoma City, Oklahoma",
+    signoff: "Credit-report guide · Strategy call · Oklahoma City, Oklahoma",
     stats: [
       { value: "20+", label: "years since 2004" },
       { value: "FCRA + FDCPA", label: "the laws I use" },
@@ -269,7 +266,7 @@ export const site = {
   howItWorks: {
     heading: "Getting started is simple:",
     steps: [
-      { title: "Choose your starting point", body: "Get the free credit-report guide or book a free strategy call." },
+      { title: "Choose your starting point", body: "Get the credit-report guide or book a strategy call." },
       { title: "We review your case and find the violations", body: "You'll know exactly where you stand." },
       { title: "We go to work, you take back control", body: "I handle the bureaus and collectors so you don't have to." },
     ],
@@ -279,7 +276,7 @@ export const site = {
   faq: [
     {
       q: "Is this a scam?",
-      a: "Fair question. Start with the free credit-report guide or book a free strategy call to discuss your questions and possible next steps. There is no obligation to move forward.",
+      a: "Fair question. Start with the credit-report guide or book a strategy call to discuss your questions and possible next steps. There is no obligation to move forward.",
     },
     {
       q: "Is this even legal?",
@@ -291,11 +288,11 @@ export const site = {
     },
     {
       q: "What will it cost me?",
-      a: "The strategy call is free. Pricing for services varies depending on the issue and will be explained before you decide whether to move forward.",
+      a: "There is no charge for the strategy call. Pricing for services varies depending on the issue and will be explained before you decide whether to move forward.",
     },
     {
       q: "Will I be judged?",
-      a: "The free strategy call is a chance to discuss your questions and possible next steps. You can decide whether to move forward.",
+      a: "The strategy call is a chance to discuss your questions and possible next steps. You can decide whether to move forward.",
     },
   ],
 
@@ -303,7 +300,7 @@ export const site = {
   riskReversal: {
     heading: "You've got nothing to lose by looking.",
     points: [
-      "The strategy call is free.",
+      "There is no charge for the strategy call.",
       "No judgment. Discuss only the questions you want to raise.",
       "No obligation.",
       "Worst case: you learn exactly where you stand.",
@@ -330,14 +327,14 @@ export const site = {
   // Public launch choices (replaces the retired homepage registration form).
   register: {
     heading: "Choose a next step that feels right.",
-    body: "Start with the free credit-report guide or book a free strategy call. No obligation.",
-    primaryDescription: "Use the free intake to get a guide for pulling your credit reports.",
+    body: "Start with the credit-report guide or book a strategy call. No obligation.",
+    primaryDescription: "Use the intake to get a guide for pulling your credit reports.",
     secondaryDescription: "Talk through the calls or report concerns and possible next steps.",
-    webinarNote: "Choose a free guide or strategy call.",
+    webinarNote: "Choose a guide or strategy call.",
   },
 
   // WEBINAR FUNNEL — evergreen, on-demand training whose end action is booking
-  // a free strategy call (an application funnel, not a paid checkout). Copy is
+  // a strategy call (an application funnel, not a paid checkout). Copy is
   // written compliance-safe: no fake countdowns, no guarantee %. ⚠️ items need
   // Vance's confirmation before going live.
   webinar: {
@@ -354,7 +351,7 @@ export const site = {
         "Every harassing call and every inaccurate line on your report, logged as what it legally is: a violation you can hold them to. That ledger is what turns a complaint into leverage.",
     },
     // Evergreen and honest: on-demand, no live date, no countdown.
-    format: "Free on-demand training. Watch on any device.",
+    format: "On-demand training. Watch on any device.",
     runtime: "About 35 minutes.", // ⚠️ set to the real runtime once recorded
     learn: [
       "Why your own disputes came back verified, and what the bureaus are actually required to do.",
@@ -438,7 +435,7 @@ export const site = {
       // Revealed only at the pitch mark, never before (ebook §3.4, block 8).
       pitchCue:
         "Now you've seen how it works. If you want me to look at your specific situation, here's the shortcut.",
-      offerCta: "Book my free strategy call",
+      offerCta: "Book my strategy call",
       // Short line for the sticky book-a-call bar at the bottom of the room.
       bookBarNote: "Ready to see if you have a case?",
     },
@@ -446,8 +443,8 @@ export const site = {
     // Book-the-call (the "offer") page — application-style qualification.
     call: {
       kicker: "INTAKE // BOOK YOUR CALL",
-      heading: "Book your free strategy call.",
-      body: "Pick a free 30-minute call. I’ll review your situation, tell you whether you may have a case, and explain the honest next step.",
+      heading: "Book your strategy call.",
+      body: "Pick a 30-minute call. I’ll review your situation, tell you whether you may have a case, and explain the honest next step.",
       covers: [
         "We review the calls you're getting and the items on your report.",
         "We find out whether there's a violation to hold them to.",
@@ -461,7 +458,7 @@ export const site = {
       whoNotFor: [
         "Your report is accurate and no one is contacting you. Then you probably don't need me, and I'll tell you so.",
       ],
-      cta: "Book my free call",
+      cta: "Book my call",
       // Honest scarcity only — a real reason, not a timer.
       slotsNote:
         "It's just me, so I open a limited number of call slots each week.",
@@ -474,7 +471,7 @@ export const site = {
       body: "You’re confirmed. We’ll send the appointment time by email. Add it to your calendar, then use the checklist below.",
       checklist: [
         {
-          text: "Pull your credit reports from all three bureaus for free at",
+          text: "Pull your credit reports from all three bureaus at",
           linkLabel: "AnnualCreditReport.com",
           href: "https://www.annualcreditreport.com/",
         },
@@ -494,7 +491,6 @@ export const site = {
     links: [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
-      { label: "Contact", href: "mailto:vance@vancethecreditdoctor.com" },
     ],
   },
 } as const;

@@ -2,7 +2,6 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { site } from "@/config/site-v3";
 import { liveWebinar } from "@/config/live-webinar";
 import { Kicker, SectionScan, Reveal } from "@/components/marketing-v3/shared/primitives";
 import { useReveal } from "@/components/marketing-v3/shared/hooks";
@@ -90,7 +89,7 @@ function escapeIcs(value: string): string {
 }
 
 const CALL_TITLE = "Strategy call with Vance Dotson";
-const CALL_DETAILS = "Free 30-minute strategy call booked through the Vance Dotson website.";
+const CALL_DETAILS = "30-minute strategy call booked through the Vance Dotson website.";
 
 function AddBookingToCalendar({ booking }: { booking: BookingConfirmation }) {
   const googleUrl = useMemo(() => {
@@ -288,29 +287,6 @@ export function LiveBookedSection() {
             <p className="mt-6" style={{ fontSize: 13.5, color: "var(--v3-faint)", lineHeight: 1.6 }}>
               {B.checklist.note}
             </p>
-          </div>
-        </Reveal>
-
-        {/* The honest in-crisis path. */}
-        <Reveal>
-          <div
-            className="mt-6 flex flex-wrap items-center justify-between gap-5 p-6"
-            style={{ border: "1px solid var(--v3-line-soft)", borderRadius: 4 }}
-          >
-            <div>
-              <span
-                className="v3-mono"
-                style={{ fontSize: 10, letterSpacing: "0.2em", color: "var(--v3-faint)" }}
-              >
-                {B.urgent.label}
-              </span>
-              <p className="mt-3" style={{ fontSize: 15, color: "var(--v3-mut)", lineHeight: 1.6, maxWidth: 460 }}>
-                {B.urgent.body}
-              </p>
-            </div>
-            <a className="v3-btn v3-btn-ghost" href={site.contact.phoneHref} style={{ minHeight: 44 }}>
-              {site.contact.phoneDisplay}
-            </a>
           </div>
         </Reveal>
 

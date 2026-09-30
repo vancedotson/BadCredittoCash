@@ -9,7 +9,7 @@ import { QUIZ_QUESTIONS as QUESTIONS, QUIZ_TOTAL as TOTAL, quizReflections, type
  * "The 60-second collector check" — light home-page skin of the lead-magnet quiz
  * (content + logic live in src/config/collector-quiz). It resonates by naming the
  * collectors people actually get contacted by, asks about their situation through
- * an FCRA/FDCPA lens, then routes them to book a free call. Compliance-safe.
+ * an FCRA/FDCPA lens, then routes them to book a call. Compliance-safe.
  */
 
 const pillBtn =
@@ -131,12 +131,12 @@ function Results({ answers, onRestart, onBack }: { answers: QuizAnswers; onResta
       ) : null}
 
       <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-body">
-        From what you shared, you may have protections under the FCRA and FDCPA. The only way to know for sure is to look at your specific situation. Book a free, no-pressure call and I&apos;ll tell you the honest next step.
+        From what you shared, you may have protections under the FCRA and FDCPA. The only way to know for sure is to look at your specific situation. Book a no-pressure call and I&apos;ll tell you the honest next step.
       </p>
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        <Link href="/book" className={pillBtn}>Book my free call<span aria-hidden>→</span></Link>
-        <p className="text-sm text-slate">Free. No obligation.</p>
+        <Link href="/book" className={pillBtn}>Book my call<span aria-hidden>→</span></Link>
+        <p className="text-sm text-slate">No obligation.</p>
       </div>
 
       <div className="mt-8 flex items-center justify-center gap-5 text-sm font-semibold text-slate">

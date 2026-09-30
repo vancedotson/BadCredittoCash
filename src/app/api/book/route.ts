@@ -56,7 +56,7 @@ export async function GET() {
 }
 
 /**
- * Receives a free-strategy-call booking (the funnel's conversion). Records the
+ * Receives a strategy-call booking (the funnel's conversion). Records the
  * `call_booked` event against the lead and hands off to the automation map,
  * which stops the pitch sequences and starts onboarding (delivery stubbed).
  *

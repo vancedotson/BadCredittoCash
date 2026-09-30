@@ -47,7 +47,7 @@ export const homePageMetadata = publicRouteMetadata({
   path: "/",
   title: "FCRA & FDCPA Information | Vance Dotson",
   description:
-    "Learn about the FCRA and FDCPA, get a free credit-report guide, or book a free strategy call in Oklahoma City.",
+    "Learn about the FCRA and FDCPA, get a credit-report guide, or book a strategy call in Oklahoma City.",
 });
 
 export const creditCheckPageMetadata = publicRouteMetadata({
@@ -59,16 +59,16 @@ export const creditCheckPageMetadata = publicRouteMetadata({
 
 export const bookPageMetadata = publicRouteMetadata({
   path: "/book",
-  title: "Book a Free Strategy Call",
+  title: "Book a Strategy Call",
   description:
-    "Schedule a free 30-minute phone call with Vance Dotson to review collector calls, credit report issues, and possible next steps.",
+    "Schedule a 30-minute phone call with Vance Dotson to review collector calls, credit report issues, and possible next steps.",
 });
 
 export const livePageMetadata = publicRouteMetadata({
   path: "/live",
-  title: "Free Live Session on Debt Collector Conduct",
+  title: "Live Session on Debt Collector Conduct",
   description:
-    "Join a free online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
+    "Join an online session with Vance Dotson to learn which debt collector conduct the FDCPA restricts and what to document.",
 });
 
 export const privacyPageMetadata = publicRouteMetadata({

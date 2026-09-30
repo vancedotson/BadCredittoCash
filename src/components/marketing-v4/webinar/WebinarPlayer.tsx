@@ -133,7 +133,7 @@ export function WebinarPlayer({
         className="v3-mono absolute left-4 top-4 z-10"
         style={{ fontSize: 9.5, letterSpacing: "0.24em", color: "var(--v3-mut)" }}
       >
-        FREE TRAINING
+        TRAINING
       </span>
 
       {playing ? (

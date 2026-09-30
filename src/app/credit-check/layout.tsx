@@ -23,18 +23,15 @@ export default function CreditCheckLayout({ children }: { children: ReactNode })
           <div className="flex flex-wrap justify-between gap-5">
             <address className="not-italic">
               <strong>{site.name}</strong><br />
-              {site.contact.officeAddress}<br />
-              <a className="underline underline-offset-4" href={site.contact.phoneHref}>{site.contact.phoneDisplay}</a>
-              {" · "}
-              <a className="underline underline-offset-4" href={`mailto:${site.contact.email}`}>{site.contact.email}</a>
+              {site.contact.officeAddress}
             </address>
             <div className="space-y-2">
-              <nav aria-label="Legal and contact" className="flex flex-wrap gap-5">
+              <nav aria-label="Legal" className="flex flex-wrap gap-5">
                 {site.footer.links.map((link) => (
                   <Link key={link.label} className="underline underline-offset-4" href={link.href}>{link.label}</Link>
                 ))}
               </nav>
-              <p>Free. No judgment. No obligation.</p>
+              <p>No judgment. No obligation.</p>
             </div>
           </div>
           <div className="max-w-4xl space-y-1">
