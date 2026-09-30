@@ -32,7 +32,7 @@
     "EVERGREEN_TRAINING_ENABLED": "false",
     "LIVE_WEBINAR_ENABLED": "false",
     "CLOUDFLARE_STREAM_ENABLED": "false",
-    "PAYMENTS_ENABLED": "false",
+    "PAYMENTS_ENABLED": "true",
     "AUTHNET_ENV": "sandbox",
     "EMAIL_FROM": "Vance Dotson <updates@updates.creditrepairparty.com>",
     "EMAIL_REPLY_TO": "vance@vancethecreditdoctor.com",
