@@ -1,6 +1,6 @@
 /**
  * Email sequence content — the three sequences plus the six behavioral segment
- * paths from the ebook (§2.3, §4.4), adapted to Vance's free-call offer (the
+ * paths from the ebook (§2.3, §4.4), adapted to Vance's strategy-call offer (the
  * "purchase" is booking a strategy call, so "checkout abandoned" becomes
  * "started booking, didn't finish").
  *
@@ -140,8 +140,8 @@ export const SEGMENT_SEQUENCES: Record<string, Sequence> = {
     name: "High watch (50 to 90 percent)",
     trigger: "Watched most of it",
     emails: [
-      { delay: "+1 hour", subject: "You're basically there. Want me to look?", body: "You watched most of the training, so you already see how this works. The next step is a free call where we point it at your situation: {{call_link}}." },
-      { delay: "+1 day", subject: "Free, no obligation, no judgment", body: "The call's only job is to tell you whether you have a case. If you don't, I'll say so. {{call_link}}." },
+      { delay: "+1 hour", subject: "You're basically there. Want me to look?", body: "You watched most of the training, so you already see how this works. The next step is a call where we point it at your situation: {{call_link}}." },
+      { delay: "+1 day", subject: "No obligation, no judgment", body: "The call's only job is to tell you whether you have a case. If you don't, I'll say so. {{call_link}}." },
       { delay: "+3 days", subject: "I open a few slots each week", body: "It's just me, so I only take a limited number of calls a week. If you want one, grab it here: {{call_link}}." },
     ],
   },

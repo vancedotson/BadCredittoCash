@@ -16,11 +16,11 @@ export const LIVE_EMAIL_TEMPLATES: Record<string, SequenceEmail> = {
   },
   "live_attended:1": {
     delay: "immediately", subject: "Following up after the live session",
-    body: "Thanks for joining us for {{session_title}}. Keep a dated record of collector calls and save any letters, texts, or voicemails. If you'd like to discuss your own situation, you can book a free call here: {{call_link}}. No outcome is promised, and there's no obligation.",
+    body: "Thanks for joining us for {{session_title}}. Keep a dated record of collector calls and save any letters, texts, or voicemails. If you'd like to discuss your own situation, you can book a call here: {{call_link}}. No outcome is promised, and there's no obligation.",
   },
   "live_no_show:1": {
     delay: "immediately", subject: "In case you missed the live session",
-    body: "{{session_title}} was not recorded, but you can still discuss your situation on a free call with Vance: {{call_link}}. No pressure and no obligation.",
+    body: "{{session_title}} was not recorded, but you can still discuss your situation on a call with Vance: {{call_link}}. No pressure and no obligation.",
   },
   "live_rescheduled:1": {
     delay: "immediately", subject: "Your live session details have changed",

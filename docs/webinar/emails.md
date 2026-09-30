@@ -2,7 +2,7 @@
 
 Human-readable mirror of `src/config/sequences.ts` (the code the automation map
 reads). Three sequences plus the six behavioral segment paths (ebook §2.3, §4.4),
-adapted to the free-call offer. **Nothing sends yet** — delivery is stubbed in
+adapted to the strategy-call offer. **Nothing sends yet** — delivery is stubbed in
 `src/lib/email.ts`. Copy is compliance-safe: honest urgency only, no guarantee %, no
 fake countdowns. `{{watch_link}}` / `{{call_link}}` are merge fields.
 
@@ -63,9 +63,9 @@ must not get the same email.
 2. **+1 day** · "A quick proof story" — proof, then resume.
 
 ### High watch (50–90%) — warm, almost there
-1. **+1 hour** · "You're basically there. Want me to look?" — next step is the free
+1. **+1 hour** · "You're basically there. Want me to look?" — next step is the
    call.
-2. **+1 day** · "Free, no obligation, no judgment" — the call only tells you if you
+2. **+1 day** · "No obligation, no judgment" — the call only tells you if you
    have a case.
 3. **+3 days** · "I open a few slots each week" — honest scarcity.
 

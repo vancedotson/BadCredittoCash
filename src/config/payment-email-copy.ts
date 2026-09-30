@@ -8,5 +8,5 @@ import type { SequenceEmail } from "./sequences";
 export const PAYMENT_REQUEST_EMAIL: SequenceEmail = {
   delay: "immediately",
   subject: "Payment request from Vance Dotson: {{payment_description}}",
-  body: "Hi {{first_name}},\n\nHere is your secure payment link for {{payment_description}} ({{payment_amount}}):\n\n{{payment_link}}\n\nYou will enter your card on Authorize.net's secure payment page. Vance never sees or stores your card number. Authorize.net emails your receipt after payment.\n\nQuestions? Reply to this email or call (405) 406-7323.\n\nVance Dotson",
+  body: "Hi {{first_name}},\n\nHere is your secure payment link for {{payment_description}} ({{payment_amount}}):\n\n{{payment_link}}\n\nYou will enter your card on Authorize.net's secure payment page. Vance never sees or stores your card number. Authorize.net emails your receipt after payment.\n\nQuestions? Just reply to this email.\n\nVance Dotson",
 };
