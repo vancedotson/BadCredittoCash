@@ -32,7 +32,7 @@ export const site = {
   // Dual CTA carried throughout (see structure: webinar primary, call secondary).
   cta: {
     primary: { label: "Watch How It Works", href: "#register" },
-    secondary: { label: "Book a Strategy Call", href: "/book" },
+    secondary: { label: "Join the Webinar", href: "/live" },
   },
 
   // Anchor nav links (targets: ids on the corresponding sections).

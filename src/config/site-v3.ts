@@ -30,7 +30,7 @@ export const site = {
   // Main page CTAs. Both approved launch paths read from this shared config.
   cta: {
     primary: { label: "Check my credit report", href: "/credit-check" },
-    secondary: { label: "Book a strategy call", href: "/book" },
+    secondary: { label: "Join the webinar", href: "/live" },
   },
 
   nav: [
@@ -266,7 +266,7 @@ export const site = {
   howItWorks: {
     heading: "Getting started is simple:",
     steps: [
-      { title: "Choose your starting point", body: "Get the credit-report guide or book a strategy call." },
+      { title: "Choose your starting point", body: "Get the credit-report guide or join the webinar." },
       { title: "We review your case and find the violations", body: "You'll know exactly where you stand." },
       { title: "We go to work, you take back control", body: "I handle the bureaus and collectors so you don't have to." },
     ],
@@ -327,10 +327,10 @@ export const site = {
   // Public launch choices (replaces the retired homepage registration form).
   register: {
     heading: "Choose a next step that feels right.",
-    body: "Start with the credit-report guide or book a strategy call. No obligation.",
+    body: "Start with the credit-report guide or join the webinar. No obligation.",
     primaryDescription: "Use the intake to get a guide for pulling your credit reports.",
-    secondaryDescription: "Talk through the calls or report concerns and possible next steps.",
-    webinarNote: "Choose a guide or strategy call.",
+    secondaryDescription: "Learn about credit-report accuracy and debt-collection practices in a live webinar.",
+    webinarNote: "Choose the guide or join the webinar.",
   },
 
   // WEBINAR FUNNEL — evergreen, on-demand training whose end action is booking

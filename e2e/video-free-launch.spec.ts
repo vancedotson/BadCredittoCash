@@ -2,7 +2,7 @@ import { expect, test } from "./fixtures/local-safe-page";
 
 const retiredTrainingRoutes = ["/webinar/confirmed?state=quiz-1", "/webinar/room?state=room-preview"] as const;
 
-test("homepage presents only the guide and strategy-call paths, without registration or training promises", async ({ page }) => {
+test("homepage presents the guide and live webinar registration paths", async ({ page }) => {
   const leadPosts: string[] = [];
   page.on("request", (request) => {
     if (request.url().includes("/api/lead") && request.method() === "POST") leadPosts.push(request.url());
@@ -12,13 +12,13 @@ test("homepage presents only the guide and strategy-call paths, without registra
   await expect(page.getByRole("heading", { name: /choose a next step/i })).toBeVisible();
 
   const visibleCopy = await page.locator("body").innerText();
-  expect(visibleCopy).not.toMatch(/\b(training|webinar|watch|live session|private watch link)\b/i);
+  expect(visibleCopy).not.toMatch(/on-demand|private watch link/i);
   expect(await page.locator("#register form").count()).toBe(0);
   await expect(page.locator("#register").getByRole("link", { name: /check my credit report/i })).toHaveAttribute("href", "/credit-check");
-  await expect(page.locator("#register").getByRole("link", { name: /book a strategy call/i })).toHaveAttribute("href", "/book");
+  await expect(page.locator("#register").getByRole("link", { name: /join the webinar/i })).toHaveAttribute("href", "/live");
 
-  const approvedHrefs = new Set(["/credit-check", "/book"]);
-  const activeCtas = page.getByRole("link", { name: /check my credit report|book a strategy call/i });
+  const approvedHrefs = new Set(["/credit-check", "/live"]);
+  const activeCtas = page.getByRole("link", { name: /check my credit report|join the webinar/i });
   const count = await activeCtas.count();
   expect(count).toBeGreaterThan(1);
   for (let index = 0; index < count; index += 1) {

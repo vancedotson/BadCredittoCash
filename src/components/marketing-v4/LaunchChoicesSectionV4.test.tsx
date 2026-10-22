@@ -4,12 +4,13 @@ import { describe, expect, it } from "vitest";
 import { LaunchChoicesSectionV4 } from "./LaunchChoicesSectionV4";
 
 describe("public home next-step section", () => {
-  it("offers the guide and booking routes rather than disabled evergreen training", () => {
+  it("offers the guide and live webinar registration routes", () => {
     const markup = renderToStaticMarkup(createElement(LaunchChoicesSectionV4));
 
     expect(markup).toContain('href="/credit-check"');
-    expect(markup).toContain('href="/book"');
-    expect(markup).not.toMatch(/webinar|on-demand|watch link|free training/i);
+    expect(markup).toContain('href="/live"');
+    expect(markup).toContain("Join the webinar");
+    expect(markup).not.toContain('href="/book"');
     expect(markup).not.toContain("/webinar/confirmed");
   });
 });

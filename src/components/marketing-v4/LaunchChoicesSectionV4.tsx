@@ -43,12 +43,12 @@ export function LaunchChoicesSectionV4() {
             className="v3-panel v3-corner group flex min-h-52 flex-col justify-between p-6 transition-colors hover:border-[var(--v3-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--v3-accent)] sm:p-7"
           >
             <span>
-              <span className="v3-mono block" style={{ fontSize: 11, letterSpacing: "0.16em", color: "var(--v3-accent)" }}>OPTION 02 // TALK IT THROUGH</span>
+              <span className="v3-mono block" style={{ fontSize: 11, letterSpacing: "0.16em", color: "var(--v3-accent)" }}>OPTION 02 // JOIN THE WEBINAR</span>
               <span className="v3-display mt-4 block" style={{ fontSize: 25, color: "var(--v3-ink)" }}>{site.cta.secondary.label}</span>
               <span className="mt-3 block" style={{ fontSize: 14.5, color: "var(--v3-mut)", lineHeight: 1.55 }}>{site.register.secondaryDescription}</span>
             </span>
             <span className="v3-mono mt-6 inline-flex items-center gap-2" style={{ fontSize: 12, color: "var(--v3-accent)" }}>
-              VIEW TIMES <ArrowRightIcon className="h-4 w-4" />
+              REGISTER NOW <ArrowRightIcon className="h-4 w-4" />
             </span>
           </Link>
         </nav>
