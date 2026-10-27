@@ -208,7 +208,7 @@ function WhoFor() {
           ))}
         </div>
         <div className="lr-center-cta">
-          <RegisterAnchor target="register-final" label="That's me — save my seat" />
+          <RegisterAnchor target="register-final" label="That's me. Save my seat" />
         </div>
       </div>
     </section>
@@ -218,7 +218,7 @@ function WhoFor() {
 function Logistics() {
   const duration = useSessionDurationMinutes();
   const cards = [
-    { label: "WHEN", value: <SourceTime showDuration={false} />, note: "Starts on time — runs once" },
+    { label: "WHEN", value: <SourceTime showDuration={false} />, note: "Starts on time. Runs once" },
     { label: "LENGTH", value: `${duration} minutes`, note: "Including live Q&A" },
     { label: "WHERE", value: P.logistics.where, note: P.logistics.whereNote },
     { label: "COST", value: P.logistics.cost, note: P.logistics.costNote },

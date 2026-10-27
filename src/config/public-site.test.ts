@@ -6,12 +6,17 @@ import { PUBLIC_SITE_ORIGIN, resolvePublicSiteOrigin } from "@/config/public-sit
 import { isBookingEmailConfigurationReady } from "@/lib/email-configuration";
 
 type WranglerConfig = {
+  secrets?: { required?: string[] };
   vars?: {
     APP_BASE_URL?: string;
+    CLOUDFLARE_ACCOUNT_ID?: string;
+    CLOUDFLARE_STREAM_ALLOWED_ORIGINS?: string;
+    CLOUDFLARE_STREAM_CUSTOMER_ORIGIN?: string;
     MARKETING_EMAILS_ENABLED?: string;
     EMAIL_MODE?: string;
     EVERGREEN_TRAINING_ENABLED?: string;
     LIVE_WEBINAR_ENABLED?: string;
+    LIVE_WEBINAR_EMAILS_APPROVED?: string;
     CLOUDFLARE_STREAM_ENABLED?: string;
     EMAIL_FROM?: string;
     EMAIL_REPLY_TO?: string;
@@ -74,11 +79,20 @@ describe("public site origin configuration", () => {
     expect(wranglerConfig.vars?.APP_BASE_URL).not.toMatch(/\/$/);
     expect(isBookingEmailConfigurationReady(wranglerConfig.vars)).toBe(true);
     expect(wranglerConfig.vars?.MARKETING_EMAILS_ENABLED).toBe("false");
-    expect(wranglerConfig.vars?.EMAIL_MODE).toBe("test");
+    expect(wranglerConfig.vars?.EMAIL_MODE).toBe("production");
     expect(wranglerConfig.vars?.EMAIL_REPLY_TO).toBe("vance@vancethecreditdoctor.com");
     expect(wranglerConfig.vars?.EMAIL_FROM).toMatch(/^Vance Dotson <[^<>\s@]+@updates\.creditrepairparty\.com>$/);
     expect(wranglerConfig.vars?.EVERGREEN_TRAINING_ENABLED).toBe("false");
-    expect(wranglerConfig.vars?.LIVE_WEBINAR_ENABLED).toBe("false");
-    expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_ENABLED).toBe("false");
+    expect(wranglerConfig.vars?.LIVE_WEBINAR_ENABLED).toBe("true");
+    expect(wranglerConfig.vars?.LIVE_WEBINAR_EMAILS_APPROVED).toBe("true");
+    expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_ENABLED).toBe("true");
+    expect(wranglerConfig.vars?.CLOUDFLARE_ACCOUNT_ID).toBe("705ccc4ff6e1ae75c616d7c6a567d787");
+    expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_CUSTOMER_ORIGIN).toBe("https://customer-f15nogdf46kchhnl.cloudflarestream.com");
+    expect(wranglerConfig.vars?.CLOUDFLARE_STREAM_ALLOWED_ORIGINS).toBe(PUBLIC_SITE_ORIGIN);
+    expect(wranglerConfig.secrets?.required).toEqual(expect.arrayContaining([
+      "CLOUDFLARE_STREAM_API_TOKEN",
+      "CLOUDFLARE_STREAM_SIGNING_KEY_ID",
+      "CLOUDFLARE_STREAM_SIGNING_KEY_JWK",
+    ]));
   });
 });

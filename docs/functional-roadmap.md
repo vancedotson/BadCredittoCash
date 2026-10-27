@@ -187,15 +187,15 @@ The separate non-secret `CLOUDFLARE_STREAM_ALLOWED_ORIGINS` variable controls at
 - [x] Make recording/replay unavailable for new sessions without purging legacy database fields.
 - [x] Test registration isolation, endpoint validation, signing, participant playback access, admin authorization, replay suppression, credential TTL/tampering, CSP allow/deny, and unsupported WebRTC fallback locally.
 - [x] Keep the focused live E2E suite credential-free and local-only; test CRM manager roles and Stream preparation authorization with mocked component/API coverage.
-- [ ] Verify the existing `20260916140000_cloudflare_stream_live.sql` migration has been reviewed and applied in each target environment. This code task does not apply migrations.
-- [ ] Confirm the client-owned Cloudflare Stream subscription is eligible and approve any provider usage before preparing a live input.
-- [ ] Configure and independently verify Stream API and signing-key secrets; never store their values in source control or this roadmap.
-- [ ] Configure and verify `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` as the exact `https://customer-<account-code>.cloudflarestream.com` origin. It is non-secret Worker configuration, not a wildcard; without it CSP blocks WHEP and Stream setup remains unavailable.
-- [ ] Configure and verify `CLOUDFLARE_STREAM_ALLOWED_ORIGINS` in the authorized runtime with exact attendee HTTPS origins; the rehearsal transition may include both the workers.dev origin and final custom domain, then remove workers.dev after cutover if unneeded. Do not use wildcard/broad origins. This code task does not set the production variable.
-- [ ] Keep `APP_BASE_URL` as the canonical application/email base; do not treat it as Stream's attendee-origin allowlist. Custom-domain/DNS work remains a separate launch item.
-- [ ] Obtain final approval for live email copy and legal/content claims; configure `LIVE_WEBINAR_EMAILS_APPROVED` only after that approval.
+- [x] Verify `20260916140000_cloudflare_stream_live.sql` and the five live-webinar migrations are applied to production project `gulidnxltrgomjyctjlp` (verified 2026-10-03).
+- [x] Confirm the client-owned Cloudflare Stream Basic subscription is active and approve rehearsal usage before preparing an input (verified 2026-10-03).
+- [x] Independently verify the three required Stream secret names are present in the exact production Worker; secret values remain unread and out of source control (verified 2026-10-03).
+- [x] Configure `CLOUDFLARE_STREAM_CUSTOMER_ORIGIN` as the exact provisioned customer origin in the deployable Worker configuration. Verify the runtime value and CSP after Ana deploys.
+- [x] Configure `CLOUDFLARE_STREAM_ALLOWED_ORIGINS` with the canonical attendee origin `https://creditrepairparty.com`; do not use wildcard/broad origins.
+- [x] Keep `APP_BASE_URL` as the canonical application/email base; it remains separate from Stream's attendee-origin allowlist.
+- [x] Approve webinar logistics for the private rehearsal with `EMAIL_MODE=test`; marketing delivery remains disabled and session emails default off.
 - [ ] Complete a separately authorized non-production rehearsal, including host broadcast, attendee access, browser compatibility, and the no-recording behavior.
-- [ ] Keep `LIVE_WEBINAR_ENABLED`, `CLOUDFLARE_STREAM_ENABLED`, and `LIVE_WEBINAR_EMAILS_APPROVED` false until all prerequisites and explicit launch approval are complete.
+- [x] Enable `LIVE_WEBINAR_ENABLED`, `CLOUDFLARE_STREAM_ENABLED`, and `LIVE_WEBINAR_EMAILS_APPROVED` for the standing private rehearsal workflow after explicit approval; this is not a public marketing launch.
 
 No production resource, secret, database, feature flag, broadcast, or email is changed by the code implementation alone. Live webinar activation is not a substitute for the still-open evergreen recording/player backlog.
 

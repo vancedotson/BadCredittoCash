@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon, CheckIcon, DocumentIcon } from "@/components/marketing-v2/Icons";
+import { RegistrationFormV3 } from "@/components/marketing-v3/shared/RegistrationFormV3";
+import type { PublicLiveWebinarSession } from "@/lib/live-webinar-types";
 import { REPORT_BUREAUS, useReportUploadSession, type ReportBureau } from "./ReportUploadSession";
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
@@ -16,6 +19,7 @@ export function CreditReportUploads() {
   const inputs = useRef<Partial<Record<ReportBureau, HTMLInputElement | null>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [showSentDialog, setShowSentDialog] = useState(false);
+  const [liveMasterclass, setLiveMasterclass] = useState<PublicLiveWebinarSession | null>(null);
   // Set only by a submit in this visit, so reopening the page with 3 reports
   // already on file doesn't greet the person with the popup again.
   const submittedThisVisit = useRef(false);
@@ -32,9 +36,29 @@ export function CreditReportUploads() {
   useEffect(() => {
     if (!allSentThisVisit || !submittedThisVisit.current) return;
     submittedThisVisit.current = false;
-    const timer = setTimeout(() => setShowSentDialog(true), 2000);
-    return () => clearTimeout(timer);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void fetch("/api/live/session", { cache: "no-store", signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) return null;
+          const payload = await response.json() as { session?: PublicLiveWebinarSession | null };
+          return payload.session?.status === "scheduled" ? payload.session : null;
+        })
+        .catch(() => null)
+        .then((scheduledSession) => {
+          if (controller.signal.aborted) return;
+          setLiveMasterclass(scheduledSession);
+          setShowSentDialog(true);
+        });
+    }, 2000);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [allSentThisVisit]);
+
+  function formatMasterclassDate(startsAt: string) {
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+    }).format(new Date(startsAt));
+  }
 
   // Native <dialog> gives focus trapping, Escape-to-close and a backdrop for free.
   useEffect(() => {
@@ -87,11 +111,11 @@ export function CreditReportUploads() {
    * One button for all chosen files. Sent one at a time rather than in parallel:
    * each PDF can be up to 15 MB, and a failure on one company must leave the
    * others' results (and that company's selected file) intact so only the
-   * failed box needs another try. Partial submits are allowed on purpose — if a
-   * bureau can't verify someone's identity, they can still send the other two.
+   * failed box needs another try. Submission starts only after all three bureau
+   * slots are covered, so the visitor completes the task in one clear action.
    */
   async function submitAll() {
-    if (!available || submitting || chosen.length === 0) return;
+    if (!available || submitting || chosen.length === 0 || coveredCount < 3) return;
     setSubmitting(true);
     submittedThisVisit.current = true;
     try {
@@ -103,46 +127,55 @@ export function CreditReportUploads() {
 
   return (
     <div className="cc-uploads">
-      <p className="cc-simple-copy">Choose the matching PDF in each box, then press <strong>Submit to Vance.</strong> A check mark means that file was received.</p>
+      <p className="cc-simple-copy">Choose the matching PDF in each box. When all three are ready, press <strong>Submit all 3 reports.</strong></p>
       {session.phase === "loading" && <p className="cc-upload-notice" role="status">Loading your upload slots…</p>}
-      {session.phase === "missing" && <div className="cc-upload-notice" role="status" aria-live="polite" aria-atomic="true"><p>First, complete the quick check so we can attach these reports to your details. If you switched devices, use the personal link you copied.</p><Link href="/credit-check">Complete my quick check →</Link></div>}
+      {session.phase === "missing" && <div className="cc-upload-notice" role="status" aria-live="polite" aria-atomic="true"><p>First, complete the quick check so we can attach these reports to your details. If you switched devices, open the personal link from your email.</p><Link href="/credit-check">Complete my quick check →</Link></div>}
       {session.phase === "error" && <div className="cc-upload-notice" role="alert"><p>We couldn&apos;t load your upload slots. Please try again.</p><button type="button" onClick={() => void session.refresh()}>Try again</button></div>}
       {session.phase === "changed" && <div className="cc-upload-notice" role="alert"><p>This browser switched to another quick check. Reload this page or reopen your personal link before choosing your PDFs again.</p><button type="button" onClick={() => window.location.reload()}>Reload upload page</button></div>}
       {available && session.mode === "local" && <p className="cc-upload-local">Local preview · PDFs are saved on this computer. They are not sent to Vance&apos;s live CRM.</p>}
-      <div className="cc-upload-grid">
-        {REPORT_BUREAUS.map(({ id, label }) => {
+      <section className="cc-upload-panel" aria-labelledby="cc-upload-checklist-title">
+        <div className="cc-upload-panel-heading">
+          <h3 id="cc-upload-checklist-title" className="v3-display">Upload checklist</h3>
+          <p aria-live="polite" aria-atomic="true"><strong>{coveredCount}</strong> of 3 ready</p>
+        </div>
+        <ol className="cc-upload-grid">
+        {REPORT_BUREAUS.map(({ id, label }, index) => {
           const draft = drafts[id];
           const receipt = session.reports.find((report) => report.bureau === id);
           const confirmed = Boolean(receipt && !draft.file);
-          return <div key={id} className={`cc-upload-card${confirmed ? " is-received" : ""}${draft.file ? " has-file" : ""}`} aria-busy={draft.sending}>
+          return <li key={id} className={`cc-upload-card${confirmed ? " is-received" : ""}${draft.file ? " has-file" : ""}`} aria-busy={draft.sending}>
+            <span className="cc-upload-number" aria-hidden="true">{index + 1}</span>
+            <span className="cc-upload-check" aria-hidden="true">{confirmed || draft.file ? <CheckIcon className="h-5 w-5" /> : null}</span>
             <div className="cc-upload-symbol" aria-hidden="true">{confirmed ? <CheckIcon className="h-7 w-7" /> : <DocumentIcon className="h-7 w-7" />}</div>
-            <h3 id={`cc-upload-${id}-title`}>{label}</h3>
-            <p className="cc-upload-status" role="status">{draft.sending ? "Sending…" : confirmed ? session.mode === "local" ? "Saved on this computer" : "Received" : draft.file ? "Ready to send" : "Choose your report"}</p>
-            <p className="cc-upload-filename" title={draft.file?.name ?? receipt?.fileName}>{draft.file?.name ?? receipt?.fileName ?? "PDF · up to 15 MB"}</p>
-            {draft.file && <p className="cc-upload-size">{draft.file.size < 1024 * 1024 ? `${Math.max(1, Math.round(draft.file.size / 1024))} KB` : `${(draft.file.size / (1024 * 1024)).toFixed(1)} MB`}</p>}
+            <div className="cc-upload-details">
+              <h4 id={`cc-upload-${id}-title`}>{label}</h4>
+              <p className="cc-upload-status" role="status">{draft.sending ? "Sending…" : confirmed ? session.mode === "local" ? "Saved on this computer" : "Received" : draft.file ? "Ready to send" : "Full PDF report"}</p>
+              <p className="cc-upload-filename" title={draft.file?.name ?? receipt?.fileName}>{draft.file?.name ?? receipt?.fileName ?? "PDF · up to 15 MB"}</p>
+              {draft.file && <p className="cc-upload-size">{draft.file.size < 1024 * 1024 ? `${Math.max(1, Math.round(draft.file.size / 1024))} KB` : `${(draft.file.size / (1024 * 1024)).toFixed(1)} MB`}</p>}
+            </div>
             <input hidden ref={(input) => { inputs.current[id] = input; }} id={`cc-upload-${id}`} aria-label={`Choose ${label} PDF`} type="file" accept=".pdf,application/pdf" disabled={!available || submitting} onChange={(event) => chooseFile(id, event.target.files?.[0])} />
-            <button className={`cc-upload-choose${draft.file || confirmed ? " is-secondary" : ""}`} type="button" disabled={!available || submitting} aria-label={`${draft.file || confirmed ? "Change" : "Choose"} ${label} PDF`} aria-describedby={draft.error ? `cc-upload-${id}-error` : undefined} onClick={() => inputs.current[id]?.click()}>{draft.file ? "Choose a different PDF" : confirmed ? "Replace PDF" : "Choose PDF"}</button>
-            {draft.file && <button className="cc-upload-cancel" type="button" disabled={submitting} onClick={() => setDrafts((previous) => ({ ...previous, [id]: emptyDraft() }))}>{receipt ? "Keep previous PDF" : "Remove"}</button>}
+            <div className="cc-upload-actions">
+              <button className={`cc-upload-choose${draft.file || confirmed ? " is-secondary" : ""}`} type="button" disabled={!available || submitting} aria-label={`${draft.file || confirmed ? "Change" : "Choose"} ${label} PDF`} aria-describedby={draft.error ? `cc-upload-${id}-error` : undefined} onClick={() => inputs.current[id]?.click()}>{draft.file ? "Choose a different PDF" : confirmed ? "Replace PDF" : "Choose PDF"}</button>
+              {draft.file && <button className="cc-upload-cancel" type="button" disabled={submitting} onClick={() => setDrafts((previous) => ({ ...previous, [id]: emptyDraft() }))}>{receipt ? "Keep previous PDF" : "Remove"}</button>}
+            </div>
             {draft.error && <p className="cc-upload-error" id={`cc-upload-${id}-error`} role="alert">{draft.error}</p>}
-          </div>;
+          </li>;
         })}
-      </div>
+        </ol>
+        <p className="cc-upload-requirement"><span aria-hidden="true">i</span> All 3 are required before you can submit.</p>
+      </section>
       {(chosen.length > 0 || receivedCount < 3) && <div className="cc-upload-submit">
-        <button className="cc-primary cc-guide-button" type="button" disabled={!available || submitting || chosen.length === 0} onClick={() => void submitAll()}>
-          {submitting ? "Sending to Vance…" : chosen.length > 0 && coveredCount < 3 ? `Submit ${chosen.length} of 3 to Vance` : "Submit to Vance"} {!submitting && <ArrowRightIcon className="h-5 w-5" />}
+        <button className="cc-primary cc-guide-button" type="button" disabled={!available || submitting || chosen.length === 0 || coveredCount < 3} onClick={() => void submitAll()}>
+          {submitting ? "Sending all 3 reports…" : "Submit all 3 reports"} {!submitting && <ArrowRightIcon className="h-5 w-5" />}
         </button>
         <p className="cc-upload-hint">
-          {chosen.length === 0
-            ? "Choose at least one PDF above to submit."
-            : coveredCount < 3
-              ? "You can submit what you have now and add the rest later."
-              : "All 3 chosen — ready to send."}
+          {coveredCount < 3
+            ? `Add ${3 - coveredCount} more ${3 - coveredCount === 1 ? "report" : "reports"} to continue.`
+            : "All 3 reports are ready — submit them now."}
         </p>
       </div>}
 
-      <div className={`cc-upload-total${receivedCount === 3 ? " is-complete" : ""}`} role="status">
-        {receivedCount === 3 ? <><CheckIcon className="h-6 w-6" /><p><strong>{session.mode === "local" ? "All 3 PDFs saved on this computer." : "All 3 reports received. You're done!"}</strong><span>{session.mode === "local" ? "Local test complete. No reports were sent to the live CRM." : "Your reports are available to Vance for review."}</span></p></> : <><span className="cc-upload-count">{receivedCount}<small> / 3</small></span><p><strong>{receivedCount === 0 ? "Nothing sent yet." : "Keep going — send the remaining reports."}</strong><span>{receivedCount} of 3 {session.mode === "local" && available ? "saved locally" : "received"}. Choosing a file doesn&apos;t send it — press Submit to Vance.</span></p></>}
-      </div>
+      {receivedCount === 3 && <div className="cc-upload-total is-complete" role="status"><CheckIcon className="h-6 w-6" /><p><strong>{session.mode === "local" ? "All 3 PDFs saved on this computer." : "All 3 reports received. You're done!"}</strong><span>{session.mode === "local" ? "Local test complete. No reports were sent to the live CRM." : "Your reports are available to Vance for review."}</span></p></div>}
       <p className="cc-simple-delivery-tip">Send the full credit reports, including every page. Make sure each PDF matches the company shown above.</p>
 
       <dialog
@@ -154,12 +187,46 @@ export function CreditReportUploads() {
         onClose={() => setShowSentDialog(false)}
         onClick={(event) => { if (event.target === event.currentTarget) event.currentTarget.close(); }}
       >
-        <div className="cc-sent-dialog-body">
+        <div className={`cc-sent-dialog-body${liveMasterclass ? " is-live" : ""}`}>
+          <div className="cc-sent-dialog-progress-copy"><strong>75% complete</strong><span>Almost ready</span></div>
+          <div className="cc-sent-dialog-progress" role="progressbar" aria-label="Next step progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={75}><span /></div>
           <div className="cc-sent-dialog-mark" aria-hidden="true"><CheckIcon className="h-8 w-8" /></div>
-          <h2 id="cc-sent-dialog-title" className="v3-display">All files have been sent.</h2>
-          <p>Vance will contact you within 48 hours.</p>
+          {liveMasterclass ? <>
+            <p className="cc-sent-dialog-eyebrow">Congratulations — your reports are in</p>
+            <h2 id="cc-sent-dialog-title" className="v3-display">Join Vance&apos;s next live masterclass.</h2>
+            <p className="cc-sent-dialog-contact">Learn what happens next, how to prepare for your review, and how to get the most benefit from Vance&apos;s guidance.</p>
+            <div className="cc-live-masterclass-date">
+              <span>Live masterclass</span>
+              <strong>{formatMasterclassDate(liveMasterclass.startsAt)}</strong>
+            </div>
+            <div className="cc-live-masterclass-form">
+              <RegistrationFormV3
+                redirectTo="/live/confirmed"
+                source="vance-live-webinar"
+                showPhone
+                submitLabel="Register for the masterclass"
+                loadingLabel="Saving your seat..."
+                reassurance="Free to attend. We'll email your private joining link."
+                sessionId={liveMasterclass.id}
+                timezone={Intl.DateTimeFormat().resolvedOptions().timeZone}
+                idPrefix="credit-upload-live"
+              />
+            </div>
+          </> : <>
+            <h2 id="cc-sent-dialog-title" className="v3-display">All files have been sent.</h2>
+            <p className="cc-sent-dialog-contact">Vance will contact you within 48 hours.</p>
+            <div className="cc-sent-dialog-thumbnail">
+              <Image src="/img/vance-credit-report-guide.png" alt="Vance teaching how to review TransUnion, Equifax and Experian credit reports" fill sizes="(max-width: 760px) calc(100vw - 64px), 780px" />
+              <span className="cc-sent-dialog-play" aria-hidden="true">▶</span>
+              <h3>A special video guide from Vance</h3>
+            </div>
+            <form className="cc-sent-dialog-watch" action="/api/credit-check/webinar" method="post">
+              <button className="cc-primary cc-guide-button" type="submit" autoFocus>Watch it now <ArrowRightIcon className="h-5 w-5" /></button>
+            </form>
+            <p className="cc-sent-dialog-guide-copy">Get the most from what happens next.</p>
+            <p className="cc-sent-dialog-free">100% free · Available for the next 48 hours</p>
+          </>}
           {session.mode === "local" && <p className="cc-sent-dialog-local">Local preview · these PDFs were saved on this computer, not sent to the live CRM.</p>}
-          <button className="cc-primary cc-guide-button" type="button" autoFocus onClick={() => sentDialog.current?.close()}>Close</button>
         </div>
       </dialog>
     </div>

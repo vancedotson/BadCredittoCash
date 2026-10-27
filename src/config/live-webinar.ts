@@ -44,7 +44,7 @@ export const liveWebinar = {
     /** The zone the event is authored in; shown verbatim so the source time is never ambiguous. */
     sourceTimeZone: "UTC",
     /** ⚠️ PLACEHOLDER — where it actually streams. */
-    platform: "Live video — joining link sent by email",
+    platform: "Live video. Joining link sent by email",
     /** ⚠️ PLACEHOLDER — set once seats/capacity are real. `null` = make no capacity claim. */
     capacity: null as number | null,
   },
@@ -72,7 +72,7 @@ export const liveWebinar = {
       minutes: 12,
       title: "Where the line actually is.",
       detail:
-        "The specific collector conduct the FDCPA restricts — calling your workplace, discussing your debt with family or neighbors, calling at prohibited hours, threats about consequences that can't happen. You'll leave able to name what happened to you.",
+        "The specific collector conduct the FDCPA restricts, including calling your workplace, discussing your debt with family or neighbors, calling at prohibited hours, and making threats about consequences that can't happen. You'll leave able to name what happened to you.",
     },
     {
       minutes: 12,
@@ -84,13 +84,13 @@ export const liveWebinar = {
       minutes: 11,
       title: "What you're entitled to ask for.",
       detail:
-        "The written requests the law gives you — debt validation, and putting your contact preferences in writing — and what a collector is required to do once it's on the record.",
+        "The written requests the law gives you, including debt validation and putting your contact preferences in writing, plus what a collector is required to do once it's on the record.",
     },
     {
       minutes: 10,
       title: "Live Q&A.",
       detail:
-        "Open questions about collector conduct and the process. General information only — this is not a review of your individual situation.",
+        "Open questions about collector conduct and the process. This is general information only, not a review of your individual situation.",
     },
   ],
 
@@ -99,7 +99,7 @@ export const liveWebinar = {
     {
       title: "A rough timeline of the calls.",
       detail:
-        "Even approximate — who, roughly when, how often, and whether they reached anyone besides you. It'll make the first segment land.",
+        "Even approximate details help: who, roughly when, how often, and whether they reached anyone besides you. It'll make the first segment land.",
     },
     {
       title: "Any letters you've kept.",
@@ -217,7 +217,7 @@ export const liveWebinar = {
     submitLabel: "Save my seat",
     loadingLabel: "Saving your seat...",
     reassurance:
-      "No payment. Your joining link arrives by email — no spam, unsubscribe anytime.",
+      "No payment. Your joining link arrives by email. No spam, and you can unsubscribe anytime.",
   },
 
   finalCta: {
@@ -244,7 +244,7 @@ export const liveWebinar = {
     outcomes: [
       {
         title: "Name exactly what they did wrong.",
-        detail: "Calls to your job, talking to your family, threats about things that can't happen — you'll know which conduct the FDCPA restricts.",
+        detail: "Calls to your job, talking to your family, and threats about things that can't happen. You'll know which conduct the FDCPA restricts.",
       },
       {
         title: "Have it on the record.",
@@ -266,7 +266,7 @@ export const liveWebinar = {
       items: [
         { title: "They call where they shouldn't.", detail: "Your job. Your family. At dinner, again and again." },
         { title: "The threats don't add up.", detail: "Letters and calls warning about consequences that don't sound right." },
-        { title: "You already tried.", detail: "You disputed it or asked them to stop — and nothing changed." },
+        { title: "You already tried.", detail: "You disputed it or asked them to stop, but nothing changed." },
       ],
     },
 
@@ -285,7 +285,7 @@ export const liveWebinar = {
 
     logistics: {
       kicker: "THE DETAILS",
-      where: "Online — join from any browser",
+      where: "Online. Join from any browser",
       whereNote: "Your joining link arrives by email",
       cost: "No charge",
       costNote: "No payment, now or later",
@@ -314,11 +314,11 @@ export const liveWebinar = {
 
     calendar: {
       label: "ADD IT TO YOUR CALENDAR",
-      note: "Most people who miss a live session didn't change their mind — it just left their head. Ninety seconds now is the whole difference.",
+      note: "Most people who miss a live session didn't change their mind; it just left their head. Ninety seconds now is the whole difference.",
       googleLabel: "Add to Google Calendar",
       icsLabel: "Apple / Outlook (.ics)",
       /** Shown on the calendar entry itself. */
-      eventTitle: "Live session with Vance Dotson — collector rights",
+      eventTitle: "Live session with Vance Dotson: collector rights",
       eventDescription:
         "Live session on what debt collectors are not allowed to do under the FDCPA, how to document it, and what you're entitled to ask for. The joining link is sent by email.",
     },
@@ -330,12 +330,12 @@ export const liveWebinar = {
         {
           title: "Check your inbox now.",
           detail:
-            "A confirmation is on its way to the address you just used. If it isn't there in a few minutes, look in spam or promotions — and mark it 'not spam' so the joining link doesn't land there too.",
+            "A confirmation is on its way to the address you just used. If it isn't there in a few minutes, look in spam or promotions, then mark it 'not spam' so the joining link doesn't land there too.",
         },
         {
           title: "The joining link arrives by email.",
           detail:
-            "It is not shown on this page. Keep the confirmation email — that's the thread the link comes in on.",
+            "It is not shown on this page. Keep the confirmation email; that's the thread the link comes in on.",
         },
         {
           title: "Join a few minutes early.",
@@ -351,13 +351,13 @@ export const liveWebinar = {
       lines: [
         "This runs live, once, at the time above.",
         "No recording or replay is promised.",
-        "It's general information about federal law — not legal advice, and not a review of your case.",
+        "It's general information about federal law, not legal advice or a review of your case.",
       ],
     },
 
     countdown: {
       label: "STARTS IN",
-      live: "Happening now — check your email for the joining link.",
+      live: "Happening now. Check your email for the joining link.",
       ended: "This session has ended.",
       endedSub: "This session has ended. You can check back for another scheduled date or book a call.",
     },
@@ -412,13 +412,13 @@ export const liveWebinar = {
     kicker: "SCHEDULE // STRATEGY CALL",
     heading: "Now let's look at yours.",
     body:
-      "The session was general — this is the part where someone actually looks at what's happening to you. A 30-minute call with Vance: what the collectors have been doing, what's on your report, and the honest next step. No cost, no obligation.",
+      "The session was general. This is the part where someone actually looks at what's happening to you. A 30-minute call with Vance covers what the collectors have been doing, what's on your report, and the honest next step. No cost, no obligation.",
 
     /** What the call covers. Mirrors site-v3 `howItWorks`, in the live voice. */
     covers: [
       "You walk through what the collectors have actually been doing.",
       "Vance says whether there looks to be a violation worth holding them to.",
-      "You leave knowing where you stand — either way, and with no pressure.",
+      "You leave knowing where you stand, either way and with no pressure.",
     ],
 
     facts: ["30 minutes", "By phone", "Directly with Vance", "No obligation"],
@@ -447,7 +447,7 @@ export const liveWebinar = {
     kicker: "CONFIRMED // CALL BOOKED",
     heading: "Your call is booked.",
     /** Used when the booking details survived the handoff. */
-    body: "Here's what you booked. Add it to your calendar, then spend ten minutes on the list below — it's the difference between a vague call and a useful one.",
+    body: "Here's what you booked. Add it to your calendar, then spend ten minutes on the list below. It's the difference between a vague call and a useful one.",
     /** Used when sessionStorage was unavailable and we have no details to show. */
     bodyGeneric:
       "You're confirmed. Check your email for the appointment time and call details, then use the checklist below.",
@@ -459,7 +459,7 @@ export const liveWebinar = {
       label: "BEFORE THE CALL",
       items: [
         {
-          text: "Write down the collector calls you can remember — who, roughly when, how often, and whether they reached anyone else.",
+          text: "Write down the collector calls you can remember: who, roughly when, how often, and whether they reached anyone else.",
         },
         {
           text: "Gather any collection letters, texts, or voicemails you still have.",
@@ -473,7 +473,7 @@ export const liveWebinar = {
           text: "Note anything on those reports you think is wrong or isn't yours.",
         },
       ],
-      note: "None of this is required — come as you are. It just means less of the call spent reconstructing dates.",
+      note: "None of this is required. Come as you are. It just means less of the call spent reconstructing dates.",
     },
   },
 
@@ -505,7 +505,7 @@ export const liveWebinar = {
     early: {
       kicker: "THE ROOM ISN'T OPEN YET",
       heading: "You're early.",
-      sub: "The room opens shortly before we start. Leave this tab open — it lets you in on its own, no refresh needed.",
+      sub: "The room opens shortly before we start. Leave this tab open. It lets you in on its own, no refresh needed.",
     },
     ended: {
       kicker: "SESSION ENDED",
@@ -525,7 +525,7 @@ export const liveWebinar = {
       submitLabel: "Send to Vance",
       sendingLabel: "Sending...",
       sentLabel: "Sent",
-      note: "Questions go only to Vance — nobody else in the session sees them. He answers as many as time allows in the Q&A segment. Please don't include account numbers or anything you wouldn't want written down.",
+      note: "Questions go only to Vance; nobody else in the session sees them. He answers as many as time allows in the Q&A segment. Please don't include account numbers or anything you wouldn't want written down.",
       emptyState: "No questions sent yet.",
       sentHeading: "Your questions",
       errorText: "That didn't send. Try again in a moment.",

@@ -289,7 +289,7 @@ export function TimeZonePicker() {
         <strong style={{ color: "var(--v3-ink)", fontWeight: 600 }}>
           {formatInZone(session.startsAt, zone)}
         </strong>{" "}
-        where you are. Same moment — only the clock changes.
+        where you are. Same moment; only the clock changes.
       </p>
     </div>
   );

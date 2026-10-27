@@ -7,6 +7,7 @@ import { isCreditReportBureau, isPdfFile, type CreditReportBureau } from "./cred
 export type { CreditReportBureau } from "./credit-report-validation";
 
 export const CREDIT_REPORT_COOKIE = "vance_report_upload";
+export const CREDIT_REPORT_WEBINAR_COOKIE = "vance_report_webinar";
 export const CREDIT_REPORT_SESSION_SECONDS = 7 * 24 * 60 * 60;
 const BUCKET = "credit-reports";
 export type CreditReportReceipt = { id: string; submissionId: string; bureau: CreditReportBureau; fileName: string; uploadedAt: string; byteSize: number };
@@ -74,6 +75,13 @@ export async function listCreditReports(session: CreditReportSession): Promise<C
   const { data, error } = await createAdminClient().from("credit_report_uploads").select("id,submission_id,bureau,file_name,uploaded_at,byte_size").eq("session_id", session.id);
   if (error) throw new Error("Report receipts could not be read.");
   return (data ?? []).map(receipt);
+}
+
+export async function findCompletedCreditReportSession(token: string): Promise<CreditReportSession | null> {
+  const session = await findCreditReportSession(token);
+  if (!session) return null;
+  const reports = await listCreditReports(session);
+  return new Set(reports.map(({ bureau }) => bureau)).size === 3 ? session : null;
 }
 export async function saveCreditReport(session: CreditReportSession, bureau: CreditReportBureau, fileName: string, bytes: Uint8Array): Promise<CreditReportReceipt> {
   if (!isCreditReportBureau(bureau) || !isPdfFile(bytes) || Date.parse(session.expiresAt) <= Date.now()) throw new Error("Invalid or expired report upload.");

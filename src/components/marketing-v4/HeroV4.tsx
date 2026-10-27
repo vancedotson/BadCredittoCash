@@ -81,9 +81,6 @@ export function HeroV4() {
               </span>
               {site.cta.primary.label}
             </Link>
-            <Link href={site.cta.secondary.href} className="v3-btn v3-btn-ghost">
-              {site.cta.secondary.label} →
-            </Link>
           </div>
 
           {/* Topics and available next steps */}

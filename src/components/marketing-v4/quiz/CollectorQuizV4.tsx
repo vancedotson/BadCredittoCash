@@ -136,16 +136,13 @@ function ResultsV4({ answers, onRestart, onBack }: { answers: QuizAnswers; onRes
       ) : null}
 
       <p className="mx-auto mt-7" style={{ maxWidth: 600, fontSize: 19, lineHeight: 1.6, color: "var(--v3-mut)" }}>
-        From what you shared, you may have protections under the FCRA and FDCPA. Start with the credit-report guide or join the webinar to learn about possible next steps.
+        From what you shared, you may have protections under the FCRA and FDCPA. Check your credit report to learn about possible next steps.
       </p>
 
       <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link href={site.cta.primary.href} className="v3-btn v3-btn-primary v3-clip" style={{ paddingLeft: 12, fontSize: 16 }}>
           <span className="v3-btn-badge"><ArrowRightIcon className="h-4 w-4" /></span>
           {site.cta.primary.label}
-        </Link>
-        <Link href={site.cta.secondary.href} className="v3-btn v3-btn-ghost">
-          {site.cta.secondary.label} →
         </Link>
         <p className="v3-mono" style={{ fontSize: 13.5, color: "var(--v3-faint)" }}>No obligation.</p>
       </div>

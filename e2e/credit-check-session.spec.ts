@@ -74,11 +74,11 @@ async function expectNoOverflowAndAxe(page: Page) {
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth);
 
   const axeResults = await new AxeBuilder({ page }).analyze();
-  expect(axeResults.violations.map(({ id, help }) => `${id}: ${help}`)).toEqual([]);
+  expect(axeResults.violations.map(({ id, help, nodes }) => `${id}: ${help} (${nodes.flatMap(({ target }) => target).join(", ")})`)).toEqual([]);
 }
 
 async function focusButtonWithKeyboard(page: Page) {
-  const button = page.getByRole("button", { name: "I'm on a computer", exact: true });
+  const button = page.getByRole("button", { name: "Yes, I am on my computer", exact: true });
 
   for (let tabCount = 0; tabCount < 24; tabCount += 1) {
     if (await button.evaluate((element) => element === document.activeElement)) return button;
@@ -102,14 +102,14 @@ for (const scenario of scenarios) {
     await expect(guidance).toHaveCount(1);
     await expect(guidance).toHaveAttribute("aria-live", "polite");
     await expect(guidance).toHaveAttribute("aria-atomic", "true");
-    await expect(guidance).toContainText("If you switched devices, use the personal link you copied.");
+    await expect(guidance).toContainText("If you switched devices, open the personal link from your email.");
 
     const recoveryLink = guidance.getByRole("link", { name: "Complete my quick check →", exact: true });
     await expect(recoveryLink).toHaveAttribute("href", "/credit-check");
     const fileInputs = page.locator('input[type="file"]');
     await expect(fileInputs).toHaveCount(3);
     for (const input of await fileInputs.all()) await expect(input).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Submit to Vance" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Submit all 3 reports" })).toBeDisabled();
 
     const guidanceText = await guidance.textContent();
     await page.waitForTimeout(250);
@@ -140,8 +140,38 @@ test("credit-check session preserves loading and recovers from a transient 503",
   await expect(page.getByText("Local preview · PDFs are saved on this computer.")).toBeVisible();
   await expect(page.locator('.cc-upload-notice[role="status"]')).toHaveCount(0);
   for (const input of await page.locator('input[type="file"]').all()) await expect(input).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Submit to Vance" })).toBeDisabled();
+  const submit = page.getByRole("button", { name: "Submit all 3 reports" });
+  await expect(submit).toBeDisabled();
+  const testPdf = { name: "report.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n") };
+  await page.locator('#cc-upload-transunion').setInputFiles(testPdf);
+  await expect(submit).toBeDisabled();
+  await page.locator('#cc-upload-equifax').setInputFiles(testPdf);
+  await expect(submit).toBeDisabled();
+  await page.locator('#cc-upload-experian').setInputFiles(testPdf);
+  await expect(submit).toBeEnabled();
+  await expect(page.getByText("All 3 reports are ready — submit them now.")).toBeVisible();
   expect(requests.getSessionRequestCount()).toBe(2);
   expect(requests.getMutatingRequests().some((request) => request.includes("/api/credit-check/reports/"))).toBe(false);
+  await expectNoOverflowAndAxe(page);
+});
+
+test("successful upload dialog offers the free video guide", async ({ page, baseURL }) => {
+  await isolateLocalGuide(page, baseURL, [{ status: 200 }]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/credit-check/thank-you");
+  await focusButtonWithKeyboard(page);
+  await page.keyboard.press("Enter");
+
+  const dialog = page.locator(".cc-sent-dialog");
+  await dialog.evaluate((element: HTMLDialogElement) => element.showModal());
+  await expect(dialog.getByRole("heading", { name: "All files have been sent." })).toBeVisible();
+  await expect(dialog).toContainText("Vance will contact you within 48 hours.");
+  await expect(dialog).toContainText("A special video guide from Vance");
+  await expect(dialog).toContainText("100% free · Available for the next 48 hours");
+  await expect(dialog.getByRole("progressbar", { name: "Next step progress" })).toHaveAttribute("aria-valuenow", "75");
+  await expect(dialog.getByRole("img", { name: /Vance teaching how to review/ })).toBeVisible();
+  const watchForm = dialog.getByRole("button", { name: "Watch it now" }).locator("..");
+  await expect(watchForm).toHaveAttribute("action", /\/api\/credit-check\/webinar$/);
+  await expect(watchForm).toHaveAttribute("method", "post");
   await expectNoOverflowAndAxe(page);
 });

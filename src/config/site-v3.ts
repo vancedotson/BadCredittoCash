@@ -19,7 +19,7 @@ export const site = {
   seo: {
     title: "Vance Dotson: Challenge inaccurate credit information.",
     description:
-      "Learn about the FCRA and FDCPA, get a credit-report guide, or book a strategy call in Oklahoma City.",
+      "Learn about the FCRA and FDCPA and check your credit report in Oklahoma City.",
   },
 
   contact: {
@@ -27,10 +27,10 @@ export const site = {
     officeAddress: "425 W. Wilshire Blvd Ste E, Oklahoma City, OK 73116",
   },
 
-  // Main page CTAs. Both approved launch paths read from this shared config.
+  // The public marketing site uses one CTA throughout.
   cta: {
     primary: { label: "Check my credit report", href: "/credit-check" },
-    secondary: { label: "Join the webinar", href: "/live" },
+    secondary: { label: "Check my credit report", href: "/credit-check" },
   },
 
   nav: [
@@ -63,7 +63,7 @@ export const site = {
     classification: "FCRA + FDCPA // PUBLIC INFORMATION",
     established: "OKLAHOMA CITY, OK",
     kickers: {
-      hero: "START HERE // YOUR OPTIONS",
+      hero: "START HERE // CREDIT REPORT",
       pain: "COLLECTIONS // COMMON CONCERNS",
       reframe: "FCRA + FDCPA // OVERVIEW",
       meet: "SERVICE FOCUS",
@@ -75,14 +75,14 @@ export const site = {
       faq: "COMMON QUESTIONS // FAQ",
       risk: "TERMS // NO RISK",
       urgency: "CLOCK // TIME-SENSITIVE",
-      register: "NEXT STEP // TWO OPTIONS",
+      register: "NEXT STEP // CREDIT REPORT",
     },
     // Hero "terminal" readout lines (decorative, factual).
     terminal: [
       "> statute: FCRA · FDCPA",
-      "> options: credit-report guide · strategy call",
+      "> option: check your credit report",
       "> location: Oklahoma City, OK",
-      "> next step: yours to choose",
+      "> next step: review your report",
     ],
   },
 
@@ -90,12 +90,12 @@ export const site = {
   hero: {
     headline: "Understand your options under federal law.",
     subhead:
-      "The FCRA addresses credit-report accuracy, and the FDCPA addresses debt-collection practices. Start with the credit-report guide or book a strategy call to discuss possible next steps.",
+      "The FCRA addresses credit-report accuracy, and the FDCPA addresses debt-collection practices. Start by checking your credit report.",
     photoCaption: "Vance Dotson, Oklahoma City",
     bullets: [
       "Learn about credit-report accuracy under the FCRA",
       "Learn about debt-collection practices under the FDCPA",
-      "Choose a guide or strategy call",
+      "Check your credit report",
     ],
   },
 
@@ -146,7 +146,7 @@ export const site = {
       },
       {
         title: "You could push back this whole time.",
-        body: "These federal laws address credit-report accuracy and debt-collection practices. A guide and strategy call are available to discuss possible next steps.",
+        body: "These federal laws address credit-report accuracy and debt-collection practices. Start by checking your credit report.",
         imageHint: "Vance at his OKC office, reviewing a client's file",
       },
     ],
@@ -157,9 +157,9 @@ export const site = {
     heading: "Credit-report and debt-collection information.",
     body: [
       "The FCRA and FDCPA are federal laws concerning credit-report accuracy and debt-collection practices.",
-      "A strategy call is available to discuss your situation and possible next steps. Vance Dotson is based in Oklahoma City, Oklahoma.",
+      "Start with a credit-report review to understand your situation and possible next steps. Vance Dotson is based in Oklahoma City, Oklahoma.",
     ],
-    signoff: "Credit-report guide · Strategy call · Oklahoma City, Oklahoma",
+    signoff: "Credit-report review · Oklahoma City, Oklahoma",
     stats: [
       { value: "20+", label: "years since 2004" },
       { value: "FCRA + FDCPA", label: "the laws I use" },
@@ -266,7 +266,7 @@ export const site = {
   howItWorks: {
     heading: "Getting started is simple:",
     steps: [
-      { title: "Choose your starting point", body: "Get the credit-report guide or join the webinar." },
+      { title: "Check your credit report", body: "Start with the guided credit-report intake." },
       { title: "We review your case and find the violations", body: "You'll know exactly where you stand." },
       { title: "We go to work, you take back control", body: "I handle the bureaus and collectors so you don't have to." },
     ],
@@ -276,7 +276,7 @@ export const site = {
   faq: [
     {
       q: "Is this a scam?",
-      a: "Fair question. Start with the credit-report guide or book a strategy call to discuss your questions and possible next steps. There is no obligation to move forward.",
+      a: "Fair question. Start by checking your credit report to understand possible next steps. There is no obligation to move forward.",
     },
     {
       q: "Is this even legal?",
@@ -326,11 +326,11 @@ export const site = {
 
   // Public launch choices (replaces the retired homepage registration form).
   register: {
-    heading: "Choose a next step that feels right.",
-    body: "Start with the credit-report guide or join the webinar. No obligation.",
+    heading: "Start with your credit report.",
+    body: "Use the guided intake to check your credit report. No obligation.",
     primaryDescription: "Use the intake to get a guide for pulling your credit reports.",
-    secondaryDescription: "Learn about credit-report accuracy and debt-collection practices in a live webinar.",
-    webinarNote: "Choose the guide or join the webinar.",
+    secondaryDescription: "",
+    webinarNote: "Check your credit report.",
   },
 
   // WEBINAR FUNNEL — evergreen, on-demand training whose end action is booking

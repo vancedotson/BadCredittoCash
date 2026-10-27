@@ -47,9 +47,6 @@ export function RiskPanel() {
             </span>
             {site.cta.primary.label}
           </Link>
-          <Link href={site.cta.secondary.href} className="v3-btn v3-btn-ghost">
-            {site.cta.secondary.label} →
-          </Link>
         </Reveal>
       </div>
 

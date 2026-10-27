@@ -52,7 +52,7 @@ async function isolateLocalGuide(page: Page, baseURL: string | undefined) {
 }
 
 async function focusButtonWithKeyboard(page: Page) {
-  const button = page.getByRole("button", { name: "I'm on a computer", exact: true });
+  const button = page.getByRole("button", { name: "Yes, I am on my computer", exact: true });
 
   for (let tabCount = 0; tabCount < 24; tabCount += 1) {
     if (await button.evaluate((element) => element === document.activeElement)) return button;
@@ -69,12 +69,15 @@ for (const scenario of scenarios) {
     await page.setViewportSize({ width: scenario.width, height: scenario.height });
     await page.goto("/credit-check/thank-you");
 
+    await expect(page.getByRole("button", { name: "I'm not on my computer, email the link", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /copy my personal link/i })).toHaveCount(0);
+
     const continueButton = await focusButtonWithKeyboard(page);
     await expect(continueButton).toBeFocused();
     await page.keyboard.press("Enter");
 
     const heading = page.locator("#cc-current-step");
-    await expect(heading).toHaveText("Get all 3 credit reports.");
+    await expect(heading).toHaveText("Upload all 3 credit reports.");
     await expect(heading).toBeFocused();
 
     const indicator = await heading.evaluate((element) => {

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { FunnelShell } from "@/components/marketing-v4/FunnelShell";
 import {
@@ -7,6 +8,7 @@ import {
   WebinarRoomV4,
 } from "@/components/marketing-v4/webinar/WebinarRoomV4";
 import { evergreenTrainingEnabled } from "@/lib/evergreen-training";
+import { CREDIT_REPORT_WEBINAR_COOKIE, findCompletedCreditReportSession } from "@/lib/credit-reports";
 
 /**
  * /webinar/room — funnel step 3. The training. The player fires watch-progress
@@ -14,7 +16,11 @@ import { evergreenTrainingEnabled } from "@/lib/evergreen-training";
  */
 export default async function WebinarRoomPage() {
   await connection();
-  if (!evergreenTrainingEnabled()) redirect("/book");
+  if (!evergreenTrainingEnabled()) {
+    const token = (await cookies()).get(CREDIT_REPORT_WEBINAR_COOKIE)?.value;
+    const completedSession = token ? await findCompletedCreditReportSession(token) : null;
+    if (!completedSession) redirect("/book");
+  }
 
   return (
     <FunnelShell>

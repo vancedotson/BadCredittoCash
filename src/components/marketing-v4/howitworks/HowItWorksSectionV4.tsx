@@ -8,7 +8,7 @@ import { HiwNumerals } from "./variants";
 
 /**
  * v4 "Intake // Getting started" (How It Works) — the chosen "Big Numerals"
- * treatment, closed with a left-aligned primary CTA + a ghost secondary.
+ * treatment, closed with the site's single credit-report CTA.
  */
 export function HowItWorksSectionV4() {
   return (
@@ -39,9 +39,6 @@ export function HowItWorksSectionV4() {
             <ArrowRightIcon className="h-4 w-4" />
           </span>
           {site.cta.primary.label}
-        </Link>
-        <Link href={site.cta.secondary.href} className="v3-btn v3-btn-ghost">
-          {site.cta.secondary.label} →
         </Link>
       </div>
     </section>

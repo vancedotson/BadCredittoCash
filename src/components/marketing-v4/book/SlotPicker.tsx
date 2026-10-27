@@ -156,14 +156,14 @@ export function SlotPicker({
                   cursor: disabled || unavailable ? "not-allowed" : "pointer",
                 }}
               >
-                {t}{unavailable ? " — Booked" : ""}
+                {t}{unavailable ? " (Booked)" : ""}
               </button>
             );
           })}
         </div>
         <p className="v3-mono mt-3" style={{ fontSize: 12.5, color: slotLabel ? "var(--v3-accent)" : "var(--v3-faint)" }}>
           {slotLabel
-            ? `Selected: ${slotLabel}${timezoneLabel ? ` — ${timezoneLabel}` : ""}`
+            ? `Selected: ${slotLabel}${timezoneLabel ? ` (${timezoneLabel})` : ""}`
             : "Pick a day and a time above."}
         </p>
       </div>

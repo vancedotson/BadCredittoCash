@@ -12,11 +12,7 @@ import { CreditReportUploads } from "./CreditReportUploads";
  * three PDFs can upload straight away, and someone who doesn't gets the guide
  * without a dead-end "next" button in between.
  */
-const steps = ["Use a computer", "Get & send your reports"];
-
-function GuideLink({ page, children }: { page: number; children: React.ReactNode }) {
-  return <a href={`${guide.href}#page=${page}`} target="_blank" rel="noopener noreferrer">{children}<span className="sr-only"> (PDF opens in a new tab)</span></a>;
-}
+const steps = ["Use a computer", "Upload your reports"];
 
 export function ReportGuideSteps() {
   const [step, setStep] = useState(0);
@@ -49,37 +45,49 @@ export function ReportGuideSteps() {
             <div><h2 id="cc-current-step" className="v3-display" ref={heading} tabIndex={-1}>Use a laptop<br />or desktop.</h2><p>Do this walkthrough on a computer.</p></div>
           </div>
           <p className="cc-simple-copy">You&apos;ll need to download and send 3 PDF files. Keep your phone nearby for any verification codes.</p>
-          <button className="cc-primary cc-guide-button" type="button" onClick={() => setStep(1)}>I&apos;m on a computer <ArrowRightIcon className="h-5 w-5" /></button>
-          <div className="cc-simple-handoff"><p>On your phone? Open this page on your computer.</p><DesktopHandoff /></div>
+          <button className="cc-primary cc-guide-button" type="button" onClick={() => setStep(1)}>Yes, I am on my computer <ArrowRightIcon className="h-5 w-5" /></button>
+          <div className="cc-simple-handoff"><DesktopHandoff /></div>
         </>}
 
         {step === 1 && <>
-          <h2 id="cc-current-step" className="v3-display" ref={heading} tabIndex={-1}>Get all 3 credit reports.</h2>
-          <p className="cc-simple-copy">Vance needs one full PDF from <strong>each</strong> company: TransUnion, Equifax and Experian. All three, not just one.</p>
-          <a className="cc-simple-jump" href="#cc-upload-branch">Already have all 3 PDFs? Skip to upload ↓</a>
+          <h2 id="cc-current-step" className="v3-display" ref={heading} tabIndex={-1}>Upload all 3 credit reports.</h2>
+          <p className="cc-simple-copy">Choose one full PDF from <strong>each</strong> company: TransUnion, Equifax and Experian. Add all three, then submit.</p>
 
-          <div className="cc-simple-branch" aria-labelledby="cc-get-branch-title">
-            <p className="cc-eyebrow cc-simple-branch-title" id="cc-get-branch-title">DON&apos;T HAVE THEM YET?</p>
-            <div className="cc-simple-save"><strong>Save each report before moving to the next.</strong><span>Choose Download or Print → <b>Save as PDF.</b> Open the saved file to check every page is readable.</span></div>
-            <p className="cc-simple-address"><strong>Moved in the last 2 years?</strong> Have your previous address ready.</p>
-            <div className="cc-simple-get-actions">
-              <a className="cc-guide-open" href={guide.href} target="_blank" rel="noopener noreferrer"><span className="cc-simple-action-number">A</span><span>Open the picture guide<small>Optional — keep it open while you get your reports.</small></span><span aria-hidden="true">↗</span><span className="sr-only"> (PDF opens in a new tab)</span></a>
-              <a className="cc-primary cc-guide-button" href="https://www.annualcreditreport.com/" target="_blank" rel="noopener noreferrer"><span className="cc-simple-action-number">B</span>Go get my 3 reports <ArrowRightIcon className="h-5 w-5" /><span className="sr-only"> (AnnualCreditReport.com opens in a new tab)</span></a>
-            </div>
-            <p className="cc-simple-site">AnnualCreditReport.com · Come back to this page to upload once you&apos;ve saved your files.</p>
-            <details className="cc-simple-help"><summary>Need help? See the key steps</summary><div>
-              <p><strong>Moved in the last 2 years?</strong> Include your previous address. Check your information carefully. <GuideLink page={9}>See page 9.</GuideLink></p>
-              <p><strong>Select all 3 companies.</strong> TransUnion, Equifax, and Experian. <GuideLink page={11}>See page 11.</GuideLink></p>
-              <p><strong>Having trouble saving?</strong> Wait for the full print preview. The guide shows Landscape for TransUnion. <GuideLink page={18}>TransUnion: page 18</GuideLink> · <GuideLink page={33}>Equifax: page 33</GuideLink> · <GuideLink page={41}>Experian: page 41</GuideLink>.</p>
-              <p>Screens can look different. If you can&apos;t verify your identity, follow that company&apos;s instructions. Don&apos;t guess at the answers.</p>
-              <a href={guide.href} download="Vance-Dotson-Annual-Credit-Report-Guide.pdf">Download the full picture guide ↓</a>
-            </div></details>
-          </div>
-
-          <div className="cc-simple-branch" id="cc-upload-branch" aria-labelledby="cc-upload-branch-title">
-            <p className="cc-eyebrow cc-simple-branch-title" id="cc-upload-branch-title">ALREADY HAVE YOUR 3 PDFs? UPLOAD THEM HERE</p>
+          <div id="cc-upload-branch" aria-labelledby="cc-upload-branch-title">
+            <p className="cc-eyebrow cc-simple-branch-title" id="cc-upload-branch-title">1 // UPLOAD ALL 3 CREDIT REPORTS</p>
             <CreditReportUploads />
           </div>
+
+          <div className="cc-simple-branch" aria-labelledby="cc-get-branch-title">
+            <p className="cc-eyebrow cc-simple-branch-title" id="cc-get-branch-title">2 // DON&apos;T KNOW HOW TO GET YOUR CREDIT REPORTS?</p>
+            <p className="cc-report-keep-open"><span aria-hidden="true">!</span><strong>Do not close this page.</strong> AnnualCreditReport.com opens in a new tab.</p>
+            <h3 className="cc-report-journey-title v3-display">Get reports <span>→</span> save PDFs <span>→</span> return here</h3>
+            <div className="cc-report-journey">
+              <section className="cc-report-journey-card" aria-labelledby="cc-get-reports-title">
+                <span className="cc-report-journey-letter" aria-hidden="true">A</span>
+                <div className="cc-report-journey-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M27 8h13v13M40 8 23 25M38 27v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V13a3 3 0 0 1 3-3h10" /></svg></div>
+                <h4 id="cc-get-reports-title">Get all 3 reports</h4>
+                <p>Use AnnualCreditReport.com and save each one as a PDF.</p>
+                <a className="cc-primary cc-guide-button" href="https://www.annualcreditreport.com/" target="_blank" rel="noopener noreferrer">Open AnnualCreditReport.com <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a>
+                <a className="cc-report-guide-link" href={guide.href} target="_blank" rel="noopener noreferrer">Open the picture guide <span aria-hidden="true">↗</span><span className="sr-only"> (PDF opens in a new tab)</span></a>
+              </section>
+
+              <span className="cc-report-journey-arrow" aria-hidden="true">→</span>
+
+              <section className="cc-report-journey-card" aria-labelledby="cc-return-upload-title">
+                <span className="cc-report-journey-letter" aria-hidden="true">B</span>
+                <div className="cc-report-journey-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M14 5h15l9 9v29H14zM29 5v10h9M8 28h19M14 22l-6 6 6 6" /></svg></div>
+                <h4 id="cc-return-upload-title">Come back to upload</h4>
+                <p>Return to this page with all 3 saved PDFs.</p>
+                <ul className="cc-report-file-slots" aria-label="Reports to bring back">
+                  <li><span aria-hidden="true">□</span>TransUnion</li>
+                  <li><span aria-hidden="true">□</span>Equifax</li>
+                  <li><span aria-hidden="true">□</span>Experian</li>
+                </ul>
+              </section>
+            </div>
+          </div>
+
         </>}
       </section>
       <p className="cc-simple-finish">The finish line: Vance has all 3 of your reports.</p>

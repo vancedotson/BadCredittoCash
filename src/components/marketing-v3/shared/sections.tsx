@@ -103,7 +103,7 @@ export function Header() {
           className="v3-btn v3-btn-ghost hidden sm:inline-flex"
           style={{ minHeight: 42, fontSize: 13, padding: "0 18px" }}
         >
-          {site.cta.secondary.label}
+          {site.cta.primary.label}
         </Link>
       </div>
     </header>

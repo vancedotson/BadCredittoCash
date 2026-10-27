@@ -71,7 +71,7 @@ export function PreviewBanner() {
         fontWeight: 600,
       }}
     >
-      PREVIEW — for review only. Registration, booking, questions, and tracking are disabled.
+      PREVIEW: for review only. Registration, booking, questions, and tracking are disabled.
     </div>
   );
 }

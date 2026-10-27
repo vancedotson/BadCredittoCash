@@ -2,28 +2,28 @@ import { expect, test } from "./fixtures/local-safe-page";
 
 const retiredTrainingRoutes = ["/webinar/confirmed?state=quiz-1", "/webinar/room?state=room-preview"] as const;
 
-test("homepage presents the guide and live webinar registration paths", async ({ page }) => {
+test("homepage presents only the credit-report CTA", async ({ page }) => {
   const leadPosts: string[] = [];
   page.on("request", (request) => {
     if (request.url().includes("/api/lead") && request.method() === "POST") leadPosts.push(request.url());
   });
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /choose a next step/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /start with your credit report/i })).toBeVisible();
 
   const visibleCopy = await page.locator("body").innerText();
   expect(visibleCopy).not.toMatch(/on-demand|private watch link/i);
   expect(await page.locator("#register form").count()).toBe(0);
   await expect(page.locator("#register").getByRole("link", { name: /check my credit report/i })).toHaveAttribute("href", "/credit-check");
-  await expect(page.locator("#register").getByRole("link", { name: /join the webinar/i })).toHaveAttribute("href", "/live");
+  await expect(page.getByRole("link", { name: /join the webinar/i })).toHaveCount(0);
+  await expect(page.locator('a[href="/live"], a[href="/book"]')).toHaveCount(0);
 
-  const approvedHrefs = new Set(["/credit-check", "/live"]);
-  const activeCtas = page.getByRole("link", { name: /check my credit report|join the webinar/i });
+  const activeCtas = page.getByRole("link", { name: /check my credit report/i });
   const count = await activeCtas.count();
   expect(count).toBeGreaterThan(1);
   for (let index = 0; index < count; index += 1) {
     const href = await activeCtas.nth(index).getAttribute("href");
-    expect(approvedHrefs.has(href ?? ""), `Unexpected CTA destination: ${href}`).toBe(true);
+    expect(href, `Unexpected CTA destination: ${href}`).toBe("/credit-check");
   }
   expect(leadPosts).toEqual([]);
 });

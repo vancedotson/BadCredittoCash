@@ -1,28 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import { useReportUploadSession } from "./ReportUploadSession";
 
 export function DesktopHandoff() {
-  const [copied, setCopied] = useState(false);
-  const [manualLink, setManualLink] = useState("");
   const { phase, handoffToken } = useReportUploadSession();
 
-  async function copyLink() {
+  function emailLink() {
     const url = `${window.location.origin}/credit-check/thank-you${handoffToken ? `#upload=${encodeURIComponent(handoffToken)}` : ""}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setManualLink("");
-    } catch {
-      setManualLink(url);
-    }
+    const subject = "My credit report upload link";
+    const body = `Open this personal link on your computer to continue:\n\n${url}\n\nKeep this link private.`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   return <div className="cc-handoff">
-    <button type="button" className="cc-copy" disabled={phase === "loading"} onClick={copyLink}>{copied ? "Link copied ✓" : handoffToken ? "Copy my personal link" : "Copy this page link"}</button>
-    <span className="sr-only" role="status">{copied ? "Page link copied. Open it on your laptop or desktop." : ""}</span>
-    {manualLink && <label className="cc-manual-link">Copy this link to open on your computer<input readOnly value={manualLink} onFocus={(event) => event.target.select()} /></label>}
+    <button type="button" className="cc-copy" disabled={phase === "loading"} onClick={emailLink}>I&apos;m not on my computer, email the link</button>
+    <p className="cc-handoff-help">This opens your email app with the link ready to send.</p>
     {handoffToken && <p className="cc-handoff-private">Your personal link keeps your uploads connected to your details. Keep it private.</p>}
   </div>;
 }

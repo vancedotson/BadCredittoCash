@@ -291,7 +291,7 @@ function LiveState() {
             className="v3-mono"
             style={{ fontSize: 11, letterSpacing: "0.2em", color: "var(--v3-danger)" }}
           >
-            {phase !== "live" ? "DOORS OPEN — STARTING SOON" : streamState === "live" ? "LIVE NOW" : streamState === "connecting" ? "CONNECTING TO LIVE SESSION" : "WAITING FOR THE HOST"}
+            {phase !== "live" ? "DOORS OPEN: STARTING SOON" : streamState === "live" ? "LIVE NOW" : streamState === "connecting" ? "CONNECTING TO LIVE SESSION" : "WAITING FOR THE HOST"}
           </span>
         </div>
       </div>

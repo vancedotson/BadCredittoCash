@@ -112,7 +112,7 @@
 .cc-option-indicator { width: 19px; height: 19px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid #666660; border-radius: 2px; }
 .cc-option-indicator.is-radio { border-radius: 50%; }
 .is-selected .cc-option-indicator { background: var(--v3-accent); border-color: var(--v3-accent); color: #101010; }
-.cc-primary { display: inline-flex; align-items: center; justify-content: center; gap: 15px; min-height: 48px; padding: 13px 20px; border: 1px solid transparent; background: var(--v3-accent); color: #141414; font-size: 14px; font-weight: 650; text-decoration: none; cursor: pointer; line-height: 1.4; transition: background .15s; }
+.cc-primary { display: inline-flex; align-items: center; justify-content: center; gap: 15px; min-height: 48px; padding: 13px 20px; border: 1px solid transparent; background: var(--v3-accent); color: #141414; font-size: 14px; font-weight: 650; text-decoration: none; cursor: pointer; line-height: 1.4; }
 .cc-primary:hover:not(:disabled) { background: #ffc268; }
 .cc-primary:disabled { background: #34332e; color: #9b9991; cursor: not-allowed; }
 .cc-primary svg { flex-shrink: 0; }
@@ -213,7 +213,9 @@
 .cc-simple-guide .cc-primary { min-height: 54px; font-size: 15px; }
 .cc-simple-handoff { padding-top: 18px; text-align: center; }
 .cc-simple-handoff p { color: var(--cc-muted); font-size: 13px; line-height: 1.6; margin: 0; }
-.cc-simple-handoff .cc-copy { font-size: 13px; }
+.cc-simple-handoff .cc-copy { display: inline-flex; width: 100%; min-height: 52px; align-items: center; justify-content: center; border: 1px solid var(--v3-accent); padding: 12px 18px; color: var(--v3-accent); font-size: 14px; font-weight: 700; text-decoration: none; transition: background-color 160ms ease, color 160ms ease; }
+.cc-simple-handoff .cc-copy:hover { background: color-mix(in srgb, var(--v3-accent) 12%, transparent); }
+.cc-simple-handoff p.cc-handoff-help { margin-top: 10px; }
 .cc-simple-text-button { display: block; border: 0; border-top: 1px solid var(--v3-line); background: none; padding: 18px 0 0; margin-top: 18px; min-height: 44px; color: var(--cc-muted); font-size: 13px; line-height: 1.6; text-align: left; cursor: pointer; width: 100%; text-decoration: underline; text-underline-offset: 4px; }
 .cc-simple-text-button:hover { color: var(--v3-accent); }
 .cc-simple-get-actions { display: grid; gap: 12px; }
@@ -229,15 +231,6 @@
 .cc-simple-save strong { display: block; font-size: 15px; line-height: 1.5; color: #ffe1b2; margin-bottom: 8px; }
 .cc-simple-save > span { display: block; font-size: 14px; line-height: 1.7; color: #c4c1b9; }
 .cc-simple-save b { color: var(--v3-ink); font-weight: 550; }
-.cc-simple-help { margin-top: 9px; font-size: 13px; color: var(--cc-muted); line-height: 1.7; }
-.cc-simple-help summary { cursor: pointer; padding-block: 14px; color: #d1cbbf; min-height: 48px; text-underline-offset: 4px; }
-.cc-simple-help summary:hover { color: var(--v3-accent); }
-.cc-simple-help summary:focus-visible { outline: 2px solid var(--v3-accent); outline-offset: 4px; }
-.cc-simple-help > div { padding: 0 0 15px; }
-.cc-simple-help p { margin: 0 0 16px; }
-.cc-simple-help strong { color: var(--v3-ink); font-weight: 550; }
-.cc-simple-help a { color: var(--v3-accent); text-decoration: underline; text-underline-offset: 3px; }
-.cc-simple-help a:last-child { display: inline-block; padding-block: 5px; }
 .cc-simple-delivery-tip { color: #c4c1b9; font-size: 14px; line-height: 1.7; margin: 0 0 23px; }
 /* Step 2 holds both paths: get the reports, or upload ones you already have. */
 .cc-simple-copy strong { color: var(--v3-ink); font-weight: 600; }
@@ -246,45 +239,100 @@
 .cc-simple-branch { border-top: 1px solid var(--v3-line); margin-top: 26px; padding-top: 26px; scroll-margin-top: 24px; }
 .cc-simple-branch-title { margin: 0 0 18px; color: var(--v3-accent); }
 .cc-simple-branch .cc-simple-site { margin-bottom: 8px; }
+.cc-report-journey-title { color: #f4c06f; font-size: 27px; line-height: 1.15; letter-spacing: .035em; text-align: center; margin: 6px 0 20px; }
+.cc-report-journey-title span { color: var(--v3-accent); padding-inline: 5px; }
+.cc-report-journey { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr); align-items: stretch; }
+.cc-report-journey-card { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 24px 20px 20px; border: 1px solid #f2a93ba6; background: #08090a80; text-align: center; }
+.cc-report-journey-letter { position: absolute; top: 14px; left: 14px; display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--v3-accent); border-radius: 50%; color: var(--v3-accent); font-family: var(--v3-mono); font-size: 12px; }
+.cc-report-journey-icon { display: grid; place-items: center; width: 58px; height: 58px; margin: 4px auto 12px; color: var(--v3-accent); }
+.cc-report-journey-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.cc-report-journey-card h4 { color: var(--v3-ink); font-family: var(--font-display); font-size: 25px; line-height: 1.1; letter-spacing: .02em; margin: 0; }
+.cc-report-journey-card > p { color: #c4c1b9; font-size: 13px; line-height: 1.6; max-width: 245px; margin: 10px auto 18px; }
+.cc-report-journey-card .cc-primary { width: 100%; min-height: 50px; margin-top: auto; padding-inline: 12px; font-size: 13px; }
+.cc-report-guide-link { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; margin-top: 7px; padding: 8px; color: #f4dab3; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+.cc-report-guide-link:hover { color: var(--v3-accent); }
+.cc-report-journey-arrow { position: relative; z-index: 1; align-self: center; display: grid; place-items: center; width: 50px; height: 50px; margin-left: -8px; border: 1px solid #f2a93ba6; border-radius: 50%; color: #0e0f10; background: var(--v3-accent); font-size: 29px; font-weight: 700; }
+.cc-report-file-slots { display: grid; width: 100%; gap: 7px; padding: 0; margin: auto 0 0; list-style: none; }
+.cc-report-file-slots li { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 7px 10px; border: 1px dashed #706d66; color: #d1cbbf; font-size: 12px; text-align: left; }
+.cc-report-file-slots li span { color: var(--v3-accent); font-size: 18px; line-height: 1; }
+.cc-report-keep-open { position: sticky; top: 12px; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; padding: 13px 18px; margin: 0 0 20px; border: 1px solid #f2a93ba8; background: #18150f; box-shadow: 0 8px 28px #0009; color: #c4c1b9; font-size: 13px; line-height: 1.5; text-align: center; }
+.cc-report-keep-open > span { display: grid; place-items: center; flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid var(--v3-accent); border-radius: 50%; color: var(--v3-accent); font-family: var(--font-display); font-size: 19px; }
+.cc-report-keep-open strong { color: #f4c06f; font-size: 14px; }
 .cc-upload-submit { margin: 4px 0 0; }
 .cc-upload-hint { color: var(--cc-muted); font-size: 12px; line-height: 1.6; text-align: center; margin: 10px 0 0; }
 /* "All files have been sent" confirmation popup. */
 /* Tailwind's preflight zeroes every margin, which removes the `margin: auto` a
    modal <dialog> relies on to center itself — restore it explicitly. */
-.cc-sent-dialog { position: fixed; inset: 0; margin: auto; height: fit-content; width: min(440px, calc(100vw - 32px)); padding: 0; border: 1px solid #75be9177; border-top: 3px solid #75be91; background: #0e0f10; color: var(--v3-ink); box-shadow: 0 30px 80px #000a; }
+.cc-sent-dialog { position: fixed; inset: 0; margin: auto; max-height: calc(100dvh - 24px); width: min(900px, calc(100vw - 32px)); padding: 0; overflow-y: auto; border: 1px solid #75be9177; border-top: 3px solid #75be91; background: #0e0f10; color: var(--v3-ink); box-shadow: 0 30px 80px #000a; }
 .cc-sent-dialog::backdrop { background: #000000b8; backdrop-filter: blur(3px); }
 .cc-sent-dialog[open] { animation: cc-sent-in .22s ease-out; }
 @keyframes cc-sent-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .cc-sent-dialog[open] { animation: none; } }
-.cc-sent-dialog-body { padding: 34px 30px 28px; text-align: center; }
-.cc-sent-dialog-mark { display: grid; place-items: center; width: 64px; height: 64px; margin: 0 auto 20px; color: #99dfb4; background: #75be9115; border: 1px solid #75be9166; border-radius: 50%; }
+.cc-sent-dialog-body { padding: 28px 34px 30px; text-align: center; }
+.cc-sent-dialog-mark { display: grid; place-items: center; width: 54px; height: 54px; margin: 20px auto 14px; color: #99dfb4; background: #75be9115; border: 1px solid #75be9166; border-radius: 50%; }
 .cc-sent-dialog h2 { font-size: 34px; line-height: 1.05; margin: 0; color: var(--v3-ink); }
-.cc-sent-dialog-body > p { font-size: 16px; line-height: 1.6; color: #d1cbbf; margin: 12px 0 24px; }
-.cc-sent-dialog-body > .cc-sent-dialog-local { font-size: 12px; color: var(--cc-muted); margin: -12px 0 22px; }
+.cc-sent-dialog-body > .cc-sent-dialog-contact { font-size: 16px; line-height: 1.5; color: #d1cbbf; margin: 8px 0 18px; }
+.cc-sent-dialog-thumbnail { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid #f2a93b90; background: #08090a; }
+.cc-sent-dialog-thumbnail img { object-fit: cover; }
+.cc-sent-dialog-thumbnail::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #020504d9 0%, #03050478 20%, transparent 48%, #0007 100%); pointer-events: none; }
+.cc-sent-dialog-play { position: absolute; z-index: 2; inset: 54% auto auto 50%; display: grid; place-items: center; width: 76px; height: 76px; padding-left: 5px; transform: translate(-50%, -50%); border: 2px solid #fff7; border-radius: 50%; background: var(--v3-accent); box-shadow: 0 10px 30px #0009; color: #101112; font-size: 29px; }
+.cc-sent-dialog-thumbnail h3 { position: absolute; z-index: 2; inset: 0 0 auto; margin: 0; padding: 12px 18px; background: #75be91; box-shadow: 0 7px 24px #0008; color: #07120b; font-size: 20px; font-weight: 800; line-height: 1.25; text-transform: uppercase; letter-spacing: .035em; }
+.cc-sent-dialog-guide-copy { color: #c4c1b9; font-size: 14px; line-height: 1.5; margin: 15px 0 7px; }
+.cc-sent-dialog-progress-copy { display: flex; justify-content: space-between; gap: 15px; color: #c4c1b9; font-size: 12px; line-height: 1.4; margin-bottom: 7px; }
+.cc-sent-dialog-progress-copy strong { color: var(--v3-accent); text-transform: uppercase; letter-spacing: .05em; }
+.cc-sent-dialog-progress { height: 22px; overflow: hidden; border: 1px solid #706d66; border-radius: 999px; background: #191a1b; }
+.cc-sent-dialog-progress > span { display: block; width: 75%; height: 100%; background-color: var(--v3-accent); background-image: repeating-linear-gradient(135deg, transparent 0 10px, #ffe1b288 10px 18px, transparent 18px 28px); background-size: 40px 40px; animation: cc-progress-stripes 1s linear infinite; }
+@keyframes cc-progress-stripes { to { background-position: 40px 0; } }
+.cc-sent-dialog-free { color: var(--v3-accent); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin: 7px 0 12px; }
+.cc-sent-dialog-body > .cc-sent-dialog-local { font-size: 11px; line-height: 1.5; color: var(--cc-muted); margin: 0; }
+.cc-sent-dialog-watch { margin-top: 12px; }
+.cc-sent-dialog-watch .cc-primary { width: 100%; animation: cc-watch-bounce 2.4s ease-in-out infinite; }
+.cc-sent-dialog-watch .cc-primary:hover { animation-play-state: paused; }
+.cc-sent-dialog-eyebrow { margin: 0 0 9px; color: #99dfb4; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.cc-live-masterclass-date { display: grid; gap: 5px; margin: 2px 0 20px; padding: 15px 18px; border: 1px solid #75be916b; background: #75be9110; text-align: left; }
+.cc-live-masterclass-date span { color: #99dfb4; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.cc-live-masterclass-date strong { color: var(--v3-ink); font-size: 17px; line-height: 1.4; }
+.cc-live-masterclass-form { max-width: 620px; margin: 0 auto; text-align: left; --v3-accent: #f2a93b; --v3-danger: #ef7f78; --v3-line: #665f54; --v3-ink: #f7f2e8; --v3-mut: #d1cbbf; --v3-faint: #aaa49a; }
+.cc-sent-dialog-body.is-live { padding-inline: clamp(20px, 5vw, 64px); }
+.cc-sent-dialog-body.is-live > .cc-sent-dialog-local { margin-top: 14px; }
+@keyframes cc-watch-bounce { 0%, 62%, 100% { transform: translateY(0); } 72% { transform: translateY(-9px); } 82% { transform: translateY(0); } 89% { transform: translateY(-4px); } 95% { transform: translateY(0); } }
 .cc-uploads .cc-simple-copy strong { color: var(--v3-ink); font-weight: 600; }
 .cc-upload-notice { padding: 16px; margin: 20px 0; border: 1px solid #f2a93b55; color: #d1cbbf; font-size: 13px; line-height: 1.7; background: #f2a93b06; }
 .cc-upload-notice p { margin: 0 0 10px; }
 .cc-upload-notice a, .cc-upload-notice button { background: none; border: 0; color: var(--v3-accent); text-decoration: underline; text-underline-offset: 4px; font-size: 13px; cursor: pointer; padding: 6px 0; }
 .cc-upload-local { color: #c4c1b9; border-left: 2px solid #87734f; padding-left: 12px; font-size: 12px; line-height: 1.7; margin: 18px 0; }
-.cc-upload-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 24px 0; align-items: start; }
-.cc-upload-card { border: 1px solid #454139; background: #f2a93b03; padding: 22px 14px 16px; text-align: center; min-width: 0; }
-.cc-upload-card.has-file { border-color: #f2a93b90; }
+.cc-upload-panel { border: 1px solid #f2a93b90; background: #f2a93b03; padding: 22px; margin: 24px 0; }
+.cc-upload-panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+.cc-upload-panel-heading h3 { color: var(--v3-accent); font-size: 25px; line-height: 1; letter-spacing: .035em; margin: 0; }
+.cc-upload-panel-heading p { color: #d1cbbf; font-size: 13px; font-weight: 600; margin: 0; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+.cc-upload-panel-heading p strong { color: var(--v3-accent); font-family: var(--font-display); font-size: 22px; }
+.cc-upload-grid { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.cc-upload-card { display: grid; grid-template-columns: 34px 34px 48px minmax(0, 1fr) minmax(145px, 190px); align-items: center; gap: 14px; border: 1px solid #454139; background: #08090a80; padding: 14px 16px; min-width: 0; }
+.cc-upload-card.has-file { border-color: #f2a93b90; background: #f2a93b08; }
 .cc-upload-card.is-received { border-color: #75be9177; background: #75be9108; }
-.cc-upload-symbol { display: grid; place-items: center; width: 46px; height: 46px; color: var(--v3-accent); margin: 0 auto 14px; }
-.is-received .cc-upload-symbol { color: #99dfb4; background: #75be9115; border: 1px solid #75be9166; border-radius: 50%; }
-.cc-upload-card h3 { font-family: var(--font-sans); font-size: 15px; font-weight: 600; color: var(--v3-ink); margin: 0; }
-.cc-upload-status { color: var(--cc-muted); font-size: 11px; line-height: 1.5; margin: 10px 0; min-height: 17px; }
+.cc-upload-number { color: var(--v3-accent); font-family: var(--font-display); font-size: 25px; line-height: 1; text-align: center; }
+.cc-upload-check { display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid #78756f; border-radius: 50%; color: #101112; }
+.has-file .cc-upload-check, .is-received .cc-upload-check { border-color: var(--v3-accent); background: var(--v3-accent); }
+.is-received .cc-upload-check { border-color: #75be91; background: #75be91; }
+.cc-upload-symbol { display: grid; place-items: center; width: 46px; height: 46px; color: var(--v3-accent); }
+.is-received .cc-upload-symbol { color: #99dfb4; }
+.cc-upload-details { min-width: 0; }
+.cc-upload-card h4 { font-family: var(--font-sans); font-size: 16px; font-weight: 650; color: var(--v3-ink); margin: 0; }
+.cc-upload-status { color: var(--cc-muted); font-size: 12px; line-height: 1.5; margin: 3px 0 0; }
 .is-received .cc-upload-status { color: #99dfb4; }
 .has-file .cc-upload-status { color: #f4dab3; }
-.cc-upload-filename { color: #c4c1b9; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; margin: 0 0 15px; }
-.cc-upload-size { color: var(--cc-muted); font-size: 10px; margin: -8px 0 15px; }
+.cc-upload-filename { color: #c4c1b9; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; margin: 2px 0 0; }
+.cc-upload-size { color: var(--cc-muted); font-size: 10px; margin: 2px 0 0; }
+.cc-upload-actions { min-width: 0; text-align: center; }
 .cc-upload-choose { width: 100%; min-height: 44px; padding: 10px 8px; color: var(--v3-accent); background: #f2a93b08; border: 1px solid #f2a93b80; font-size: 12px; font-weight: 550; cursor: pointer; line-height: 1.4; }
 .cc-upload-choose:hover:not(:disabled) { background: #f2a93b16; }
 .cc-upload-choose:disabled { color: #8d8a83; border-color: #454139; background: none; cursor: not-allowed; }
 .cc-upload-choose.is-secondary { border: 0; background: none; font-size: 11px; text-decoration: underline; text-underline-offset: 4px; padding-inline: 0; }
 .cc-upload-cancel { display: block; color: var(--cc-muted); background: none; border: 0; font-size: 11px; cursor: pointer; padding: 8px 0; margin: 0 auto; min-height: 32px; }
 .cc-upload-cancel:disabled { opacity: .5; cursor: not-allowed; }
-.cc-upload-error { color: #ffb6a5; font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
+.cc-upload-error { grid-column: 4 / -1; color: #ffb6a5; font-size: 12px; line-height: 1.6; margin: -4px 0 0; }
+.cc-upload-requirement { display: flex; align-items: center; justify-content: center; gap: 10px; color: #c4c1b9; border-top: 1px solid #454139; font-size: 12px; line-height: 1.5; margin: 18px 0 0; padding: 17px 0 0; }
+.cc-upload-requirement > span { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--v3-accent); border-radius: 50%; color: var(--v3-accent); font-family: Georgia, serif; font-weight: 700; }
 .cc-upload-total { display: flex; align-items: center; gap: 16px; padding: 20px 0; border-block: 1px solid var(--v3-line); margin: 22px 0; }
 .cc-upload-count { color: var(--v3-accent); font-family: var(--font-display); font-size: 38px; white-space: nowrap; }
 .cc-upload-count small { color: var(--cc-muted); font-size: 22px; }
@@ -320,13 +368,23 @@
   .cc-simple-save { padding: 14px; }
   .cc-simple-save strong { font-size: 14px; }
   .cc-simple-save > span { font-size: 13px; }
-  .cc-upload-grid { grid-template-columns: 1fr; gap: 12px; }
-  .cc-upload-card { display: grid; grid-template-columns: 42px 1fr; column-gap: 14px; padding: 18px; text-align: left; }
-  .cc-upload-symbol { grid-column: 1; grid-row: 1 / span 2; width: 38px; height: 38px; margin: 0; }
-  .cc-upload-card h3 { grid-column: 2; align-self: end; }
-  .cc-upload-status { grid-column: 2; margin: 5px 0 14px; min-height: 0; }
-  .cc-upload-card > :is(.cc-upload-filename, .cc-upload-size, button, .cc-upload-error) { grid-column: 1 / -1; }
-  .cc-upload-filename { font-size: 12px; margin-bottom: 14px; }
+  .cc-report-journey-title { font-size: 22px; line-height: 1.25; }
+  .cc-report-journey { grid-template-columns: 1fr; }
+  .cc-report-journey-card { padding: 23px 16px 18px; }
+  .cc-report-journey-arrow { width: 44px; height: 44px; margin: -6px auto; transform: rotate(90deg); }
+  .cc-report-journey-card h4 { font-size: 23px; }
+  .cc-report-keep-open { align-items: flex-start; flex-wrap: wrap; }
+  .cc-upload-panel { padding: 16px; }
+  .cc-upload-panel-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .cc-upload-panel-heading h3 { font-size: 23px; }
+  .cc-upload-card { grid-template-columns: 28px 30px 1fr; gap: 10px; padding: 15px; }
+  .cc-upload-number { font-size: 22px; }
+  .cc-upload-check { width: 27px; height: 27px; }
+  .cc-upload-symbol { display: none; }
+  .cc-upload-details { grid-column: 3; }
+  .cc-upload-actions { grid-column: 1 / -1; margin-top: 4px; }
+  .cc-upload-error { grid-column: 1 / -1; margin-top: 0; }
+  .cc-upload-filename { font-size: 11px; }
   .cc-upload-choose { font-size: 14px; min-height: 46px; }
   .cc-upload-choose.is-secondary, .cc-upload-cancel { font-size: 12px; }
   .cc-upload-total { gap: 13px; }
